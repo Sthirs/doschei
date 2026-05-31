@@ -1,0 +1,14 @@
+.DS_Store
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.vite/
+.turbo/
+.idea/
+tmp/

@@ -1,0 +1,132 @@
+# Do Schèi bootstrap
+
+Initial monorepo bootstrap for the shared-expenses app described in `docs/specs.md`.
+
+## Included
+
+- Vue 3 + TypeScript frontend with login, auth guard, groups screen, Pinia, Vue Router, Axios, Tailwind, PWA, ESLint, Prettier, Jest, and Cypress scaffolding
+- Node.js + TypeScript + Express backend with TypeORM, JWT local auth, seeded demo user, and groups endpoint
+- Helm chart that deploys frontend, backend, and PostgreSQL into Minikube
+- Telepresence-based development flow to run frontend and/or backend locally while the rest of the stack stays in cluster
+
+## Supported development workflow
+
+There is one supported way to develop this project:
+
+- Minikube runs the baseline cluster services
+- Helm deploys `frontend`, `backend`, and `postgres`
+- Telepresence intercepts `frontend` and/or `backend`
+- `npm run dev:frontend` and `npm run dev:backend` run the intercepted service locally
+
+Local Docker PostgreSQL and direct localhost-only development are not part of the supported workflow.
+
+## Prerequisites
+
+- `nvm`
+- Node.js `26.2.0` via `.nvmrc`
+- npm
+- Docker
+- Minikube
+- Helm
+- Telepresence
+
+## Cluster bootstrap
+
+```bash
+nvm install
+nvm use
+npm ci
+npm run cluster:up
+npm run cluster:build
+npm run cluster:deploy
+```
+
+Useful host value:
+
+```bash
+npm run dev:host
+```
+
+The app ingress host defaults to `doschei.$(minikube ip).nip.io`.
+
+Demo credentials:
+
+- email: `demo@doschei.local`
+- password: `password123`
+
+## Daily development with Telepresence
+
+Connect Telepresence:
+
+```bash
+npm run telepresence:connect
+```
+
+### Run backend locally
+
+```bash
+npm run telepresence:backend
+npm run dev:backend
+```
+
+### Run frontend locally
+
+```bash
+npm run telepresence:frontend
+npm run dev:frontend
+```
+
+### Run both locally
+
+Open two terminals for the intercepts and one for the app processes:
+
+```bash
+npm run telepresence:backend
+npm run telepresence:frontend
+npm run dev
+```
+
+Open the application through the ingress host printed by `npm run dev:host`.
+
+When you are done:
+
+```bash
+npm run telepresence:leave
+```
+
+## Notes
+
+- The backend local process uses the in-cluster PostgreSQL service over the Telepresence network.
+- The frontend local process is expected to be reached through the Minikube ingress host, not directly through `localhost:5173`.
+- Vite HMR is configured for the ingress host so the frontend can stay behind a Telepresence intercept.
+- For this first bootstrap, TypeORM still uses schema synchronization in development (`DB_SYNC=true`).
+- Seed data is created by the in-cluster backend startup path.
+
+## Useful commands
+
+```bash
+npm run cluster:up
+npm run cluster:build
+npm run cluster:deploy
+npm run telepresence:connect
+npm run telepresence:frontend
+npm run telepresence:backend
+npm run telepresence:leave
+npm run dev:frontend
+npm run dev:backend
+npm run dev
+npm run build
+npm run lint
+npm run test
+```
+
+## Structure
+
+```text
+apps/
+  backend/
+  frontend/
+helm/
+  doschei/
+scripts/
+```
