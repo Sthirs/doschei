@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-telepresence connect
+telepresence helm install || true
+telepresence connect --namespace doschei
