@@ -32,28 +32,27 @@ const submit = async () => {
 <template>
   <main class="flex min-h-screen items-center justify-center px-4 py-12 text-slate-50">
     <div class="grid w-full max-w-5xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <section class="hidden rounded-[2rem] border border-white/10 bg-white/5 p-10 shadow-glow lg:block">
+      <section class="hidden rounded-md border border-white/10 bg-white/5 p-10 shadow-glow lg:block">
         <p class="mb-4 text-sm uppercase tracking-[0.35em] text-brand-100/80">Do Schèi</p>
         <h1 class="max-w-md text-5xl font-semibold leading-tight">
-          Shared expenses that feel calm, clear, and mobile-first.
+          Manage and share your expenses
         </h1>
-        <p class="mt-6 max-w-lg text-base leading-7 text-slate-300">
-          This bootstrap delivers the first authenticated flow: local login, protected routing, and an initial groups
-          overview backed by the Node + PostgreSQL API.
-        </p>
+        <div class="px-20">
+          <img src="/logo.svg">
+        </div>
         <div class="mt-10 grid gap-4 sm:grid-cols-2">
-          <div class="glass-panel rounded-3xl p-5">
+          <div class="glass-panel rounded-md p-5">
             <p class="text-xs uppercase tracking-[0.3em] text-brand-100/70">Demo user</p>
             <p class="mt-3 font-medium">demo@doschei.local</p>
           </div>
-          <div class="glass-panel rounded-3xl p-5">
+          <div class="glass-panel rounded-md p-5">
             <p class="text-xs uppercase tracking-[0.3em] text-brand-100/70">Password</p>
             <p class="mt-3 font-medium">password123</p>
           </div>
         </div>
       </section>
 
-      <section class="glass-panel rounded-[2rem] p-6 shadow-2xl sm:p-10">
+      <section class="glass-panel rounded-md p-6 shadow-2xl sm:p-10">
         <div class="mx-auto max-w-md">
           <p class="text-sm uppercase tracking-[0.35em] text-brand-100/70">Welcome back</p>
           <h2 class="mt-3 text-3xl font-semibold">Sign in to your workspace</h2>
@@ -68,7 +67,7 @@ const submit = async () => {
                 v-model="form.email"
                 type="email"
                 required
-                class="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-50 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
+                class="w-full rounded-md border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-50 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
               />
             </label>
 
@@ -78,17 +77,17 @@ const submit = async () => {
                 v-model="form.password"
                 type="password"
                 required
-                class="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-50 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
+                class="w-full rounded-md border border-white/10 bg-slate-950/60 px-4 py-3 text-slate-50 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
               />
             </label>
 
-            <p v-if="errorMessage" class="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            <p v-if="errorMessage" class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
               {{ errorMessage }}
             </p>
 
             <button
               type="submit"
-              class="w-full rounded-2xl bg-brand-500 px-4 py-3 font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+              class="w-full rounded-md bg-brand-500 px-4 py-3 font-medium text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
               :disabled="authStore.isLoading"
             >
               {{ authStore.isLoading ? 'Signing in...' : 'Sign in' }}

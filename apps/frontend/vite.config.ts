@@ -13,7 +13,7 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['logo.svg'],
       manifest: {
         name: 'Do Schèi',
         short_name: 'Do Schèi',
