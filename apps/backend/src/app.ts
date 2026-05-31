@@ -4,6 +4,10 @@ import express from 'express';
 import { env } from './config/env';
 import { apiRouter } from './routes';
 
+const healthHandler = (_request: express.Request, response: express.Response) => {
+  response.json({ status: 'ok' });
+};
+
 export const createApp = () => {
   const app = express();
 
@@ -14,9 +18,7 @@ export const createApp = () => {
   );
   app.use(express.json());
 
-  app.get('/health', (_request, response) => {
-    response.json({ status: 'ok' });
-  });
+  app.get('/api/health', healthHandler);
 
   app.use('/api', apiRouter);
 

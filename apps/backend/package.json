@@ -8,6 +8,7 @@
     "start": "node dist/src/index.js",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
     "test": "jest --runInBand",
+    "test:integration": "bash ./scripts/test-integration.sh",
     "seed": "tsx src/scripts/seed.ts"
   },
   "dependencies": {

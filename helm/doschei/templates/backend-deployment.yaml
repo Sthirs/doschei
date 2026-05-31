@@ -47,7 +47,7 @@ spec:
                   key: JWT_SECRET
           readinessProbe:
             httpGet:
-              path: /health
+              path: /api/health
               port: {{ .Values.backend.service.targetPort }}
             initialDelaySeconds: 5
             periodSeconds: 10

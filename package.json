@@ -21,6 +21,7 @@
     "build": "npm run build --workspace @doschei/backend && npm run build --workspace @doschei/frontend",
     "lint": "npm run lint --workspace @doschei/backend && npm run lint --workspace @doschei/frontend",
     "test": "npm run test --workspace @doschei/backend && npm run test --workspace @doschei/frontend",
+    "test:integration": "npm run test:integration --workspace @doschei/backend --",
     "seed": "npm run seed --workspace @doschei/backend"
   },
   "devDependencies": {

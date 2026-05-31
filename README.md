@@ -118,7 +118,31 @@ npm run dev
 npm run build
 npm run lint
 npm run test
+npm run test:integration -- http://doschei.127.0.0.1.nip.io
 ```
+
+## Backend integration tests
+
+The backend integration suite targets an already running backend deployment. It does not start a local server process.
+
+Run the suite against a specific endpoint:
+
+```bash
+npm run test:integration -- http://doschei.127.0.0.1.nip.io
+```
+
+Or reuse an environment variable:
+
+```bash
+BACKEND_BASE_URL=http://doschei.127.0.0.1.nip.io npm run test:integration
+```
+
+Notes:
+
+- The endpoint must expose `/api/health` and `/api/*`.
+- Tests use unique emails and group names so they can run against the shared Minikube database.
+- There is one test file per endpoint: `auth/register`, `auth/login`, `auth/me`, `groups GET`, `groups POST`.
+- The backend itself exposes health only on `/api/health`.
 
 ## Structure
 
