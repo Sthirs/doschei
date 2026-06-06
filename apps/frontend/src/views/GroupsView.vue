@@ -81,7 +81,7 @@ onMounted(loadGroups);
             v-for="group in groups"
             :key="group.id"
             class="cursor-pointer px-6 py-4 transition hover:bg-white/5 sm:px-8"
-            @click="router.push({ name: 'group-detail', params: { id: group.id } })"
+            @click="router.push({ name: 'group-detail', params: { id: group.id }, state: { groupName: group.name } })"
           >
             <div class="flex items-center gap-4">
               <img

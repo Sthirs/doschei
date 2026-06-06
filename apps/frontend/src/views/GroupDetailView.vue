@@ -5,8 +5,9 @@ import { VueDatePicker } from '@vuepic/vue-datepicker';
 
 import { api } from '@/lib/api';
 import { DEFAULT_CATEGORY_KEY, getCategory } from '@/lib/categories';
+import { currentPageTitle } from '@/router';
 import CategoryPicker from '@/components/CategoryPicker.vue';
-import GroupSettingsPanel from '@/components/GroupSettingsPanel.vue';
+
 import type { GroupDetail, Expense } from '@/types/group';
 
 const route = useRoute();
@@ -15,7 +16,7 @@ const router = useRouter();
 const group = ref<GroupDetail | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
-const showSettings = ref(false);
+
 
 const showAddExpenseModal = ref(false);
 const expenseDescription = ref('');
@@ -67,7 +68,7 @@ const loadGroup = async () => {
   try {
     const { data } = await api.get<{ group: GroupDetail }>(`/groups/${groupId.value}`);
     group.value = data.group;
-    route.meta.title = data.group.name;
+    currentPageTitle.value = data.group.name;
   } catch {
     errorMessage.value = 'We could not load this group.';
   } finally {
@@ -229,10 +230,15 @@ const groupExpensesByMonth = computed(() => {
   return groups;
 });
 
-onMounted(loadGroup);
+onMounted(() => {
+  if (history.state.groupName) {
+    currentPageTitle.value = String(history.state.groupName);
+  }
+  loadGroup();
+});
 
 onBeforeUnmount(() => {
-  route.meta.title = 'Group';
+  currentPageTitle.value = null;
 });
 </script>
 
@@ -261,16 +267,16 @@ onBeforeUnmount(() => {
       v-if="group"
       type="button"
       class="hidden rounded-md border border-white/10 px-3 py-1.5 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 sm:inline-flex"
-      @click="showSettings = !showSettings"
+      @click="router.push({ name: 'group-settings', params: { id: groupId }, state: { groupName: group.name } })"
     >
-      {{ showSettings ? 'Hide Settings' : 'Settings' }}
+      Settings
     </button>
     <button
       v-if="group"
       type="button"
       class="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-slate-100 sm:hidden"
       aria-label="Toggle settings"
-      @click="showSettings = !showSettings"
+      @click="router.push({ name: 'group-settings', params: { id: groupId }, state: { groupName: group.name } })"
     >
       <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
         <path fill-rule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
@@ -304,7 +310,7 @@ onBeforeUnmount(() => {
       </section>
 
       <template v-else-if="group">
-        <GroupSettingsPanel v-if="showSettings" :group="group" @updated="loadGroup" />
+        
 
         <div v-if="showAddExpenseModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
           <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl">

@@ -2,13 +2,14 @@
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
+import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 
-const currentTitle = computed(() => String(route.meta.title ?? route.name ?? 'App'));
+const currentTitle = computed(() => String(currentPageTitle.value ?? route.meta.title ?? route.name ?? 'App'));
 const userInitial = computed(() => authStore.user?.displayName?.trim().charAt(0).toUpperCase() ?? 'U');
 
 const goToAccount = async () => {

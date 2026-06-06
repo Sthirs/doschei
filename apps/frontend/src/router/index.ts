@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 
 import { useAuthStore } from '@/stores/auth';
@@ -6,6 +7,10 @@ const LoginView = () => import('@/views/LoginView.vue');
 const GroupsView = () => import('@/views/GroupsView.vue');
 const GroupDetailView = () => import('@/views/GroupDetailView.vue');
 const AccountView = () => import('@/views/AccountView.vue');
+const GroupSettingsView = () => import('@/views/GroupSettingsView.vue');
+
+export const currentPageTitle = ref<string | null>(null);
+
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -31,6 +36,12 @@ export const router = createRouter({
       name: 'group-detail',
       component: GroupDetailView,
       meta: { requiresAuth: true, title: 'Group' },
+    },
+    {
+      path: '/groups/:id/settings',
+      name: 'group-settings',
+      component: GroupSettingsView,
+      meta: { requiresAuth: true, title: 'Group Settings' },
     },
     {
       path: '/account',
