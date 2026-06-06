@@ -17,6 +17,7 @@ export type Expense = {
   description: string;
   amount: number;
   paidByName: string;
+  date: string;
   createdAt: string;
 };
 

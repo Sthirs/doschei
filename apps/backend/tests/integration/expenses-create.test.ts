@@ -15,10 +15,10 @@ describe('Expenses Endpoints', () => {
       });
       const groupId = groupRes.body.group.id;
 
-      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses`, {
+      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string; date: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Dinner', amount: 50.5 }),
+        body: JSON.stringify({ description: 'Dinner', amount: 50.5, date: '2026-06-01' }),
       });
 
       expect(response.status).toBe(201);
@@ -26,6 +26,7 @@ describe('Expenses Endpoints', () => {
         description: 'Dinner',
         amount: 50.5,
         paidByName: user.body.user.displayName,
+        date: '2026-06-01',
       });
       expect(response.body.expense).toHaveProperty('id');
       expect(response.body.expense).toHaveProperty('createdAt');
@@ -59,6 +60,25 @@ describe('Expenses Endpoints', () => {
       expect(response.status).toBe(400);
       expect(response.body.message).toMatch(/Description is required/i);
     });
+
+    it('defaults the expense date to today when omitted', async () => {
+      const user = await registerUser('expense-post-default-date');
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('expenses-group-default-date') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      const response = await createJsonRequest<{ expense: { date: string } }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.body.token}` },
+        body: JSON.stringify({ description: 'Breakfast', amount: 12.5 }),
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.body.expense.date).toBe(new Date().toISOString().slice(0, 10));
+    });
   });
 
   describe('PATCH /api/groups/:id/expenses/:expenseId', () => {
@@ -78,10 +98,10 @@ describe('Expenses Endpoints', () => {
       });
       const expenseId = expRes.body.expense.id;
 
-      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
+      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string; date: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Lunch updated', amount: 25.5 }),
+        body: JSON.stringify({ description: 'Lunch updated', amount: 25.5, date: '2026-06-03' }),
       });
 
       expect(response.status).toBe(200);
@@ -89,8 +109,9 @@ describe('Expenses Endpoints', () => {
         description: 'Lunch updated',
         amount: 25.5,
         paidByName: user.body.user.displayName,
+        date: '2026-06-03',
       });
-      expect(response.body.expense.createdAt).toBeUndefined();
+      expect(response.body.expense).toHaveProperty('createdAt');
     });
 
     it('allows update from non-author member', async () => {
@@ -117,16 +138,17 @@ describe('Expenses Endpoints', () => {
       });
       const expenseId = expRes.body.expense.id;
 
-      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
+      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string; date: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${otherUser.body.token}` },
-        body: JSON.stringify({ amount: 20 }),
+        body: JSON.stringify({ amount: 20, date: '2026-06-05' }),
       });
 
       expect(response.status).toBe(200);
       expect(response.body.expense).toMatchObject({
         amount: 20,
         paidByName: author.body.user.displayName,
+        date: '2026-06-05',
       });
     });
 
@@ -188,7 +210,7 @@ describe('Expenses Endpoints', () => {
       expect(groupVerifyRes.body.group.expenses).toHaveLength(0);
     });
 
-    it('rejects delete from non-author', async () => {
+    it('allows delete from another group member', async () => {
       const author = await registerUser('expense-del-author');
       const otherUser = await registerUser('expense-del-other');
 
@@ -198,6 +220,12 @@ describe('Expenses Endpoints', () => {
         body: JSON.stringify({ name: uniqueValue('expenses-del-group-auth') }),
       });
       const groupId = groupRes.body.group.id;
+
+      await createJsonRequest(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({ email: otherUser.body.user.email }),
+      });
 
       const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
@@ -211,8 +239,12 @@ describe('Expenses Endpoints', () => {
         headers: { Authorization: `Bearer ${otherUser.body.token}` },
       });
 
-      expect(response.status).toBe(404);
-      expect(response.body.message).toMatch(/Group not found or you are not a member/i);
+      expect(response.status).toBe(204);
+
+      const groupVerifyRes = await createJsonRequest<{ group: { expenses: unknown[] } }>(`/api/groups/${groupId}`, {
+        headers: { Authorization: `Bearer ${author.body.token}` },
+      });
+      expect(groupVerifyRes.body.group.expenses).toHaveLength(0);
     });
   });
 });

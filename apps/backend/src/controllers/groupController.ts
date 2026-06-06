@@ -5,6 +5,15 @@ import { GroupService } from '../services/groupService';
 
 const groupService = new GroupService();
 
+const isValidExpenseDate = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+};
+
 export const listGroups = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groups = await groupService.getGroupsForUser(request.auth!.userId);
 
@@ -43,7 +52,7 @@ export const createGroup = async (request: AuthenticatedRequest, response: Respo
 
 export const createExpense = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
-  const { description, amount } = request.body as { description?: unknown; amount?: unknown };
+  const { description, amount, date } = request.body as { description?: unknown; amount?: unknown; date?: unknown };
 
   if (typeof description !== 'string' || description.trim().length === 0) {
     response.status(400).json({ message: 'Description is required.' });
@@ -55,11 +64,17 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
     return;
   }
 
+  if (date !== undefined && (typeof date !== 'string' || !isValidExpenseDate(date))) {
+    response.status(400).json({ message: 'Valid expense date is required.' });
+    return;
+  }
+
   try {
     const expense = await groupService.createExpenseForGroup(
       groupId,
       description.trim(),
       amount,
+      typeof date === 'string' ? date : undefined,
       request.auth!.userId
     );
 
@@ -72,7 +87,7 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
 export const updateExpense = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
   const expenseId = request.params.expenseId as string;
-  const { description, amount } = request.body as { description?: unknown; amount?: unknown };
+  const { description, amount, date } = request.body as { description?: unknown; amount?: unknown; date?: unknown };
 
   if (description !== undefined && (typeof description !== 'string' || description.trim().length === 0)) {
     response.status(400).json({ message: 'Description must be a non-empty string.' });
@@ -84,6 +99,11 @@ export const updateExpense = async (request: AuthenticatedRequest, response: Res
     return;
   }
 
+  if (date !== undefined && (typeof date !== 'string' || !isValidExpenseDate(date))) {
+    response.status(400).json({ message: 'Valid expense date is required.' });
+    return;
+  }
+
   try {
     const expense = await groupService.updateExpenseForGroup(
       groupId,
@@ -91,6 +111,7 @@ export const updateExpense = async (request: AuthenticatedRequest, response: Res
       {
         description: typeof description === 'string' ? description.trim() : undefined,
         amount: typeof amount === 'number' ? amount : undefined,
+        date: typeof date === 'string' ? date : undefined,
       },
       request.auth!.userId
     );
@@ -190,4 +211,3 @@ export const removeMember = async (request: AuthenticatedRequest, response: Resp
     response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to remove member.' });
   }
 };
-

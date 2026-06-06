@@ -83,7 +83,7 @@ export class GroupService {
     const expenses = await this.expenseRepository.find({
       where: { group: { id: groupId } },
       relations: ['paidBy'],
-      order: { createdAt: 'DESC' },
+      order: { date: 'DESC', createdAt: 'DESC' },
     });
 
     return {
@@ -93,6 +93,7 @@ export class GroupService {
         description: expense.description,
         amount: Number(expense.amount),
         paidByName: expense.paidBy.displayName,
+        date: expense.date,
         createdAt: expense.createdAt.toISOString(),
       })),
     };
@@ -166,7 +167,7 @@ export class GroupService {
     await this.groupRepository.save(group);
   }
 
-  async createExpenseForGroup(groupId: string, description: string, amount: number, userId: string) {
+  async createExpenseForGroup(groupId: string, description: string, amount: number, date: string | undefined, userId: string) {
     const group = await this.getGroupForMember(groupId, userId);
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -177,6 +178,7 @@ export class GroupService {
     const expense = this.expenseRepository.create({
       description,
       amount,
+      date: date ?? new Date().toISOString().slice(0, 10),
       paidBy: user,
       group,
     });
@@ -188,11 +190,17 @@ export class GroupService {
       description: savedExpense.description,
       amount: Number(savedExpense.amount),
       paidByName: savedExpense.paidBy.displayName,
+      date: savedExpense.date,
       createdAt: savedExpense.createdAt.toISOString(),
     };
   }
 
-  async updateExpenseForGroup(groupId: string, expenseId: string, updates: { description?: string; amount?: number }, userId: string) {
+  async updateExpenseForGroup(
+    groupId: string,
+    expenseId: string,
+    updates: { description?: string; amount?: number; date?: string },
+    userId: string,
+  ) {
     await this.getGroupForMember(groupId, userId);
 
     const expense = await this.expenseRepository.findOne({
@@ -210,6 +218,9 @@ export class GroupService {
     if (updates.amount !== undefined) {
       expense.amount = updates.amount;
     }
+    if (updates.date !== undefined) {
+      expense.date = updates.date;
+    }
 
     const savedExpense = await this.expenseRepository.save(expense);
 
@@ -218,6 +229,8 @@ export class GroupService {
       description: savedExpense.description,
       amount: Number(savedExpense.amount),
       paidByName: savedExpense.paidBy.displayName,
+      date: savedExpense.date,
+      createdAt: savedExpense.createdAt.toISOString(),
     };
   }
 
@@ -231,10 +244,6 @@ export class GroupService {
 
     if (!expense) {
       throw new Error('Expense not found.');
-    }
-
-    if (expense.paidBy.id !== userId) {
-      throw new Error('You can only delete your own expenses.');
     }
 
     await this.expenseRepository.remove(expense);

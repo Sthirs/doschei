@@ -21,6 +21,9 @@ export class Expense {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount!: number;
 
+  @Column({ type: 'date', default: () => 'CURRENT_DATE' })
+  date!: string;
+
   @ManyToOne(() => User, { eager: true })
   @JoinColumn({ name: 'paid_by_id' })
   paidBy!: User;
