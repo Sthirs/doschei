@@ -9,6 +9,7 @@ RUN npm ci
 COPY apps ./apps
 RUN npm run build --workspace @doschei/frontend
 
-FROM nginx:1.31.1-alpine3.23@sha256:8b1e78743a03dbb2c95171cc58639fef29abc8816598e27fb910ed2e621e589a
+FROM nginxinc/nginx-unprivileged:1.31.1-alpine3.23
 COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/frontend/dist /usr/share/nginx/html
+EXPOSE 8080
