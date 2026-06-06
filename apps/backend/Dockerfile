@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY apps/frontend/package.json ./apps/frontend/package.json
 COPY apps/backend/package.json ./apps/backend/package.json
-RUN npm ci
+RUN npm ci --workspace @doschei/backend --ignore-scripts
 
 COPY apps ./apps
 RUN npm run build --workspace @doschei/backend
@@ -15,7 +15,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY apps/frontend/package.json ./apps/frontend/package.json
 COPY apps/backend/package.json ./apps/backend/package.json
-RUN npm ci --omit=dev --workspace @doschei/backend
+RUN npm ci --omit=dev --workspace @doschei/backend --ignore-scripts
 
 COPY --from=build /app/apps/backend/dist ./apps/backend/dist
 
