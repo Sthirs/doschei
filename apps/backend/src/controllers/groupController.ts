@@ -5,6 +5,52 @@ import { GroupService } from '../services/groupService';
 
 const groupService = new GroupService();
 
+const VALID_EXPENSE_CATEGORIES = new Set([
+  'games',
+  'movies',
+  'music',
+  'entertainment-other',
+  'sports',
+  'dining-out',
+  'groceries',
+  'liquor',
+  'food-other',
+  'electronics',
+  'furniture',
+  'household-supplies',
+  'maintenance',
+  'mortgage',
+  'home-other',
+  'pets',
+  'rent',
+  'services',
+  'childcare',
+  'clothing',
+  'education',
+  'gifts',
+  'insurance',
+  'medical-expenses',
+  'life-other',
+  'taxes',
+  'bicycle',
+  'bus-train',
+  'car',
+  'gas-fuel',
+  'hotel',
+  'transportation-other',
+  'parking',
+  'plane',
+  'taxi',
+  'general',
+  'cleaning',
+  'electricity',
+  'heat-gas',
+  'utilities-other',
+  'trash',
+  'tv-phone-internet',
+  'water',
+ ]);
+
 const isValidExpenseDate = (value: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return false;
@@ -52,7 +98,8 @@ export const createGroup = async (request: AuthenticatedRequest, response: Respo
 
 export const createExpense = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
-  const { description, amount, date } = request.body as { description?: unknown; amount?: unknown; date?: unknown };
+  const { description, amount, date, category } = request.body as { description?: unknown; amount?: unknown; date?: unknown; category?: unknown };
+  const normalizedCategory = typeof category === 'string' ? category.trim() : undefined;
 
   if (typeof description !== 'string' || description.trim().length === 0) {
     response.status(400).json({ message: 'Description is required.' });
@@ -69,12 +116,23 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
     return;
   }
 
+  if (category !== undefined && typeof category !== 'string') {
+    response.status(400).json({ message: 'Category must be a string.' });
+    return;
+  }
+
+  if (normalizedCategory !== undefined && normalizedCategory.length > 0 && !VALID_EXPENSE_CATEGORIES.has(normalizedCategory)) {
+    response.status(400).json({ message: 'Category must be one of the supported values.' });
+    return;
+  }
+
   try {
     const expense = await groupService.createExpenseForGroup(
       groupId,
       description.trim(),
       amount,
       typeof date === 'string' ? date : undefined,
+      normalizedCategory && normalizedCategory.length > 0 ? normalizedCategory : undefined,
       request.auth!.userId
     );
 
@@ -87,7 +145,8 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
 export const updateExpense = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
   const expenseId = request.params.expenseId as string;
-  const { description, amount, date } = request.body as { description?: unknown; amount?: unknown; date?: unknown };
+  const { description, amount, date, category } = request.body as { description?: unknown; amount?: unknown; date?: unknown; category?: unknown };
+  const normalizedCategory = typeof category === 'string' ? category.trim() : undefined;
 
   if (description !== undefined && (typeof description !== 'string' || description.trim().length === 0)) {
     response.status(400).json({ message: 'Description must be a non-empty string.' });
@@ -104,6 +163,16 @@ export const updateExpense = async (request: AuthenticatedRequest, response: Res
     return;
   }
 
+  if (category !== undefined && typeof category !== 'string') {
+    response.status(400).json({ message: 'Category must be a string.' });
+    return;
+  }
+
+  if (normalizedCategory !== undefined && normalizedCategory.length > 0 && !VALID_EXPENSE_CATEGORIES.has(normalizedCategory)) {
+    response.status(400).json({ message: 'Category must be one of the supported values.' });
+    return;
+  }
+
   try {
     const expense = await groupService.updateExpenseForGroup(
       groupId,
@@ -112,6 +181,7 @@ export const updateExpense = async (request: AuthenticatedRequest, response: Res
         description: typeof description === 'string' ? description.trim() : undefined,
         amount: typeof amount === 'number' ? amount : undefined,
         date: typeof date === 'string' ? date : undefined,
+        category: normalizedCategory && normalizedCategory.length > 0 ? normalizedCategory : undefined,
       },
       request.auth!.userId
     );

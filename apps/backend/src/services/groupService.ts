@@ -92,6 +92,7 @@ export class GroupService {
         id: expense.id,
         description: expense.description,
         amount: Number(expense.amount),
+        category: expense.category,
         paidByName: expense.paidBy.displayName,
         date: expense.date,
         createdAt: expense.createdAt.toISOString(),
@@ -167,7 +168,7 @@ export class GroupService {
     await this.groupRepository.save(group);
   }
 
-  async createExpenseForGroup(groupId: string, description: string, amount: number, date: string | undefined, userId: string) {
+  async createExpenseForGroup(groupId: string, description: string, amount: number, date: string | undefined, category: string | undefined, userId: string) {
     const group = await this.getGroupForMember(groupId, userId);
 
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -179,6 +180,7 @@ export class GroupService {
       description,
       amount,
       date: date ?? new Date().toISOString().slice(0, 10),
+      category: category ?? 'general',
       paidBy: user,
       group,
     });
@@ -189,6 +191,7 @@ export class GroupService {
       id: savedExpense.id,
       description: savedExpense.description,
       amount: Number(savedExpense.amount),
+      category: savedExpense.category,
       paidByName: savedExpense.paidBy.displayName,
       date: savedExpense.date,
       createdAt: savedExpense.createdAt.toISOString(),
@@ -198,7 +201,7 @@ export class GroupService {
   async updateExpenseForGroup(
     groupId: string,
     expenseId: string,
-    updates: { description?: string; amount?: number; date?: string },
+    updates: { description?: string; amount?: number; date?: string; category?: string },
     userId: string,
   ) {
     await this.getGroupForMember(groupId, userId);
@@ -221,6 +224,9 @@ export class GroupService {
     if (updates.date !== undefined) {
       expense.date = updates.date;
     }
+    if (updates.category !== undefined) {
+      expense.category = updates.category;
+    }
 
     const savedExpense = await this.expenseRepository.save(expense);
 
@@ -228,6 +234,7 @@ export class GroupService {
       id: savedExpense.id,
       description: savedExpense.description,
       amount: Number(savedExpense.amount),
+      category: savedExpense.category,
       paidByName: savedExpense.paidBy.displayName,
       date: savedExpense.date,
       createdAt: savedExpense.createdAt.toISOString(),

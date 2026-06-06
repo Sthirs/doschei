@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 
 import { api } from '@/lib/api';
+import { DEFAULT_CATEGORY_KEY, getCategory } from '@/lib/categories';
+import CategoryPicker from '@/components/CategoryPicker.vue';
 import GroupSettingsPanel from '@/components/GroupSettingsPanel.vue';
 import type { GroupDetail, Expense } from '@/types/group';
 
@@ -19,6 +21,7 @@ const showAddExpenseModal = ref(false);
 const expenseDescription = ref('');
 const expenseAmount = ref<number | ''>('');
 const expenseDate = ref('');
+const expenseCategory = ref(DEFAULT_CATEGORY_KEY);
 const isSubmittingExpense = ref(false);
 const expenseErrorMessage = ref('');
 
@@ -28,6 +31,7 @@ const showDeleteConfirm = ref(false);
 const editDescription = ref('');
 const editAmount = ref<number | ''>('');
 const editDate = ref('');
+const editCategory = ref(DEFAULT_CATEGORY_KEY);
 const isSubmittingEdit = ref(false);
 const isSubmittingDelete = ref(false);
 const editErrorMessage = ref('');
@@ -63,6 +67,7 @@ const loadGroup = async () => {
   try {
     const { data } = await api.get<{ group: GroupDetail }>(`/groups/${groupId.value}`);
     group.value = data.group;
+    route.meta.title = data.group.name;
   } catch {
     errorMessage.value = 'We could not load this group.';
   } finally {
@@ -75,6 +80,7 @@ const openAddExpenseModal = () => {
   expenseDescription.value = '';
   expenseAmount.value = '';
   expenseDate.value = todayDateValue();
+  expenseCategory.value = DEFAULT_CATEGORY_KEY;
   expenseErrorMessage.value = '';
 };
 
@@ -96,6 +102,7 @@ const addExpense = async () => {
       description: expenseDescription.value,
       amount: Number(expenseAmount.value),
       date: expenseDate.value,
+      category: expenseCategory.value,
     });
     showAddExpenseModal.value = false;
     await loadGroup();
@@ -111,6 +118,7 @@ const openExpenseModal = (expense: Expense) => {
   editDescription.value = expense.description;
   editAmount.value = expense.amount;
   editDate.value = getExpenseDateValue(expense);
+  editCategory.value = expense.category || DEFAULT_CATEGORY_KEY;
   showDeleteConfirm.value = false;
   editErrorMessage.value = '';
   showExpenseModal.value = true;
@@ -139,6 +147,7 @@ const saveEdit = async () => {
       description: editDescription.value,
       amount: Number(editAmount.value),
       date: editDate.value,
+      category: editCategory.value,
     });
     showExpenseModal.value = false;
     await loadGroup();
@@ -221,66 +230,98 @@ const groupExpensesByMonth = computed(() => {
 });
 
 onMounted(loadGroup);
+
+onBeforeUnmount(() => {
+  route.meta.title = 'Group';
+});
 </script>
 
 <template>
+  <!-- Topbar: back arrow -->
+  <Teleport to="#topbar-leading">
+    <button
+      type="button"
+      class="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-slate-100"
+      aria-label="Back to groups"
+      @click="goBack"
+    >
+      <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
+        <path
+          fill-rule="evenodd"
+          d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z"
+          clip-rule="evenodd"
+        />
+      </svg>
+    </button>
+  </Teleport>
+
+  <!-- Topbar: actions -->
+  <Teleport to="#topbar-actions">
+    <button
+      v-if="group"
+      type="button"
+      class="hidden rounded-md border border-white/10 px-3 py-1.5 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 sm:inline-flex"
+      @click="showSettings = !showSettings"
+    >
+      {{ showSettings ? 'Hide Settings' : 'Settings' }}
+    </button>
+    <button
+      v-if="group"
+      type="button"
+      class="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-slate-100 sm:hidden"
+      aria-label="Toggle settings"
+      @click="showSettings = !showSettings"
+    >
+      <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
+        <path fill-rule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd" />
+      </svg>
+    </button>
+    <button
+      v-if="group"
+      type="button"
+      class="hidden rounded-md bg-brand-500 px-3 py-1.5 text-sm font-medium text-slate-950 transition hover:bg-brand-400 sm:inline-flex"
+      @click="openAddExpenseModal"
+    >
+      Add Expense
+    </button>
+    <button
+      v-if="group"
+      type="button"
+      class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-slate-950 transition hover:bg-brand-400 sm:hidden"
+      aria-label="Add expense"
+      @click="openAddExpenseModal"
+    >
+      <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
+        <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+      </svg>
+    </button>
+  </Teleport>
+
   <main class="px-4 py-6 text-slate-50 sm:px-6 lg:px-8">
     <div class="mx-auto flex max-w-5xl flex-col gap-4">
-      <button
-        type="button"
-        class="flex w-fit items-center gap-1 text-sm text-slate-300 transition hover:text-slate-100"
-        @click="goBack"
-      >
-        <svg viewBox="0 0 20 20" class="h-4 w-4 fill-current">
-          <path
-            fill-rule="evenodd"
-            d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z"
-            clip-rule="evenodd"
-          />
-        </svg>
-        Back to groups
-      </button>
-
       <section v-if="isLoading" class="glass-panel rounded-md px-6 py-5 text-slate-300 sm:px-8">
         Loading group...
       </section>
 
       <template v-else-if="group">
-        <section class="glass-panel flex items-center justify-between rounded-md px-6 py-5 sm:px-8">
-          <h1 class="text-xl font-semibold text-slate-100 sm:text-2xl">{{ group.name }}</h1>
-          <div class="flex gap-2">
-            <button
-              type="button"
-              class="rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5"
-              @click="showSettings = !showSettings"
-            >
-              {{ showSettings ? 'Hide Settings' : 'Settings' }}
-            </button>
-            <button
-              type="button"
-              class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400"
-              @click="openAddExpenseModal"
-            >
-              Add Expense
-            </button>
-          </div>
-        </section>
-
         <GroupSettingsPanel v-if="showSettings" :group="group" @updated="loadGroup" />
 
         <div v-if="showAddExpenseModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
           <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl">
             <h3 class="mb-4 text-lg font-medium text-slate-100">Add New Expense</h3>
             <form class="flex flex-col gap-4" @submit.prevent="addExpense">
-              <label class="flex flex-col gap-1.5">
+              <div class="flex flex-col gap-1.5">
                 <span class="text-sm text-slate-300">Description</span>
-                <input
-                  v-model="expenseDescription"
-                  type="text"
-                  placeholder="E.g., Dinner, Taxi..."
-                  class="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
-                />
-              </label>
+                <div class="flex items-center gap-2">
+                  <CategoryPicker v-model="expenseCategory" />
+                  <input
+                    v-model="expenseDescription"
+                    type="text"
+                    placeholder="E.g., Dinner, Taxi..."
+                    class="min-w-0 flex-1 rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                  />
+                </div>
+              </div>
 
               <label class="flex flex-col gap-1.5">
                 <span class="text-sm text-slate-300">Amount</span>
@@ -304,7 +345,6 @@ onMounted(loadGroup);
                   :time-config="datePickerTimeConfig"
                   dark
                   :clearable="false"
-                  input-class-name="expense-date-input"
                 />
               </label>
 
@@ -349,14 +389,17 @@ onMounted(loadGroup);
               </div>
 
               <form class="flex flex-col gap-4" @submit.prevent="saveEdit">
-                <label class="flex flex-col gap-1.5">
+                <div class="flex flex-col gap-1.5">
                   <span class="text-sm text-slate-300">Description</span>
-                  <input
-                    v-model="editDescription"
-                    type="text"
-                    class="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
-                  />
-                </label>
+                  <div class="flex items-center gap-2">
+                    <CategoryPicker v-model="editCategory" />
+                    <input
+                      v-model="editDescription"
+                      type="text"
+                      class="min-w-0 flex-1 rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                    />
+                  </div>
+                </div>
 
                 <label class="flex flex-col gap-1.5">
                   <span class="text-sm text-slate-300">Amount</span>
@@ -371,16 +414,15 @@ onMounted(loadGroup);
 
                 <label class="flex flex-col gap-1.5">
                   <span class="text-sm text-slate-300">Date</span>
-                <VueDatePicker
-                  v-model="editDate"
-                  auto-apply
-                  model-type="yyyy-MM-dd"
-                  :formats="datePickerFormats"
-                  :time-config="datePickerTimeConfig"
-                  dark
-                  :clearable="false"
-                  input-class-name="expense-date-input"
-                />
+                  <VueDatePicker
+                    v-model="editDate"
+                    auto-apply
+                    model-type="yyyy-MM-dd"
+                    :formats="datePickerFormats"
+                    :time-config="datePickerTimeConfig"
+                    dark
+                    :clearable="false"
+                  />
                 </label>
 
                 <p v-if="editErrorMessage" class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
@@ -454,7 +496,7 @@ onMounted(loadGroup);
           <template v-if="group.expenses.length > 0">
             <template v-for="monthGroup in groupExpensesByMonth" :key="monthGroup.monthYear">
               <!-- Month header -->
-              <div class="border-t border-white/10  px-6 py-3 sm:px-8">
+              <div class="border-t border-white/10 px-6 py-3 sm:px-8">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   {{ monthGroup.monthYear }}
                 </p>
@@ -468,25 +510,33 @@ onMounted(loadGroup);
                   class="cursor-pointer px-6 py-4 transition hover:bg-white/5 sm:px-8"
                   @click="openExpenseModal(expense)"
                 >
-                  <div class="flex items-center justify-between gap-4">
+                  <div class="flex items-center justify-between gap-3 sm:gap-4">
                     <!-- Date on the left -->
-                    <div class="flex flex-col items-center justify-center gap-1 text-center">
-                      <span class="text-xs font-semibold uppercase text-slate-400">
+                    <div class="flex w-10 shrink-0 flex-col items-center justify-center gap-0.5 text-center">
+                      <span class="text-[10px] font-semibold uppercase text-slate-400 sm:text-xs">
                         {{ formatDateShort(getExpenseDateValue(expense)).monthShort }}
                       </span>
-                      <span class="text-lg font-semibold uppercase text-slate-400">
+                      <span class="text-base font-semibold text-slate-400 sm:text-lg">
                         {{ formatDateShort(getExpenseDateValue(expense)).day }}
                       </span>
                     </div>
 
+                    <!-- Category icon -->
+                    <div
+                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base"
+                      :title="getCategory(expense.category).label"
+                    >
+                      <span aria-hidden="true">{{ getCategory(expense.category).icon }}</span>
+                    </div>
+
                     <!-- Description and who paid in the middle -->
                     <div class="min-w-0 flex-1">
-                      <p class="truncate text-base font-medium text-slate-100">{{ expense.description }}</p>
-                      <p class="text-sm text-slate-400">Paid by {{ expense.paidByName }}</p>
+                      <p class="truncate text-sm font-medium text-slate-100 sm:text-base">{{ expense.description }}</p>
+                      <p class="text-xs text-slate-400 sm:text-sm">Paid by {{ expense.paidByName }}</p>
                     </div>
 
                     <!-- Amount on the right -->
-                    <span class="shrink-0 text-base font-semibold text-slate-100">
+                    <span class="shrink-0 text-sm font-semibold text-slate-100 sm:text-base">
                       &euro;{{ expense.amount.toFixed(2) }}
                     </span>
                   </div>

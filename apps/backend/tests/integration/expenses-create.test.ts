@@ -15,16 +15,17 @@ describe('Expenses Endpoints', () => {
       });
       const groupId = groupRes.body.group.id;
 
-      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string; date: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses`, {
+      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; category: string; paidByName: string; date: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Dinner', amount: 50.5, date: '2026-06-01' }),
+        body: JSON.stringify({ description: 'Dinner', amount: 50.5, date: '2026-06-01', category: 'groceries' }),
       });
 
       expect(response.status).toBe(201);
       expect(response.body.expense).toMatchObject({
         description: 'Dinner',
         amount: 50.5,
+        category: 'groceries',
         paidByName: user.body.user.displayName,
         date: '2026-06-01',
       });
@@ -61,6 +62,25 @@ describe('Expenses Endpoints', () => {
       expect(response.body.message).toMatch(/Description is required/i);
     });
 
+    it('returns 400 for an invalid category', async () => {
+      const user = await registerUser('expense-post-invalid-category');
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('expenses-group-invalid-category') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      const response = await createJsonRequest<{ message: string }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.body.token}` },
+        body: JSON.stringify({ description: 'Dinner', amount: 20, category: 'not-a-real-category' }),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/Category must be one of the supported values/i);
+    });
+
     it('defaults the expense date to today when omitted', async () => {
       const user = await registerUser('expense-post-default-date');
       const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
@@ -94,20 +114,21 @@ describe('Expenses Endpoints', () => {
       const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Lunch', amount: 20 }),
+        body: JSON.stringify({ description: 'Lunch', amount: 20, category: 'general' }),
       });
       const expenseId = expRes.body.expense.id;
 
-      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string; date: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
+      const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; category: string; paidByName: string; date: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Lunch updated', amount: 25.5, date: '2026-06-03' }),
+        body: JSON.stringify({ description: 'Lunch updated', amount: 25.5, date: '2026-06-03', category: 'taxi' }),
       });
 
       expect(response.status).toBe(200);
       expect(response.body.expense).toMatchObject({
         description: 'Lunch updated',
         amount: 25.5,
+        category: 'taxi',
         paidByName: user.body.user.displayName,
         date: '2026-06-03',
       });
@@ -176,6 +197,32 @@ describe('Expenses Endpoints', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toMatch(/Description must be a non-empty string/i);
+    });
+
+    it('returns 400 for an invalid category update', async () => {
+      const user = await registerUser('expense-patch-invalid-category');
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('expenses-patch-group-invalid-category') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.body.token}` },
+        body: JSON.stringify({ description: 'Dinner', amount: 50, category: 'general' }),
+      });
+      const expenseId = expRes.body.expense.id;
+
+      const response = await createJsonRequest<{ message: string }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${user.body.token}` },
+        body: JSON.stringify({ category: 'not-a-real-category' }),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/Category must be one of the supported values/i);
     });
   });
 

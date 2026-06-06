@@ -27,40 +27,17 @@ body {
   border: 1px solid rgba(148, 163, 184, 0.18);
 }
 
-.expense-date-input {
-  width: 100%;
-  border-radius: 0.375rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  color: #f8fafc;
-  outline: none;
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease;
-}
-
-.expense-date-input:focus {
-  border-color: rgba(79, 108, 247, 0.4);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.expense-date-input::placeholder {
-  color: #94a3b8;
-}
-
 .dp__theme_dark {
-  --dp-background-color: #0f172a;
+  --dp-background-color: rgba(15, 23, 42, 0.97);
   --dp-text-color: #e2e8f0;
   --dp-hover-color: rgba(255, 255, 255, 0.08);
   --dp-primary-color: #4f6cf7;
   --dp-primary-text-color: #020617;
   --dp-secondary-color: rgba(148, 163, 184, 0.12);
-  --dp-border-color: rgba(148, 163, 184, 0.18);
+  --dp-border-color: rgba(255, 255, 255, 0.1);
   --dp-menu-border-color: rgba(148, 163, 184, 0.18);
-  --dp-border-color-hover: rgba(148, 163, 184, 0.35);
-  --dp-border-color-focus: rgba(79, 108, 247, 0.5);
+  --dp-border-color-hover: rgba(255, 255, 255, 0.2);
+  --dp-border-color-focus: rgba(79, 108, 247, 0.4);
   --dp-disabled-color: rgba(148, 163, 184, 0.3);
   --dp-disabled-color-text: #64748b;
   --dp-scroll-bar-background: #0f172a;
@@ -70,4 +47,29 @@ body {
   --dp-range-between-dates-background-color: rgba(79, 108, 247, 0.1);
   --dp-range-between-border-color: rgba(79, 108, 247, 0.1);
   --dp-tooltip-color: #1e293b;
+  --dp-input-background-color: rgba(255, 255, 255, 0.05);
+  --dp-input-padding: 0.5rem 1rem;
+  --dp-border-radius: 0.375rem;
+  --dp-font-size: 0.875rem;
+  --dp-input-icon-padding: 2.25rem;
+}
+
+.dp__input {
+  color: #f8fafc;
+}
+
+.dp__input::placeholder {
+  color: #94a3b8;
+}
+
+.dp__input:focus,
+.dp__input_focus {
+  border-color: rgba(79, 108, 247, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dp__menu {
+  background: rgba(15, 23, 42, 0.97);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 20px 60px -20px rgba(2, 6, 23, 0.8);
 }
