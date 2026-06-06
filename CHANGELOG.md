@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/Sthirs/doschei/compare/v0.1.2...v0.1.3) (2026-06-06)
+
+
+### Bug Fixes
+
+* avoid install dev dep in dockerfile ([c65d978](https://github.com/Sthirs/doschei/commit/c65d9783d2bcb2fafda398ff8564427a77eeb404))
+
 ## [0.1.2](https://github.com/Sthirs/doschei/compare/v0.1.1...v0.1.2) (2026-06-06)
 
 
