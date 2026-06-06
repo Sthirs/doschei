@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ -s "$HOME/.nvm/nvm.sh" ]; then
-  # shellcheck disable=SC1090
+  # shellcheck disable=SC1091
   . "$HOME/.nvm/nvm.sh"
 fi
 

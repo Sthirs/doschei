@@ -11,6 +11,7 @@ repos:
       - id: check-json5
       - id: check-toml
       - id: check-yaml
+        exclude: ^helm/doschei/templates/
         args:
           - --allow-multiple-documents
       - id: check-xml
@@ -36,6 +37,9 @@ repos:
     rev: 2ccb47ff45ad361a21071a7eedda4c37e6ae8c5a # frozen: v2.4.2
     hooks:
       - id: codespell
+        exclude: package-lock\.json$
+        args:
+          - --ignore-words-list=expres
 
   - repo: https://github.com/rhysd/actionlint
     rev: 914e7df21a07ef503a81201c76d2b11c789d3fca # frozen: v1.7.12

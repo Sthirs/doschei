@@ -1,21 +1,21 @@
-FROM node:26.2.0-alpine AS build
+FROM node:26.3.0-alpine3.23@sha256:144769ec3f32e8ee36b3cfde91e82bee25d9367b20f31a151f3f7eea3a2a8541 AS build
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
 COPY apps/frontend/package.json ./apps/frontend/package.json
 COPY apps/backend/package.json ./apps/backend/package.json
-RUN npm install
+RUN npm ci
 
 COPY apps ./apps
 RUN npm run build --workspace @doschei/backend
 
-FROM node:26.2.0-alpine
+FROM node:26.3.0-alpine3.23@sha256:144769ec3f32e8ee36b3cfde91e82bee25d9367b20f31a151f3f7eea3a2a8541
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
 COPY apps/frontend/package.json ./apps/frontend/package.json
 COPY apps/backend/package.json ./apps/backend/package.json
-RUN npm install --omit=dev --workspace @doschei/backend
+RUN npm ci --omit=dev --workspace @doschei/backend
 
 COPY --from=build /app/apps/backend/dist ./apps/backend/dist
 

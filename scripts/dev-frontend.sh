@@ -2,7 +2,8 @@
 set -euo pipefail
 
 DEV_HOST="$("$(dirname "$0")/dev-host.sh")"
-
+# shellcheck disable=SC2097
+# shellcheck disable=SC2098
 DOSCHEI_DEV_HOST="$DEV_HOST" \
 FRONTEND_PORT="${FRONTEND_PORT:-5173}" \
 VITE_HMR_CLIENT_PORT="${VITE_HMR_CLIENT_PORT:-80}" \
