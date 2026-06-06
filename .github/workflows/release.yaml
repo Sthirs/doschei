@@ -83,6 +83,12 @@ jobs:
         with:
           version: v3.17.3
 
+      - name: Login to Helm registry
+        env:
+          HELM_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$HELM_PASSWORD" | helm registry login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+
       - name: Package Helm chart
         run: |
           helm package ./helm/doschei
