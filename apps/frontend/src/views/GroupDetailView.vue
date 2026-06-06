@@ -165,6 +165,50 @@ const goBack = () => {
   router.push({ name: 'groups' });
 };
 
+const formatDateShort = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return {
+    monthShort: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+    day: String(date.getDate()).padStart(2, '0'),
+  };
+};
+
+const groupExpensesByMonth = computed(() => {
+  if (!group.value?.expenses) return [];
+
+  // Sort expenses by date descending (newest first)
+  const sorted = [...group.value.expenses].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  // Group by month/year
+  const groups: Array<{ monthYear: string; month: string; year: number; expenses: Expense[] }> = [];
+  let currentMonth = '';
+  let currentYear = 0;
+
+  sorted.forEach((expense) => {
+    const date = new Date(expense.createdAt);
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    const year = date.getFullYear();
+    const monthYear = `${month} ${year}`;
+
+    if (monthYear !== currentMonth || year !== currentYear) {
+      currentMonth = monthYear;
+      currentYear = year;
+      groups.push({
+        monthYear,
+        month,
+        year,
+        expenses: [expense],
+      });
+    } else {
+      groups[groups.length - 1].expenses.push(expense);
+    }
+  });
+
+  return groups;
+});
+
 onMounted(loadGroup);
 </script>
 
@@ -387,24 +431,49 @@ onMounted(loadGroup);
             Expenses
           </h2>
 
-          <ul v-if="group.expenses.length > 0" class="divide-y divide-white/10">
-            <li
-              v-for="expense in group.expenses"
-              :key="expense.id"
-              class="cursor-pointer px-6 py-4 transition hover:bg-white/5 sm:px-8"
-              @click="openExpenseModal(expense)"
-            >
-              <div class="flex items-center justify-between gap-4">
-                <div class="min-w-0 flex-1">
-                  <p class="truncate text-base font-medium text-slate-100">{{ expense.description }}</p>
-                  <p class="text-sm text-slate-400">Paid by {{ expense.paidByName }}</p>
-                </div>
-                <span class="shrink-0 text-base font-semibold text-slate-100">
-                  &euro;{{ expense.amount.toFixed(2) }}
-                </span>
+          <template v-if="group.expenses.length > 0">
+            <template v-for="group in groupExpensesByMonth" :key="group.monthYear">
+              <!-- Month header -->
+              <div class="border-t border-white/10  px-6 py-3 sm:px-8">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {{ group.monthYear }}
+                </p>
               </div>
-            </li>
-          </ul>
+
+              <!-- Expenses for this month -->
+              <ul class="divide-y divide-white/10">
+                <li
+                  v-for="expense in group.expenses"
+                  :key="expense.id"
+                  class="cursor-pointer px-6 py-4 transition hover:bg-white/5 sm:px-8"
+                  @click="openExpenseModal(expense)"
+                >
+                  <div class="flex items-center justify-between gap-4">
+                    <!-- Date on the left -->
+                    <div class="flex flex-col items-center justify-center gap-1 text-center">
+                      <span class="text-xs font-semibold uppercase text-slate-400">
+                        {{ formatDateShort(expense.createdAt).monthShort }}
+                      </span>
+                      <span class="text-lg font-semibold uppercase text-slate-400">
+                        {{ formatDateShort(expense.createdAt).day }}
+                      </span>
+                    </div>
+
+                    <!-- Description and who paid in the middle -->
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-base font-medium text-slate-100">{{ expense.description }}</p>
+                      <p class="text-sm text-slate-400">Paid by {{ expense.paidByName }}</p>
+                    </div>
+
+                    <!-- Amount on the right -->
+                    <span class="shrink-0 text-base font-semibold text-slate-100">
+                      &euro;{{ expense.amount.toFixed(2) }}
+                    </span>
+                  </div>
+                </li>
+              </ul>
+            </template>
+          </template>
 
           <div v-else class="px-6 py-5 text-slate-300 sm:px-8">No expenses yet.</div>
         </section>
