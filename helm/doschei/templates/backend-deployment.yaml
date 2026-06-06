@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "doschei.fullname" . }}-backend
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "doschei.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: backend-tmp
+          emptyDir: {}
+      containers:
+        #trivy:ignore:KSV-0125
+        - name: backend
+          image: {{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: backend-tmp
+              mountPath: /tmp
+          ports:
+            - containerPort: {{ .Values.backend.service.targetPort }}
+          env:
+            - name: PORT
+              value: {{ .Values.backend.env.PORT | quote }}
+            - name: NODE_ENV
+              value: {{ .Values.backend.env.NODE_ENV | quote }}
+            - name: DB_SYNC
+              value: {{ .Values.backend.env.DB_SYNC | quote }}
+            - name: SEED_ON_STARTUP
+              value: {{ .Values.backend.env.SEED_ON_STARTUP | quote }}
+            - name: CORS_ORIGIN
+              value: {{ .Values.backend.env.CORS_ORIGIN | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.fullname" . }}-backend
+                  key: DATABASE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.fullname" . }}-backend
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: {{ .Values.backend.service.targetPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
