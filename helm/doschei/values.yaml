@@ -1,0 +1,50 @@
+namespace: doschei
+fullnameOverride: doschei
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: doschei/frontend
+    tag: dev
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+
+backend:
+  replicaCount: 1
+  image:
+    repository: doschei/backend
+    tag: dev
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  env:
+    PORT: "3000"
+    NODE_ENV: development
+    DB_SYNC: "true"
+    SEED_ON_STARTUP: "true"
+    CORS_ORIGIN: http://doschei.127.0.0.1.nip.io
+    JWT_SECRET: change-me-dev-secret
+
+ingress:
+  enabled: true
+  className: nginx
+  host: doschei.127.0.0.1.nip.io
+
+postgres:
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  service:
+    port: 5432
+  auth:
+    username: postgres
+    password: postgres
+    database: doschei
+  persistence:
+    enabled: false

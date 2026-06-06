@@ -1,0 +1,30 @@
+{
+  "name": "doschei",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c magenta,cyan \"./scripts/dev-backend.sh\" \"./scripts/dev-frontend.sh\"",
+    "dev:frontend": "./scripts/dev-frontend.sh",
+    "dev:backend": "./scripts/dev-backend.sh",
+    "dev:host": "./scripts/dev-host.sh",
+    "cluster:up": "./scripts/minikube-up.sh",
+    "cluster:build": "./scripts/minikube-build.sh",
+    "cluster:deploy": "./scripts/deploy.sh",
+    "telepresence:connect": "./scripts/telepresence-connect.sh",
+    "telepresence:frontend": "./scripts/telepresence-intercept-frontend.sh",
+    "telepresence:backend": "./scripts/telepresence-intercept-backend.sh",
+    "telepresence:leave": "./scripts/telepresence-leave.sh",
+    "build": "npm run build --workspace @doschei/backend && npm run build --workspace @doschei/frontend",
+    "lint": "npm run lint --workspace @doschei/backend && npm run lint --workspace @doschei/frontend",
+    "test": "npm run test --workspace @doschei/backend && npm run test --workspace @doschei/frontend",
+    "test:integration": "npm run test:integration --workspace @doschei/backend --",
+    "seed": "npm run seed --workspace @doschei/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
