@@ -9,6 +9,10 @@ jest.mock('vue-router', () => ({
       requiresAuth: false,
     },
   }),
+  createRouter: (options: any) => ({
+    beforeEach: jest.fn(),
+  }),
+  createWebHistory: () => ({}),
 }));
 
 describe('App', () => {
