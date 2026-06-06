@@ -3,6 +3,7 @@
 Do Schèi is a web application that allows users to track shared expenses and split them with other users.
 
 ## Features
+
 - The application is multilingual and supports English and Italian.
 - Users can create an account and sign in to the application.
 - Users can sign in with their Google account.
@@ -81,6 +82,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Group expenses can be exported as a CSV file.
 
 ## Product Decisions
+
 - The first release targets a single currency per workspace, with EUR as the default currency.
 - Monetary values must be stored and processed as integer cents to avoid floating-point rounding issues.
 - Expense dates are stored as calendar dates and represent the date selected by the user, without time-of-day semantics.
@@ -93,6 +95,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - The canonical financial source of truth is the ledger of expenses and settlement entries; balances are always derived from that ledger.
 
 ## Balance Rules
+
 - Every expense has a total amount, one payer, and one or more participants who are responsible for the amount according to the selected split mode.
 - A payer may or may not be one of the participants in the split. The expense definition, not the payer role alone, determines who owes what.
 - For each expense, the net balance change for a user is:
@@ -109,6 +112,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - The per-member net balance is the canonical balance representation. Any pairwise breakdown shown in the UI is a derived view and must remain consistent with the canonical member balances.
 
 ## Architecture
+
 - It is a web application that can be installed as a PWA on mobile and desktop.
 - It is primarily designed for mobile devices, but it also works well on desktop devices.
 - It is composed of a frontend, a backend, and a database.
@@ -117,6 +121,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - It is cloud native and can be deployed to a Kubernetes cluster through a Helm chart.
 
 ### Frontend
+
 The frontend is built with Vue.js 3 and TypeScript.
 Vue components are written using the Composition API and the `script setup` syntax.
 Styling is primarily implemented with Tailwind CSS, and any component-specific styles are scoped to avoid conflicts.
@@ -132,6 +137,7 @@ It uses Jest and Vue Test Utils for unit testing, and Cypress for end-to-end tes
 It has a dedicated Dockerfile to build the frontend as a microservice that can be deployed in a Kubernetes cluster.
 
 ### Backend
+
 The backend is built with Node.js and TypeScript.
 It exposes a REST API that the frontend can consume to perform CRUD operations on the data.
 It handles user authentication and authorization.
@@ -144,29 +150,35 @@ It uses ESLint and Prettier to maintain a consistent code style and catch potent
 It uses Jest for unit testing and Supertest for integration testing to ensure the quality of the code and the functionality of the API.
 
 ### Database
+
 The database is PostgreSQL.
 In production, the database is provisioned separately and is not part of the application deployment.
 In development, a PostgreSQL instance can be run locally inside the Minikube cluster.
 
 ### Deployment
+
 The application can be deployed to a Kubernetes cluster using a Helm chart.
 The Helm chart defines the deployment of the frontend and the backend as separate microservices and includes the required resources, such as ConfigMaps and Secrets for database connectivity.
 The database is not deployed by the Helm chart and must be provisioned separately. The chart assumes that the database is already available and that connection details are provided through `values.yaml`.
 
 ### Development
+
 To run the application in development mode, Minikube can be used to create a local Kubernetes cluster and the Helm chart can be used to deploy the application to that cluster.
 Telepresence can be used to run the frontend and the backend locally while they still communicate with the other services running in the cluster, enabling a seamless development experience.
 Helper scripts are provided to simplify the development workflow, such as installing dependencies, building the frontend and backend, and deploying the application to the cluster.
 
 ### CI
+
 The application uses GitHub Actions for continuous integration.
 The CI pipeline runs on every push to the `main` branch and on every pull request.
 The CI pipeline includes the following steps:
+
 - **Linting**: run ESLint to check for code style issues and potential bugs in the codebase.
 - **Testing**: run Jest and Supertest for backend unit and integration tests, and Jest and Cypress for frontend unit and end-to-end tests.
 - **Building**: build the frontend and the backend using their respective Dockerfiles to ensure that the application can be built successfully and that the Docker images are created without issues.
 
 ## Mockups
+
 The application mockups are available in [`docs/mockups`](./mockups).
 
 | File | Screen / Flow | Suggested purpose | Notes |

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512px" height="512px">
+    <defs>
+        <!-- Styles for clean geometry and tech presentation - stroke widths increased by ~1.11x to match visual scale -->
+        <style>
+            .bg { fill: none; }
+            .rim-light { fill: none; stroke: rgba(255, 255, 255, 0.45); stroke-width: 2.78; }
+            .rim-dark { fill: none; stroke: rgba(0, 0, 0, 0.12); stroke-width: 1.67; }
+            .center-pattern { fill: none; stroke: rgba(255, 255, 255, 0.25); stroke-width: 2.22; stroke-dasharray: 4.4 4.4; }
+        </style>
+
+        <!-- Premium Metallic Copper/Gold Gradients for Big Tech look -->
+        <linearGradient id="bottomFaceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#E59866" />
+            <stop offset="50%" stop-color="#D35400" />
+            <stop offset="100%" stop-color="#873600" />
+        </linearGradient>
+
+        <linearGradient id="bottomEdgeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#A04000" />
+            <stop offset="100%" stop-color="#4A1E00" />
+        </linearGradient>
+
+        <linearGradient id="topFaceGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#F5CBA7" />
+            <stop offset="35%" stop-color="#E67E22" />
+            <stop offset="75%" stop-color="#CA6F1E" />
+            <stop offset="100%" stop-color="#6E2C00" />
+        </linearGradient>
+
+        <linearGradient id="topEdgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#935116" />
+            <stop offset="100%" stop-color="#3E1A00" />
+        </linearGradient>
+    </defs>
+
+    <!-- Clean, pure white canvas background, reduced to new fixed resolution -->
+    <rect width="512" height="512" class="bg" />
+
+    <!-- Main Logo Container transformed to center composition and upscale to fill the space with minimal border -->
+    <g transform="translate(256, 256) scale(1.11)">
+        <!-- Scale to fit composition: Ground shadow is the widest element at 440, upscaled to 488 (500 width target in 512 field) -->
+
+        <!-- Align Composition center to local 0,0: Design roughly centered at (400, 440) original -->
+        <g transform="translate(-400, -440)">
+
+            <!-- Smooth Ground Shadow for 3D realism in minimalist design -->
+            <ellipse cx="400" cy="550" rx="220" ry="42" fill="#1A0D00" opacity="0.06" filter="blur(12px)" />
+
+            <!-- 1. BOTTOM COIN (Parallel to the ground) -->
+            <g id="coin-bottom">
+                <!-- Thickness/Edge -->
+                <path d="M 210,480 A 190,58 0 0,0 590,480 L 590,508 A 190,58 0 0,1 210,508 Z" fill="url(#bottomEdgeGrad)" />
+                <!-- Top Face -->
+                <ellipse cx="400" cy="480" rx="190" ry="58" fill="url(#bottomFaceGrad)" />
+                <!-- Inner Tech Rims -->
+                <ellipse cx="400" cy="480" rx="168" ry="50" class="rim-light" />
+                <ellipse cx="400" cy="480" rx="166" ry="48" class="rim-dark" />
+                <!-- Minimalist Core Geometric Accent -->
+                <ellipse cx="400" cy="480" rx="55" ry="16" class="center-pattern" />
+            </g>
+
+            <!-- 2. INTERMEDIATE SHADOW (Cast by top coin onto bottom coin) -->
+            <g transform="translate(365, 410) rotate(-38)">
+                <ellipse cx="10" cy="35" rx="180" ry="52" fill="#000000" opacity="0.18" filter="blur(9px)" />
+            </g>
+
+            <!-- 3. TOP COIN (Tilted ~45°, left side up, right side down, 3/4 perspective view) -->
+            <g id="coin-top" transform="translate(370, 400) rotate(-38)">
+                <!-- Thickness/Edge -->
+                <path d="M -190,0 A 190,58 0 0,0 190,0 L 190,26 A 190,58 0 0,1 -190,26 Z" fill="url(#topEdgeGrad)" />
+                <!-- Face -->
+                <ellipse cx="0" cy="0" rx="190" ry="58" fill="url(#topFaceGrad)" />
+                <!-- Inner Tech Rims -->
+                <ellipse cx="0" cy="0" rx="168" ry="50" class="rim-light" />
+                <ellipse cx="0" cy="0" rx="166" ry="48" class="rim-dark" />
+                <!-- Minimalist Core Geometric Accent -->
+                <ellipse cx="0" cy="0" rx="55" ry="16" class="center-pattern" />
+            </g>
+
+        </g><!-- End content alignment translate -->
+    </g><!-- End center and scale main composition -->
+</svg>
