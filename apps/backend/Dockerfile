@@ -19,6 +19,11 @@ RUN npm ci --omit=dev --workspace @doschei/backend
 
 COPY --from=build /app/apps/backend/dist ./apps/backend/dist
 
+# Create and use non-root user
+RUN addgroup -g 1001 -S app && adduser -S app -u 1001
+RUN chown -R app:app /app
+USER app
+
 WORKDIR /app/apps/backend
 ENV NODE_ENV=production
 CMD ["node", "dist/src/index.js"]
