@@ -22,6 +22,24 @@ export class GroupService {
     };
   }
 
+  /**
+   * Verifies the user is a member of the group and returns the group entity.
+   * Throws if not found or user is not a member.
+   */
+  private async getGroupForMember(groupId: string, userId: string): Promise<Group> {
+    const group = await this.groupRepository
+      .createQueryBuilder('group')
+      .innerJoin('group.members', 'membership', 'membership.id = :userId', { userId })
+      .where('group.id = :groupId', { groupId })
+      .getOne();
+
+    if (!group) {
+      throw new Error('Group not found or you are not a member.');
+    }
+
+    return group;
+  }
+
   async createGroupForUser(userId: string, name: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
@@ -78,5 +96,147 @@ export class GroupService {
         createdAt: expense.createdAt.toISOString(),
       })),
     };
+  }
+
+  async updateGroup(groupId: string, name: string, userId: string) {
+    const group = await this.groupRepository
+      .createQueryBuilder('group')
+      .innerJoin('group.members', 'membership', 'membership.id = :userId', { userId })
+      .leftJoinAndSelect('group.members', 'member')
+      .where('group.id = :groupId', { groupId })
+      .getOne();
+
+    if (!group) {
+      throw new Error('Group not found or you are not a member.');
+    }
+
+    group.name = name;
+    const savedGroup = await this.groupRepository.save(group);
+
+    return this.serializeGroup(savedGroup);
+  }
+
+  async addMemberByEmail(groupId: string, email: string, userId: string) {
+    const group = await this.groupRepository
+      .createQueryBuilder('group')
+      .innerJoin('group.members', 'membership', 'membership.id = :userId', { userId })
+      .leftJoinAndSelect('group.members', 'member')
+      .where('group.id = :groupId', { groupId })
+      .getOne();
+
+    if (!group) {
+      throw new Error('Group not found or you are not a member.');
+    }
+
+    const userToAdd = await this.userRepository.findOne({ where: { email } });
+
+    if (!userToAdd) {
+      throw new Error('No user found with that email.');
+    }
+
+    const alreadyMember = group.members.some((m) => m.id === userToAdd.id);
+    if (alreadyMember) {
+      throw new Error('User is already a member of this group.');
+    }
+
+    group.members.push(userToAdd);
+    const savedGroup = await this.groupRepository.save(group);
+
+    return this.serializeGroup(savedGroup);
+  }
+
+  async removeMember(groupId: string, memberUserId: string, userId: string) {
+    const group = await this.groupRepository
+      .createQueryBuilder('group')
+      .innerJoin('group.members', 'membership', 'membership.id = :userId', { userId })
+      .leftJoinAndSelect('group.members', 'member')
+      .where('group.id = :groupId', { groupId })
+      .getOne();
+
+    if (!group) {
+      throw new Error('Group not found or you are not a member.');
+    }
+
+    const memberIndex = group.members.findIndex((m) => m.id === memberUserId);
+    if (memberIndex === -1) {
+      throw new Error('User is not a member of this group.');
+    }
+
+    group.members.splice(memberIndex, 1);
+    await this.groupRepository.save(group);
+  }
+
+  async createExpenseForGroup(groupId: string, description: string, amount: number, userId: string) {
+    const group = await this.getGroupForMember(groupId, userId);
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new Error('User not found.');
+    }
+
+    const expense = this.expenseRepository.create({
+      description,
+      amount,
+      paidBy: user,
+      group,
+    });
+
+    const savedExpense = await this.expenseRepository.save(expense);
+
+    return {
+      id: savedExpense.id,
+      description: savedExpense.description,
+      amount: Number(savedExpense.amount),
+      paidByName: savedExpense.paidBy.displayName,
+      createdAt: savedExpense.createdAt.toISOString(),
+    };
+  }
+
+  async updateExpenseForGroup(groupId: string, expenseId: string, updates: { description?: string; amount?: number }, userId: string) {
+    await this.getGroupForMember(groupId, userId);
+
+    const expense = await this.expenseRepository.findOne({
+      where: { id: expenseId, group: { id: groupId } },
+      relations: ['paidBy'],
+    });
+
+    if (!expense) {
+      throw new Error('Expense not found.');
+    }
+
+    if (updates.description !== undefined) {
+      expense.description = updates.description;
+    }
+    if (updates.amount !== undefined) {
+      expense.amount = updates.amount;
+    }
+
+    const savedExpense = await this.expenseRepository.save(expense);
+
+    return {
+      id: savedExpense.id,
+      description: savedExpense.description,
+      amount: Number(savedExpense.amount),
+      paidByName: savedExpense.paidBy.displayName,
+    };
+  }
+
+  async deleteExpenseForGroup(groupId: string, expenseId: string, userId: string) {
+    await this.getGroupForMember(groupId, userId);
+
+    const expense = await this.expenseRepository.findOne({
+      where: { id: expenseId, group: { id: groupId } },
+      relations: ['paidBy'],
+    });
+
+    if (!expense) {
+      throw new Error('Expense not found.');
+    }
+
+    if (expense.paidBy.id !== userId) {
+      throw new Error('You can only delete your own expenses.');
+    }
+
+    await this.expenseRepository.remove(expense);
   }
 }

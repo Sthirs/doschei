@@ -52,7 +52,7 @@ export const createJsonRequest = async <T>(
 
   return {
     status: response.status,
-    body: (await response.json()) as T,
+    body: (response.status === 204 ? {} : (await response.json())) as T,
   };
 };
 

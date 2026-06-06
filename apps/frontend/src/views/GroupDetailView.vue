@@ -1,28 +1,163 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
-import type { GroupDetail } from '@/types/group';
+import { useAuthStore } from '@/stores/auth';
+import GroupSettingsPanel from '@/components/GroupSettingsPanel.vue';
+import type { GroupDetail, Expense } from '@/types/group';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 
 const group = ref<GroupDetail | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
+const showSettings = ref(false);
+
+const showAddExpenseModal = ref(false);
+const expenseDescription = ref('');
+const expenseAmount = ref<number | ''>('');
+const isSubmittingExpense = ref(false);
+const expenseErrorMessage = ref('');
+
+const showExpenseModal = ref(false);
+const selectedExpense = ref<Expense | null>(null);
+const editMode = ref(false);
+const showDeleteConfirm = ref(false);
+const editDescription = ref('');
+const editAmount = ref<number | ''>('');
+const isSubmittingEdit = ref(false);
+const isSubmittingDelete = ref(false);
+const editErrorMessage = ref('');
+
+const groupId = computed(() => route.params.id as string);
 
 const loadGroup = async () => {
   isLoading.value = true;
   errorMessage.value = '';
 
   try {
-    const { data } = await api.get<{ group: GroupDetail }>(`/groups/${route.params.id}`);
+    const { data } = await api.get<{ group: GroupDetail }>(`/groups/${groupId.value}`);
     group.value = data.group;
   } catch {
     errorMessage.value = 'We could not load this group.';
   } finally {
     isLoading.value = false;
+  }
+};
+
+const openAddExpenseModal = () => {
+  showAddExpenseModal.value = true;
+  expenseDescription.value = '';
+  expenseAmount.value = '';
+  expenseErrorMessage.value = '';
+};
+
+const closeAddExpenseModal = () => {
+  showAddExpenseModal.value = false;
+};
+
+const addExpense = async () => {
+  if (!expenseDescription.value || !expenseAmount.value || Number(expenseAmount.value) <= 0) {
+    expenseErrorMessage.value = 'Please provide a valid description and an amount greater than 0.';
+    return;
+  }
+
+  isSubmittingExpense.value = true;
+  expenseErrorMessage.value = '';
+
+  try {
+    await api.post(`/groups/${groupId.value}/expenses`, {
+      description: expenseDescription.value,
+      amount: Number(expenseAmount.value),
+    });
+    showAddExpenseModal.value = false;
+    await loadGroup();
+  } catch {
+    expenseErrorMessage.value = 'Could not add the expense. Please try again.';
+  } finally {
+    isSubmittingExpense.value = false;
+  }
+};
+
+const openExpenseModal = (expense: Expense) => {
+  selectedExpense.value = expense;
+  editDescription.value = expense.description;
+  editAmount.value = expense.amount;
+  editMode.value = false;
+  showDeleteConfirm.value = false;
+  editErrorMessage.value = '';
+  showExpenseModal.value = true;
+};
+
+const closeExpenseModal = () => {
+  showExpenseModal.value = false;
+  selectedExpense.value = null;
+};
+
+const isAuthor = computed(() => {
+  return selectedExpense.value?.paidByName === authStore.user?.displayName;
+});
+
+const enableEditMode = () => {
+  editMode.value = true;
+};
+
+const cancelEditMode = () => {
+  if (selectedExpense.value) {
+    editDescription.value = selectedExpense.value.description;
+    editAmount.value = selectedExpense.value.amount;
+  }
+  editMode.value = false;
+  editErrorMessage.value = '';
+};
+
+const saveEdit = async () => {
+  if (!editDescription.value || !editAmount.value || Number(editAmount.value) <= 0) {
+    editErrorMessage.value = 'Please provide a valid description and an amount greater than 0.';
+    return;
+  }
+
+  isSubmittingEdit.value = true;
+  editErrorMessage.value = '';
+
+  try {
+    await api.patch(`/groups/${groupId.value}/expenses/${selectedExpense.value!.id}`, {
+      description: editDescription.value,
+      amount: Number(editAmount.value),
+    });
+    showExpenseModal.value = false;
+    await loadGroup();
+  } catch {
+    editErrorMessage.value = 'Could not update the expense. Please try again.';
+  } finally {
+    isSubmittingEdit.value = false;
+  }
+};
+
+const startDelete = () => {
+  if (!isAuthor.value) return;
+  showDeleteConfirm.value = true;
+};
+
+const cancelDelete = () => {
+  showDeleteConfirm.value = false;
+};
+
+const confirmDelete = async () => {
+  isSubmittingDelete.value = true;
+  editErrorMessage.value = '';
+
+  try {
+    await api.delete(`/groups/${groupId.value}/expenses/${selectedExpense.value!.id}`);
+    showExpenseModal.value = false;
+    await loadGroup();
+  } catch {
+    editErrorMessage.value = 'Could not delete the expense. Please try again.';
+  } finally {
+    isSubmittingDelete.value = false;
   }
 };
 
@@ -56,9 +191,196 @@ onMounted(loadGroup);
       </section>
 
       <template v-else-if="group">
-        <section class="glass-panel rounded-md px-6 py-5 sm:px-8">
+        <section class="glass-panel flex items-center justify-between rounded-md px-6 py-5 sm:px-8">
           <h1 class="text-xl font-semibold text-slate-100 sm:text-2xl">{{ group.name }}</h1>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              class="rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5"
+              @click="showSettings = !showSettings"
+            >
+              {{ showSettings ? 'Hide Settings' : 'Settings' }}
+            </button>
+            <button
+              type="button"
+              class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400"
+              @click="openAddExpenseModal"
+            >
+              Add Expense
+            </button>
+          </div>
         </section>
+
+        <GroupSettingsPanel v-if="showSettings" :group="group" @updated="loadGroup" />
+
+        <div v-if="showAddExpenseModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+          <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl">
+            <h3 class="mb-4 text-lg font-medium text-slate-100">Add New Expense</h3>
+            <form class="flex flex-col gap-4" @submit.prevent="addExpense">
+              <label class="flex flex-col gap-1.5">
+                <span class="text-sm text-slate-300">Description</span>
+                <input
+                  v-model="expenseDescription"
+                  type="text"
+                  placeholder="E.g., Dinner, Taxi..."
+                  class="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                />
+              </label>
+
+              <label class="flex flex-col gap-1.5">
+                <span class="text-sm text-slate-300">Amount</span>
+                <input
+                  v-model="expenseAmount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                  class="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                />
+              </label>
+
+              <p
+                v-if="expenseErrorMessage"
+                class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
+              >
+                {{ expenseErrorMessage }}
+              </p>
+
+              <div class="mt-2 flex justify-end gap-3">
+                <button
+                  type="button"
+                  class="rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
+                  :disabled="isSubmittingExpense"
+                  @click="closeAddExpenseModal"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400 disabled:opacity-60"
+                  :disabled="isSubmittingExpense"
+                >
+                  {{ isSubmittingExpense ? 'Saving...' : 'Save' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div v-if="showExpenseModal && selectedExpense" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+          <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl">
+            <div v-if="!showDeleteConfirm">
+              <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-lg font-medium text-slate-100">
+                  {{ editMode ? 'Edit Expense' : 'Expense Details' }}
+                </h3>
+                <button type="button" class="text-slate-400 hover:text-slate-200" @click="closeExpenseModal">
+                  <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
+                    <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                  </svg>
+                </button>
+              </div>
+
+              <form class="flex flex-col gap-4" @submit.prevent="saveEdit">
+                <label class="flex flex-col gap-1.5">
+                  <span class="text-sm text-slate-300">Description</span>
+                  <input
+                    v-model="editDescription"
+                    type="text"
+                    :readonly="!editMode"
+                    class="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition"
+                    :class="editMode ? 'placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10' : 'opacity-80'"
+                  />
+                </label>
+
+                <label class="flex flex-col gap-1.5">
+                  <span class="text-sm text-slate-300">Amount</span>
+                  <input
+                    v-model="editAmount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    :readonly="!editMode"
+                    class="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition"
+                    :class="editMode ? 'placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10' : 'opacity-80'"
+                  />
+                </label>
+
+                <p v-if="editErrorMessage" class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                  {{ editErrorMessage }}
+                </p>
+
+                <div class="mt-2 flex justify-end gap-3">
+                  <template v-if="editMode">
+                    <button
+                      type="button"
+                      class="rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
+                      :disabled="isSubmittingEdit"
+                      @click="cancelEditMode"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400 disabled:opacity-60"
+                      :disabled="isSubmittingEdit"
+                    >
+                      {{ isSubmittingEdit ? 'Saving...' : 'Save' }}
+                    </button>
+                  </template>
+                  <template v-else>
+                    <button
+                      type="button"
+                      class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400"
+                      @click="enableEditMode"
+                    >
+                      Edit
+                    </button>
+                  </template>
+                  <template v-if="isAuthor">
+                    <button
+                      type="button"
+                      class="rounded-md border border-rose-500/50 text-rose-400 px-4 py-2 text-sm font-medium transition hover:bg-rose-500/10"
+                      @click="startDelete"
+                    >
+                      Delete
+                    </button>
+                  </template>
+                </div>
+              </form>
+            </div>
+
+            <div v-else>
+              <h3 class="mb-4 text-lg font-medium text-slate-100">Are you sure?</h3>
+              <p class="mb-6 text-sm text-slate-300">
+                Do you really want to delete this expense? This action cannot be undone.
+              </p>
+
+              <p v-if="editErrorMessage" class="mb-4 rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                {{ editErrorMessage }}
+              </p>
+
+              <div class="flex justify-end gap-3">
+                <button
+                  type="button"
+                  class="rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
+                  :disabled="isSubmittingDelete"
+                  @click="cancelDelete"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  class="rounded-md bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-600 disabled:opacity-60"
+                  :disabled="isSubmittingDelete"
+                  @click="confirmDelete"
+                >
+                  {{ isSubmittingDelete ? 'Deleting...' : 'Confirm' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <section class="glass-panel overflow-hidden rounded-md">
           <h2 class="px-6 py-4 text-sm font-medium uppercase tracking-wide text-slate-400 sm:px-8">
@@ -66,7 +388,12 @@ onMounted(loadGroup);
           </h2>
 
           <ul v-if="group.expenses.length > 0" class="divide-y divide-white/10">
-            <li v-for="expense in group.expenses" :key="expense.id" class="px-6 py-4 sm:px-8">
+            <li
+              v-for="expense in group.expenses"
+              :key="expense.id"
+              class="cursor-pointer px-6 py-4 transition hover:bg-white/5 sm:px-8"
+              @click="openExpenseModal(expense)"
+            >
               <div class="flex items-center justify-between gap-4">
                 <div class="min-w-0 flex-1">
                   <p class="truncate text-base font-medium text-slate-100">{{ expense.description }}</p>
