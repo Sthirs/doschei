@@ -14,4 +14,3 @@ groupRouter.delete('/:id/members/:userId', requireAuth, removeMember);
 groupRouter.post('/:id/expenses', requireAuth, createExpense);
 groupRouter.patch('/:id/expenses/:expenseId', requireAuth, updateExpense);
 groupRouter.delete('/:id/expenses/:expenseId', requireAuth, deleteExpense);
-

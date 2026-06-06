@@ -1,1 +1,0 @@
-"{\"back\":\"/groups\",\"current\":\"/groups/group-1\",\"forward\":null,\"replaced\":false,\"position\":3,\"scroll\":null,\"groupName\":\"Trip to Rome\"}"

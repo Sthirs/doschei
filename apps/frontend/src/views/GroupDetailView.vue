@@ -310,7 +310,7 @@ onBeforeUnmount(() => {
       </section>
 
       <template v-else-if="group">
-        
+
 
         <div v-if="showAddExpenseModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
           <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl">
