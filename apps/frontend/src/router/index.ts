@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth';
 
 const LoginView = () => import('@/views/LoginView.vue');
 const GroupsView = () => import('@/views/GroupsView.vue');
+const GroupDetailView = () => import('@/views/GroupDetailView.vue');
 const AccountView = () => import('@/views/AccountView.vue');
 
 export const router = createRouter({
@@ -24,6 +25,12 @@ export const router = createRouter({
       name: 'groups',
       component: GroupsView,
       meta: { requiresAuth: true, title: 'Groups' },
+    },
+    {
+      path: '/groups/:id',
+      name: 'group-detail',
+      component: GroupDetailView,
+      meta: { requiresAuth: true, title: 'Group' },
     },
     {
       path: '/account',

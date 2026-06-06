@@ -4,10 +4,12 @@ import {
   Entity,
   JoinTable,
   ManyToMany,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
+import { Expense } from './Expense';
 import { User } from './User';
 
 @Entity({ name: 'groups' })
@@ -28,6 +30,9 @@ export class Group {
     inverseJoinColumn: { name: 'user_id', referencedColumnName: 'id' },
   })
   members!: User[];
+
+  @OneToMany(() => Expense, (expense) => expense.group)
+  expenses!: Expense[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

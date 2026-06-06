@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
 import type { Group } from '@/types/group';
 
+const router = useRouter();
 const groups = ref<Group[]>([]);
 const isLoading = ref(true);
 const errorMessage = ref('');
@@ -75,7 +77,12 @@ onMounted(loadGroups);
         <div v-if="isLoading" class="px-6 py-5 text-slate-300 sm:px-8">Loading your groups...</div>
 
         <ul v-else-if="groups.length > 0" class="divide-y divide-white/10">
-          <li v-for="group in groups" :key="group.id" class="px-6 py-4 sm:px-8">
+          <li
+            v-for="group in groups"
+            :key="group.id"
+            class="cursor-pointer px-6 py-4 transition hover:bg-white/5 sm:px-8"
+            @click="router.push({ name: 'group-detail', params: { id: group.id } })"
+          >
             <div class="flex items-center gap-4">
               <img
                 v-if="group.imageUrl"

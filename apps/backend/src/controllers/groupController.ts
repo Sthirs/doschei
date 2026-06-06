@@ -11,6 +11,19 @@ export const listGroups = async (request: AuthenticatedRequest, response: Respon
   response.json({ groups });
 };
 
+export const getGroup = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+  const id = request.params.id as string;
+
+  const group = await groupService.getGroupByIdForUser(id, request.auth!.userId);
+
+  if (!group) {
+    response.status(404).json({ message: 'Group not found.' });
+    return;
+  }
+
+  response.json({ group });
+};
+
 export const createGroup = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const { name } = request.body as { name?: unknown };
 

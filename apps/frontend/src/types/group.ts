@@ -11,3 +11,15 @@ export type Group = {
   memberCount: number;
   members: GroupMember[];
 };
+
+export type Expense = {
+  id: string;
+  description: string;
+  amount: number;
+  paidByName: string;
+  createdAt: string;
+};
+
+export type GroupDetail = Group & {
+  expenses: Expense[];
+};
