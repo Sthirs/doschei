@@ -6,6 +6,8 @@ devMode:
 
 defaultPodOptions: {}
 
+imagePullSecrets: []
+
 frontend:
   replicaCount: 1
   image:
