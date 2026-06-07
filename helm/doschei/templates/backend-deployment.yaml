@@ -62,41 +62,36 @@ spec:
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "SEED_ON_STARTUP") | quote }}
             - name: CORS_ORIGIN
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "CORS_ORIGIN") | quote }}
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "doschei.fullname" . }}-backend
-                  key: DATABASE_URL
             - name: DB_HOSTNAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "doschei.fullname" . }}-backend
-                  key: DB_HOSTNAME
+                  name: {{ include "doschei.backendDatabaseSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "hostname") }}
             - name: DB_PORT
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "doschei.fullname" . }}-backend
-                  key: DB_PORT
+                  name: {{ include "doschei.backendDatabaseSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "port") }}
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "doschei.fullname" . }}-backend
-                  key: DB_USERNAME
+                  name: {{ include "doschei.backendDatabaseSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "username") }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "doschei.fullname" . }}-backend
-                  key: DB_PASSWORD
+                  name: {{ include "doschei.backendDatabaseSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "password") }}
             - name: DB_DATABASE_NAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "doschei.fullname" . }}-backend
-                  key: DB_DATABASE_NAME
+                  name: {{ include "doschei.backendDatabaseSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "databaseName") }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "doschei.fullname" . }}-backend
-                  key: JWT_SECRET
+                  name: {{ include "doschei.backendJwtSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "jwt") }}
           readinessProbe:
             httpGet:
               path: /api/health

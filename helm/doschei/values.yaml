@@ -33,13 +33,18 @@ backend:
     DB_SYNC: "false"
     SEED_ON_STARTUP: "false"
     CORS_ORIGIN: https://doschei.example.com
-    JWT_SECRET: change-me-dev-secret
-  database:
-    hostname: ""
-    port:
-    username: ""
-    password: ""
-    databaseName: ""
+  secrets:
+    jwt:
+      secretName: doschei-backend-secrets
+      key: JWT_SECRET
+    database:
+      secretName: doschei-backend-database
+      keys:
+        hostname: DB_HOSTNAME
+        port: DB_PORT
+        username: DB_USERNAME
+        password: DB_PASSWORD
+        databaseName: DB_DATABASE_NAME
 
 ingress:
   enabled: true
@@ -60,8 +65,10 @@ postgres:
   service:
     port: 5432
   auth:
-    username: postgres
-    password: postgres
-    database: doschei
+    secretName: doschei-postgres-auth
+    keys:
+      username: POSTGRES_USER
+      password: POSTGRES_PASSWORD
+      database: POSTGRES_DB
   persistence:
     enabled: false

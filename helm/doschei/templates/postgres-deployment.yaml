@@ -47,7 +47,7 @@ spec:
             - containerPort: {{ .Values.postgres.service.port }}
           envFrom:
             - secretRef:
-                name: {{ include "doschei.fullname" . }}-postgres
+                name: {{ include "doschei.postgresSecretName" . }}
           readinessProbe:
             tcpSocket:
               port: {{ .Values.postgres.service.port }}

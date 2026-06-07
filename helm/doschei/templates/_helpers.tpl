@@ -44,6 +44,7 @@ dev
 {{- if eq $key "NODE_ENV" -}}development
 {{- else if eq $key "DB_SYNC" -}}true
 {{- else if eq $key "SEED_ON_STARTUP" -}}true
+{{- else if eq $key "JWT_SECRET" -}}change-me-dev-secret
 {{- else -}}{{- index $root.Values.backend.env $key -}}
 {{- end -}}
 {{- else -}}
@@ -51,22 +52,65 @@ dev
 {{- end -}}
 {{- end -}}
 
-{{- define "doschei.databaseHostname" -}}
-{{- default (printf "%s-postgres" (include "doschei.fullname" .)) .Values.backend.database.hostname -}}
+{{- define "doschei.backendJwtSecretName" -}}
+{{- if .Values.devMode.enabled -}}
+{{- printf "%s-backend" (include "doschei.fullname" .) -}}
+{{- else -}}
+{{- .Values.backend.secrets.jwt.secretName -}}
+{{- end -}}
 {{- end -}}
 
-{{- define "doschei.databasePort" -}}
-{{- default .Values.postgres.service.port .Values.backend.database.port -}}
+{{- define "doschei.backendDatabaseSecretName" -}}
+{{- if .Values.devMode.enabled -}}
+{{- printf "%s-backend" (include "doschei.fullname" .) -}}
+{{- else -}}
+{{- .Values.backend.secrets.database.secretName -}}
+{{- end -}}
 {{- end -}}
 
-{{- define "doschei.databaseUsername" -}}
-{{- default .Values.postgres.auth.username .Values.backend.database.username -}}
+{{- define "doschei.backendSecretKey" -}}
+{{- $root := .root -}}
+{{- $type := .type -}}
+{{- if and $root.Values.devMode.enabled (eq $type "jwt") -}}JWT_SECRET
+{{- else if and $root.Values.devMode.enabled (eq $type "hostname") -}}DB_HOSTNAME
+{{- else if and $root.Values.devMode.enabled (eq $type "port") -}}DB_PORT
+{{- else if and $root.Values.devMode.enabled (eq $type "username") -}}DB_USERNAME
+{{- else if and $root.Values.devMode.enabled (eq $type "password") -}}DB_PASSWORD
+{{- else if and $root.Values.devMode.enabled (eq $type "databaseName") -}}DB_DATABASE_NAME
+{{- else if eq $type "jwt" -}}
+{{- $root.Values.backend.secrets.jwt.key -}}
+{{- else if eq $type "hostname" -}}
+{{- $root.Values.backend.secrets.database.keys.hostname -}}
+{{- else if eq $type "port" -}}
+{{- $root.Values.backend.secrets.database.keys.port -}}
+{{- else if eq $type "username" -}}
+{{- $root.Values.backend.secrets.database.keys.username -}}
+{{- else if eq $type "password" -}}
+{{- $root.Values.backend.secrets.database.keys.password -}}
+{{- else -}}
+{{- $root.Values.backend.secrets.database.keys.databaseName -}}
+{{- end -}}
 {{- end -}}
 
-{{- define "doschei.databasePassword" -}}
-{{- default .Values.postgres.auth.password .Values.backend.database.password -}}
+{{- define "doschei.postgresSecretName" -}}
+{{- if .Values.devMode.enabled -}}
+{{- printf "%s-postgres" (include "doschei.fullname" .) -}}
+{{- else -}}
+{{- .Values.postgres.auth.secretName -}}
+{{- end -}}
 {{- end -}}
 
-{{- define "doschei.databaseName" -}}
-{{- default .Values.postgres.auth.database .Values.backend.database.databaseName -}}
+{{- define "doschei.postgresSecretKey" -}}
+{{- $root := .root -}}
+{{- $type := .type -}}
+{{- if and $root.Values.devMode.enabled (eq $type "username") -}}POSTGRES_USER
+{{- else if and $root.Values.devMode.enabled (eq $type "password") -}}POSTGRES_PASSWORD
+{{- else if and $root.Values.devMode.enabled (eq $type "database") -}}POSTGRES_DB
+{{- else if eq $type "username" -}}
+{{- $root.Values.postgres.auth.keys.username -}}
+{{- else if eq $type "password" -}}
+{{- $root.Values.postgres.auth.keys.password -}}
+{{- else -}}
+{{- $root.Values.postgres.auth.keys.database -}}
+{{- end -}}
 {{- end -}}
