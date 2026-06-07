@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/Sthirs/doschei/compare/v0.1.7...v0.1.8) (2026-06-07)
+
+
+### Bug Fixes
+
+* **helm:** improve chart to be production ready ([#15](https://github.com/Sthirs/doschei/issues/15)) ([5c13deb](https://github.com/Sthirs/doschei/commit/5c13deb1e7929fb03d5165d079b9f8d865d79d67))
+
 ## [0.1.7](https://github.com/Sthirs/doschei/compare/v0.1.6...v0.1.7) (2026-06-07)
 
 
