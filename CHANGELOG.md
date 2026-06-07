@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/Sthirs/doschei/compare/v0.1.6...v0.1.7) (2026-06-07)
+
+
+### Bug Fixes
+
+* release action ([bc0e9b6](https://github.com/Sthirs/doschei/commit/bc0e9b644a315340930e985ca670c62acae14fcd))
+
 ## [0.1.6](https://github.com/Sthirs/doschei/compare/v0.1.3...v0.1.6) (2026-06-07)
 
 
