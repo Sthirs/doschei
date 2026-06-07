@@ -50,6 +50,7 @@ jobs:
             --create-namespace \
             --wait \
             --timeout 5m \
+            --set devMode.enabled=true \
             --set ingress.host="$DEV_HOST" \
             --set backend.env.CORS_ORIGIN="http://$DEV_HOST"
 

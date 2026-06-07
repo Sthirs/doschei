@@ -1,22 +1,27 @@
 namespace: doschei
 fullnameOverride: doschei
 
+devMode:
+  enabled: false
+
+defaultPodOptions: {}
+
 frontend:
   replicaCount: 1
   image:
-    repository: doschei/frontend
-    tag: dev
+    repository: ghcr.io/sthirs/doschei/frontend
+    tag: ""
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
-    port: 80
+    port: 8080
     targetPort: 8080
 
 backend:
   replicaCount: 1
   image:
-    repository: doschei/backend
-    tag: dev
+    repository: ghcr.io/sthirs/doschei/backend
+    tag: ""
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -24,18 +29,35 @@ backend:
     targetPort: 3000
   env:
     PORT: "3000"
-    NODE_ENV: development
-    DB_SYNC: "true"
-    SEED_ON_STARTUP: "true"
-    CORS_ORIGIN: http://doschei.127.0.0.1.nip.io
-    JWT_SECRET: change-me-dev-secret
+    NODE_ENV: production
+    DB_SYNC: "false"
+    SEED_ON_STARTUP: "false"
+    CORS_ORIGIN: https://doschei.example.com
+  secrets:
+    jwt:
+      secretName: doschei-backend-secrets
+      key: JWT_SECRET
+    database:
+      secretName: doschei-backend-database
+      keys:
+        hostname: DB_HOSTNAME
+        port: DB_PORT
+        username: DB_USERNAME
+        password: DB_PASSWORD
+        databaseName: DB_DATABASE_NAME
 
 ingress:
   enabled: true
   className: nginx
-  host: doschei.127.0.0.1.nip.io
+  host: doschei.example.com
+  annotations: {}
+  tls:
+    enabled: false
+    host: ""
+    secretName: ""
 
 postgres:
+  enabled: true
   image:
     repository: postgres
     tag: "16-alpine"
@@ -43,8 +65,10 @@ postgres:
   service:
     port: 5432
   auth:
-    username: postgres
-    password: postgres
-    database: doschei
+    secretName: doschei-postgres-auth
+    keys:
+      username: POSTGRES_USER
+      password: POSTGRES_PASSWORD
+      database: POSTGRES_DB
   persistence:
     enabled: false
