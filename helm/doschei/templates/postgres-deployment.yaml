@@ -1,3 +1,4 @@
+{{- if .Values.postgres.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,6 +19,9 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: postgres
     spec:
+      {{- with .Values.defaultPodOptions }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 70
@@ -43,9 +47,10 @@ spec:
             - containerPort: {{ .Values.postgres.service.port }}
           envFrom:
             - secretRef:
-                name: {{ include "doschei.fullname" . }}-postgres
+                name: {{ include "doschei.postgresSecretName" . }}
           readinessProbe:
             tcpSocket:
               port: {{ .Values.postgres.service.port }}
             initialDelaySeconds: 5
             periodSeconds: 10
+{{- end }}
