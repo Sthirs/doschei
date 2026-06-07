@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/Sthirs/doschei/compare/v0.1.8...v0.1.9) (2026-06-07)
+
+
+### Bug Fixes
+
+* remove unused CHANGELOG ([ea75b6e](https://github.com/Sthirs/doschei/commit/ea75b6e10bdabb8bb1cf2700137897f94bcab72b))
+
 ## [0.1.8](https://github.com/Sthirs/doschei/compare/v0.1.7...v0.1.8) (2026-06-07)
 
 
