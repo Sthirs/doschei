@@ -18,6 +18,9 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: backend
     spec:
+      {{- with .Values.defaultPodOptions }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
@@ -32,7 +35,7 @@ spec:
       containers:
         #trivy:ignore:KSV-0125
         - name: backend
-          image: {{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}
+          image: {{ include "doschei.imageRepository" (dict "root" . "image" .Values.backend.image "component" "backend") }}:{{ include "doschei.imageTag" (dict "root" . "image" .Values.backend.image) }}
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
           securityContext:
             runAsNonRoot: true
@@ -50,20 +53,45 @@ spec:
             - containerPort: {{ .Values.backend.service.targetPort }}
           env:
             - name: PORT
-              value: {{ .Values.backend.env.PORT | quote }}
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "PORT") | quote }}
             - name: NODE_ENV
-              value: {{ .Values.backend.env.NODE_ENV | quote }}
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "NODE_ENV") | quote }}
             - name: DB_SYNC
-              value: {{ .Values.backend.env.DB_SYNC | quote }}
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "DB_SYNC") | quote }}
             - name: SEED_ON_STARTUP
-              value: {{ .Values.backend.env.SEED_ON_STARTUP | quote }}
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "SEED_ON_STARTUP") | quote }}
             - name: CORS_ORIGIN
-              value: {{ .Values.backend.env.CORS_ORIGIN | quote }}
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "CORS_ORIGIN") | quote }}
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ include "doschei.fullname" . }}-backend
                   key: DATABASE_URL
+            - name: DB_HOSTNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.fullname" . }}-backend
+                  key: DB_HOSTNAME
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.fullname" . }}-backend
+                  key: DB_PORT
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.fullname" . }}-backend
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.fullname" . }}-backend
+                  key: DB_PASSWORD
+            - name: DB_DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.fullname" . }}-backend
+                  key: DB_DATABASE_NAME
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

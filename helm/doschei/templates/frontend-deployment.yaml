@@ -18,6 +18,9 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: frontend
     spec:
+      {{- with .Values.defaultPodOptions }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 101
@@ -32,7 +35,7 @@ spec:
       containers:
         #trivy:ignore:KSV-0125
         - name: frontend
-          image: {{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}
+          image: {{ include "doschei.imageRepository" (dict "root" . "image" .Values.frontend.image "component" "frontend") }}:{{ include "doschei.imageTag" (dict "root" . "image" .Values.frontend.image) }}
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
           securityContext:
             runAsNonRoot: true

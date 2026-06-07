@@ -1,11 +1,16 @@
 namespace: doschei
 fullnameOverride: doschei
 
+devMode:
+  enabled: false
+
+defaultPodOptions: {}
+
 frontend:
   replicaCount: 1
   image:
-    repository: doschei/frontend
-    tag: dev
+    repository: ghcr.io/sthirs/doschei/frontend
+    tag: ""
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -15,8 +20,8 @@ frontend:
 backend:
   replicaCount: 1
   image:
-    repository: doschei/backend
-    tag: dev
+    repository: ghcr.io/sthirs/doschei/backend
+    tag: ""
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -24,18 +29,30 @@ backend:
     targetPort: 3000
   env:
     PORT: "3000"
-    NODE_ENV: development
-    DB_SYNC: "true"
-    SEED_ON_STARTUP: "true"
-    CORS_ORIGIN: http://doschei.127.0.0.1.nip.io
+    NODE_ENV: production
+    DB_SYNC: "false"
+    SEED_ON_STARTUP: "false"
+    CORS_ORIGIN: https://doschei.example.com
     JWT_SECRET: change-me-dev-secret
+  database:
+    hostname: ""
+    port:
+    username: ""
+    password: ""
+    databaseName: ""
 
 ingress:
   enabled: true
   className: nginx
-  host: doschei.127.0.0.1.nip.io
+  host: doschei.example.com
+  annotations: {}
+  tls:
+    enabled: false
+    host: ""
+    secretName: ""
 
 postgres:
+  enabled: true
   image:
     repository: postgres
     tag: "16-alpine"
