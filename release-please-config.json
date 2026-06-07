@@ -6,7 +6,7 @@
 	"packages": {
 		".": {
 			"release-type": "node",
-			"component": "doschei",
+			"package-name": "",
 			"bump-minor-pre-major": true,
 			"bump-patch-for-minor-pre-major": true,
 			"changelog-path": "CHANGELOG.md",
