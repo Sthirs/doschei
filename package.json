@@ -14,6 +14,7 @@
     "cluster:up": "./scripts/minikube-up.sh",
     "cluster:build": "./scripts/minikube-build.sh",
     "cluster:deploy": "./scripts/deploy.sh",
+    "cluster:host": "./scripts/cluster-host.sh",
     "telepresence:connect": "./scripts/telepresence-connect.sh",
     "telepresence:frontend": "./scripts/telepresence-intercept-frontend.sh",
     "telepresence:backend": "./scripts/telepresence-intercept-backend.sh",
