@@ -6,12 +6,15 @@ import { VueDatePicker } from '@vuepic/vue-datepicker';
 import { api } from '@/lib/api';
 import { DEFAULT_CATEGORY_KEY, getCategory } from '@/lib/categories';
 import { currentPageTitle } from '@/router';
+import { useAuthStore } from '@/stores/auth';
 import CategoryPicker from '@/components/CategoryPicker.vue';
+import UserPicker from '@/components/UserPicker.vue';
 
 import type { GroupDetail, Expense } from '@/types/group';
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 
 const group = ref<GroupDetail | null>(null);
 const isLoading = ref(true);
@@ -23,6 +26,7 @@ const expenseDescription = ref('');
 const expenseAmount = ref<number | ''>('');
 const expenseDate = ref('');
 const expenseCategory = ref(DEFAULT_CATEGORY_KEY);
+const expensePaidByUserId = ref('');
 const isSubmittingExpense = ref(false);
 const expenseErrorMessage = ref('');
 
@@ -61,6 +65,19 @@ const getExpenseDateValue = (expense: Expense) => {
   return expense.date || expense.createdAt.slice(0, 10);
 };
 
+const selectableMembers = computed(() => {
+  const members = group.value?.members ?? [];
+  return [...members].sort((a, b) => a.displayName.localeCompare(b.displayName));
+});
+
+const defaultPaidByUserId = () => {
+  const currentUserId = authStore.user?.id;
+  if (currentUserId && group.value?.members.some((member) => member.id === currentUserId)) {
+    return currentUserId;
+  }
+  return selectableMembers.value[0]?.id ?? '';
+};
+
 const loadGroup = async () => {
   isLoading.value = true;
   errorMessage.value = '';
@@ -82,6 +99,7 @@ const openAddExpenseModal = () => {
   expenseAmount.value = '';
   expenseDate.value = todayDateValue();
   expenseCategory.value = DEFAULT_CATEGORY_KEY;
+  expensePaidByUserId.value = defaultPaidByUserId();
   expenseErrorMessage.value = '';
 };
 
@@ -95,6 +113,11 @@ const addExpense = async () => {
     return;
   }
 
+  if (!expensePaidByUserId.value) {
+    expenseErrorMessage.value = 'Please select who paid the expense.';
+    return;
+  }
+
   isSubmittingExpense.value = true;
   expenseErrorMessage.value = '';
 
@@ -104,6 +127,7 @@ const addExpense = async () => {
       amount: Number(expenseAmount.value),
       date: expenseDate.value,
       category: expenseCategory.value,
+      paidByUserId: expensePaidByUserId.value,
     });
     showAddExpenseModal.value = false;
     await loadGroup();
@@ -338,6 +362,14 @@ onBeforeUnmount(() => {
                   min="0.01"
                   placeholder="0.00"
                   class="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                />
+              </label>
+
+              <label class="flex flex-col gap-1.5">
+                <span class="text-sm text-slate-300">Paid by</span>
+                <UserPicker
+                  v-model="expensePaidByUserId"
+                  :members="selectableMembers"
                 />
               </label>
 

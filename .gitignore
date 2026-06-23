@@ -20,3 +20,5 @@ tmp/
 *.tmp
 *.swp
 *~
+
+graphify-out/
