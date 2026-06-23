@@ -99,6 +99,62 @@ describe('Expenses Endpoints', () => {
       expect(response.status).toBe(201);
       expect(response.body.expense.date).toBe(new Date().toISOString().slice(0, 10));
     });
+
+    it('attributes the expense to the paidByUserId member when provided', async () => {
+      const author = await registerUser('expense-paidby-author');
+      const otherMember = await registerUser('expense-paidby-other');
+
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('expenses-paidby-group') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      await createJsonRequest(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({ email: otherMember.body.user.email }),
+      });
+
+      const response = await createJsonRequest<{ expense: { id: string; paidByName: string } }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          description: 'Lunch paid by other',
+          amount: 30,
+          paidByUserId: otherMember.body.user.id,
+        }),
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.body.expense.paidByName).toBe(otherMember.body.user.displayName);
+    });
+
+    it('rejects a paidByUserId that is not a group member', async () => {
+      const author = await registerUser('expense-paidby-reject-author');
+      const outsider = await registerUser('expense-paidby-reject-outsider');
+
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('expenses-paidby-reject-group') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      const response = await createJsonRequest<{ message: string }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          description: 'Forbidden attribution',
+          amount: 20,
+          paidByUserId: outsider.body.user.id,
+        }),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/not a member of this group/i);
+    });
   });
 
   describe('PATCH /api/groups/:id/expenses/:expenseId', () => {

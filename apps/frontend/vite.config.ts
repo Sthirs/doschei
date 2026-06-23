@@ -13,14 +13,47 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['logo.svg'],
+      includeAssets: ['favicon.svg', 'logo.svg', 'logo-192.png', 'logo-512.png'],
       manifest: {
         name: 'Do Schèi',
         short_name: 'Do Schèi',
+        description: 'Manage and share your expenses',
         theme_color: '#111936',
         background_color: '#f8fafc',
         display: 'standalone',
-        icons: [],
+        start_url: '/',
+        scope: '/',
+        icons: [
+          {
+            src: 'logo-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'logo-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+        ],
+        screenshots: [
+          {
+            src: 'screenshots/mobile-home.png',
+            sizes: '517x1121',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Mobile home screen',
+          },
+          {
+            src: 'screenshots/desktop-home.png',
+            sizes: '1694x953',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'Desktop home screen',
+          },
+        ],
+      },
+      devOptions: {
+        enabled: true,
       },
     }),
   ],

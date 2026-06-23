@@ -98,7 +98,13 @@ export const createGroup = async (request: AuthenticatedRequest, response: Respo
 
 export const createExpense = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
-  const { description, amount, date, category } = request.body as { description?: unknown; amount?: unknown; date?: unknown; category?: unknown };
+  const { description, amount, date, category, paidByUserId } = request.body as {
+    description?: unknown;
+    amount?: unknown;
+    date?: unknown;
+    category?: unknown;
+    paidByUserId?: unknown;
+  };
   const normalizedCategory = typeof category === 'string' ? category.trim() : undefined;
 
   if (typeof description !== 'string' || description.trim().length === 0) {
@@ -126,6 +132,13 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
     return;
   }
 
+  if (paidByUserId !== undefined && typeof paidByUserId !== 'string') {
+    response.status(400).json({ message: 'paidByUserId must be a string.' });
+    return;
+  }
+
+  const resolvedPaidByUserId = typeof paidByUserId === 'string' && paidByUserId.trim().length > 0 ? paidByUserId.trim() : request.auth!.userId;
+
   try {
     const expense = await groupService.createExpenseForGroup(
       groupId,
@@ -133,7 +146,8 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
       amount,
       typeof date === 'string' ? date : undefined,
       normalizedCategory && normalizedCategory.length > 0 ? normalizedCategory : undefined,
-      request.auth!.userId
+      request.auth!.userId,
+      resolvedPaidByUserId,
     );
 
     response.status(201).json({ expense });
