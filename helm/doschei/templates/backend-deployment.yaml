@@ -25,6 +25,7 @@ spec:
       {{- with .Values.defaultPodOptions }}
       {{- toYaml . | nindent 6 }}
       {{- end }}
+      {{- if not .Values.devMode.enabled }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
@@ -33,6 +34,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
         seccompProfile:
           type: RuntimeDefault
+      {{- end }}
       volumes:
         - name: backend-tmp
           emptyDir: {}
@@ -41,6 +43,7 @@ spec:
         - name: backend
           image: {{ include "doschei.imageRepository" (dict "root" . "image" .Values.backend.image "component" "backend") }}:{{ include "doschei.imageTag" (dict "root" . "image" .Values.backend.image) }}
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          {{- if not .Values.devMode.enabled }}
           securityContext:
             runAsNonRoot: true
             runAsUser: 1001
@@ -50,6 +53,7 @@ spec:
             capabilities:
               drop:
                 - ALL
+          {{- end }}
           volumeMounts:
             - name: backend-tmp
               mountPath: /tmp
