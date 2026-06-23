@@ -168,12 +168,29 @@ export class GroupService {
     await this.groupRepository.save(group);
   }
 
-  async createExpenseForGroup(groupId: string, description: string, amount: number, date: string | undefined, category: string | undefined, userId: string) {
-    const group = await this.getGroupForMember(groupId, userId);
+  async createExpenseForGroup(
+    groupId: string,
+    description: string,
+    amount: number,
+    date: string | undefined,
+    category: string | undefined,
+    requesterUserId: string,
+    paidByUserId: string,
+  ) {
+    const group = await this.groupRepository
+      .createQueryBuilder('group')
+      .innerJoin('group.members', 'membership', 'membership.id = :requesterUserId', { requesterUserId })
+      .leftJoinAndSelect('group.members', 'member')
+      .where('group.id = :groupId', { groupId })
+      .getOne();
 
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new Error('User not found.');
+    if (!group) {
+      throw new Error('Group not found or you are not a member.');
+    }
+
+    const paidByUser = group.members.find((member) => member.id === paidByUserId);
+    if (!paidByUser) {
+      throw new Error('The selected user is not a member of this group.');
     }
 
     const expense = this.expenseRepository.create({
@@ -181,7 +198,7 @@ export class GroupService {
       amount,
       date: date ?? new Date().toISOString().slice(0, 10),
       category: category ?? 'general',
-      paidBy: user,
+      paidBy: paidByUser,
       group,
     });
 
