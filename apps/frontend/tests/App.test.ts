@@ -1,16 +1,16 @@
+import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 
 import App from '../src/App.vue';
 
-// Mock vue-router
-jest.mock('vue-router', () => ({
+vi.mock('vue-router', () => ({
   useRoute: () => ({
     meta: {
       requiresAuth: false,
     },
   }),
   createRouter: (options: any) => ({
-    beforeEach: jest.fn(),
+    beforeEach: vi.fn(),
   }),
   createWebHistory: () => ({}),
 }));
