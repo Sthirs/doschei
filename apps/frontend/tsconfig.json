@@ -16,13 +16,12 @@
     ],
     "types": [
       "vite/client",
-      "jest",
+      "vitest/globals",
       "node"
     ],
-    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ]
     }
   },

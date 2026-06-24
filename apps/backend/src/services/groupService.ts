@@ -82,7 +82,7 @@ export class GroupService {
 
     const expenses = await this.expenseRepository.find({
       where: { group: { id: groupId } },
-      relations: ['paidBy'],
+      relations: { paidBy: true },
       order: { date: 'DESC', createdAt: 'DESC' },
     });
 
@@ -225,7 +225,7 @@ export class GroupService {
 
     const expense = await this.expenseRepository.findOne({
       where: { id: expenseId, group: { id: groupId } },
-      relations: ['paidBy'],
+      relations: { paidBy: true },
     });
 
     if (!expense) {
@@ -263,7 +263,7 @@ export class GroupService {
 
     const expense = await this.expenseRepository.findOne({
       where: { id: expenseId, group: { id: groupId } },
-      relations: ['paidBy'],
+      relations: { paidBy: true },
     });
 
     if (!expense) {

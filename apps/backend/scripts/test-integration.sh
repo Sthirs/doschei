@@ -11,4 +11,4 @@ fi
 
 export BACKEND_BASE_URL="${BACKEND_BASE_URL_VALUE%/}"
 
-jest --runInBand --config jest.integration.config.cjs
+vitest run --config vitest.integration.config.ts
