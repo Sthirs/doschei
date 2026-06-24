@@ -37,7 +37,7 @@ export const seedDatabase = async (): Promise<void> => {
   const groupRepository = AppDataSource.getRepository(Group);
 
   // Demo user is the canonical seeded credential documented in the README.
-  let demoUser = await userRepository.findOne({ where: { email: DEMO_EMAIL }, relations: ['groups'] });
+  let demoUser = await userRepository.findOne({ where: { email: DEMO_EMAIL }, relations: { groups: true } });
 
   if (!demoUser) {
     demoUser = userRepository.create({
