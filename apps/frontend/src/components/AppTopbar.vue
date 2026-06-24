@@ -19,7 +19,7 @@ const goToAccount = async () => {
 
 <template>
   <header>
-    <div class="glass-panel flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 !border-l-0 !border-r-0 !border-t-0">
+    <div class="glass-panel flex items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 border-l-0! border-r-0! border-t-0!">
       <!-- Leading slot (back arrow, contextual actions from child views) -->
       <div id="topbar-leading" class="flex shrink-0 items-center"></div>
 
