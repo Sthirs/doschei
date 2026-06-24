@@ -30,7 +30,7 @@ export const ensureBackendAvailable = async (): Promise<void> => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown network error';
 
-    throw new Error(`Backend probe failed for ${probeUrl}: ${message}`);
+    throw new Error(`Backend probe failed for ${probeUrl}: ${message}`, { cause: error });
   }
 
   if (response.status !== 200 && response.status !== 401) {
