@@ -136,6 +136,7 @@ export class GroupService {
     const group = await this.groupRepository
       .createQueryBuilder('group')
       .innerJoin('group.members', 'membership', 'membership.id = :userId', { userId })
+      .leftJoinAndSelect('group.members', 'member')
       .where('group.id = :groupId', { groupId })
       .getOne();
 
@@ -365,36 +366,31 @@ export class GroupService {
       throw new Error('Expense not found.');
     }
 
-    // NOTE: when `amount` is changed but `splits` is not provided, the
-    // existing splits are intentionally left in place even if their
-    // computedAmounts no longer match the new total. The contract accepts
-    // this scope limitation (see the per-prompt spec).
-    let nextSplits: ExpenseSplit[] | undefined;
-
-    if (updates.splits !== undefined) {
-      const effectiveAmount = updates.amount ?? Number(expense.amount);
-      const splitsValidation = validateSplits(updates.splits, effectiveAmount);
-      if (!splitsValidation.ok) {
-        throw new Error(splitsValidation.message);
-      }
-
-      this.assertAllSplitUsersAreMembers(splitsValidation.splits, group);
-
-      const allocated = computeAllocatedAmounts(effectiveAmount, splitsValidation.splits);
-      nextSplits = allocated.map((entry) => {
-        const user = group.members.find((member) => member.id === entry.userId);
-        if (!user) {
-          throw new Error(`Split user ${entry.userId} is not a member of this group.`);
-        }
-        return this.splitRepository.create({
-          expense,
-          user,
-          shareType: entry.shareType,
-          shareValue: entry.shareValue,
-          computedAmount: entry.computedAmount,
-        });
-      });
+    // `splits` is always required on PATCH. The previous splits are deleted
+    // and the new ones are inserted in a single transaction, regardless of
+    // which expense fields are also being updated.
+    const effectiveAmount = updates.amount ?? Number(expense.amount);
+    const splitsValidation = validateSplits(updates.splits, effectiveAmount);
+    if (!splitsValidation.ok) {
+      throw new Error(splitsValidation.message);
     }
+
+    this.assertAllSplitUsersAreMembers(splitsValidation.splits, group);
+
+    const allocated = computeAllocatedAmounts(effectiveAmount, splitsValidation.splits);
+    const nextSplits = allocated.map((entry) => {
+      const user = group.members.find((member) => member.id === entry.userId);
+      if (!user) {
+        throw new Error(`Split user ${entry.userId} is not a member of this group.`);
+      }
+      return this.splitRepository.create({
+        expense,
+        user,
+        shareType: entry.shareType,
+        shareValue: entry.shareValue,
+        computedAmount: entry.computedAmount,
+      });
+    });
 
     if (updates.description !== undefined) {
       expense.description = updates.description;
@@ -409,14 +405,12 @@ export class GroupService {
       expense.category = updates.category;
     }
 
-    const savedExpense = nextSplits === undefined
-      ? await this.expenseRepository.save(expense)
-      : await AppDataSource.transaction(async (manager) => {
-          const splitRepo = manager.getRepository(ExpenseSplit);
-          await splitRepo.delete({ expense: { id: expense.id } });
-          expense.splits = nextSplits!;
-          return manager.getRepository(Expense).save(expense);
-        });
+    const savedExpense = await AppDataSource.transaction(async (manager) => {
+      const splitRepo = manager.getRepository(ExpenseSplit);
+      await splitRepo.delete({ expense: { id: expense.id } });
+      expense.splits = nextSplits;
+      return manager.getRepository(Expense).save(expense);
+    });
 
     const reloaded = await this.expenseRepository.findOne({
       where: { id: savedExpense.id },

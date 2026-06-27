@@ -194,7 +194,10 @@ describe('Expenses Endpoints', () => {
       const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; category: string; paidByName: string; date: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Lunch updated', amount: 25.5, date: '2026-06-03', category: 'taxi' }),
+        body: JSON.stringify({
+          description: 'Lunch updated', amount: 25.5, date: '2026-06-03', category: 'taxi',
+          splits: [{ userId: user.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
 
       expect(response.status).toBe(200);
@@ -239,7 +242,10 @@ describe('Expenses Endpoints', () => {
       const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string; date: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${otherUser.body.token}` },
-        body: JSON.stringify({ amount: 20, date: '2026-06-05' }),
+        body: JSON.stringify({
+        amount: 20, date: '2026-06-05',
+        splits: [{ userId: author.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+      }),
       });
 
       expect(response.status).toBe(200);
