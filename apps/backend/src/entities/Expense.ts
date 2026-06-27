@@ -4,9 +4,11 @@ import {
   Entity,
   ManyToOne,
   JoinColumn,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { ExpenseSplit } from './ExpenseSplit';
 import { Group } from './Group';
 import { User } from './User';
 
@@ -34,6 +36,9 @@ export class Expense {
   @ManyToOne(() => Group, (group) => group.expenses)
   @JoinColumn({ name: 'group_id' })
   group!: Group;
+
+  @OneToMany(() => ExpenseSplit, (split) => split.expense, { eager: true, cascade: true })
+  splits!: ExpenseSplit[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
