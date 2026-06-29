@@ -384,4 +384,207 @@ describe('Expense Splits Endpoints', () => {
       expect(response.body.group.balance.perUser).toEqual([]);
     });
   });
+
+  describe('POST /api/groups/:id/expenses with EQUAL splits', () => {
+    it('creates an expense with EQUAL splits for 2 users', async () => {
+      const { author, other, groupId } = await createGroupAndAddMember('splits-equal-ok');
+
+      const response = await createJsonRequest<{
+        expense: {
+          id: string;
+          amount: number;
+          paidByUserId: string;
+          splits: Array<{ userId: string; displayName: string; shareType: string; shareValue: number; computedAmount: number }>;
+        };
+      }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          description: 'Groceries',
+          amount: 100,
+          splits: [
+            { userId: author.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+            { userId: other.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+          ],
+        }),
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.body.expense.amount).toBe(100);
+      expect(response.body.expense.paidByUserId).toBe(author.body.user.id);
+      expect(response.body.expense.splits).toHaveLength(2);
+
+      for (const split of response.body.expense.splits) {
+        expect(split.shareType).toBe('EQUAL');
+        expect(split.computedAmount).toBeGreaterThan(0);
+      }
+
+      const total = response.body.expense.splits.reduce((acc, split) => acc + split.computedAmount, 0);
+      expect(total).toBe(100);
+    });
+
+    it('creates an expense with EQUAL splits for 3 users (odd amount)', async () => {
+      const user1 = await registerUser('splits-equal-3u');
+      const user2 = await registerUser('splits-equal-3u-other');
+      const user3 = await registerUser('splits-equal-3u-third');
+
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user1.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('splits-equal-3u-group') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      await createJsonRequest(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user1.body.token}` },
+        body: JSON.stringify({ email: user2.body.user.email }),
+      });
+
+      await createJsonRequest(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user1.body.token}` },
+        body: JSON.stringify({ email: user3.body.user.email }),
+      });
+
+      const response = await createJsonRequest<{
+        expense: {
+          id: string;
+          amount: number;
+          splits: Array<{ userId: string; shareType: string; computedAmount: number }>;
+        };
+      }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user1.body.token}` },
+        body: JSON.stringify({
+          description: 'Team lunch',
+          amount: 10,
+          splits: [
+            { userId: user1.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+            { userId: user2.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+            { userId: user3.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+          ],
+        }),
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.body.expense.amount).toBe(10);
+      expect(response.body.expense.splits).toHaveLength(3);
+
+      for (const split of response.body.expense.splits) {
+        expect(split.shareType).toBe('EQUAL');
+      }
+
+      const total = response.body.expense.splits.reduce((acc, split) => acc + split.computedAmount, 0);
+      expect(total).toBe(10);
+    });
+
+    it('rejects mixed EQUAL + PERCENT splits', async () => {
+      const { author, other, groupId } = await createGroupAndAddMember('splits-equal-mixed');
+
+      const response = await createJsonRequest<{ message: string }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          description: 'Snack',
+          amount: 50,
+          splits: [
+            { userId: author.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+            { userId: other.body.user.id, shareType: 'PERCENT', shareValue: 50 },
+          ],
+        }),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('All splits must use the same share type.');
+    });
+  });
+
+  describe('PATCH /api/groups/:id/expenses/:expenseId with EQUAL splits', () => {
+    it('replaces PERCENT splits with EQUAL splits', async () => {
+      const { author, other, groupId } = await createGroupAndAddMember('splits-patch-equal');
+
+      const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          description: 'Groceries',
+          amount: 40,
+          splits: [
+            { userId: author.body.user.id, shareType: 'PERCENT', shareValue: 50 },
+            { userId: other.body.user.id, shareType: 'PERCENT', shareValue: 50 },
+          ],
+        }),
+      });
+      const expenseId = expRes.body.expense.id;
+
+      const response = await createJsonRequest<{
+        expense: { id: string; splits: Array<{ userId: string; shareType: string; shareValue: number; computedAmount: number }> };
+      }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          splits: [
+            { userId: author.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+            { userId: other.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+          ],
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.expense.splits).toHaveLength(2);
+
+      for (const split of response.body.expense.splits) {
+        expect(split.shareType).toBe('EQUAL');
+      }
+
+      const total = response.body.expense.splits.reduce((acc, split) => acc + split.computedAmount, 0);
+      expect(total).toBe(40);
+    });
+  });
+
+  describe('GET /api/groups/:id with EQUAL expense splits', () => {
+    it('returns EQUAL splits in group response', async () => {
+      const { author, other, groupId } = await createGroupAndAddMember('splits-get-equal');
+
+      await createJsonRequest(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          description: 'Dinner',
+          amount: 30,
+          splits: [
+            { userId: author.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+            { userId: other.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+          ],
+        }),
+      });
+
+      const response = await createJsonRequest<{
+        group: {
+          expenses: Array<{
+            id: string;
+            paidByUserId: string;
+            splits: Array<{ userId: string; displayName: string; shareType: string; shareValue: number; computedAmount: number }>;
+          }>;
+        };
+      }>(`/api/groups/${groupId}`, {
+        headers: { Authorization: `Bearer ${author.body.token}` },
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.group.expenses).toHaveLength(1);
+
+      const expense = response.body.group.expenses[0];
+      expect(expense.splits).toHaveLength(2);
+
+      for (const split of expense.splits) {
+        expect(split.shareType).toBe('EQUAL');
+        expect(split.computedAmount).toBeGreaterThan(0);
+      }
+
+      const total = expense.splits.reduce((acc, split) => acc + split.computedAmount, 0);
+      expect(total).toBe(30);
+    });
+  });
 });

@@ -107,4 +107,30 @@ describe('splitModeFromExistingSplits', () => {
     expect(result.mode).toBe('FIXED');
     expect(result.selectedUserIds).toEqual(['a', 'b']);
   });
+
+  it('detects EQUAL mode for splits with shareType EQUAL', () => {
+    // EQUAL is not yet in the ShareType union; cast until T4 updates the type
+    const splits = [
+      { userId: 'a', displayName: 'Alice', shareType: 'EQUAL', shareValue: 50, computedAmount: 50 },
+      { userId: 'b', displayName: 'Bob', shareType: 'EQUAL', shareValue: 50, computedAmount: 50 },
+      { userId: 'c', displayName: 'Carol', shareType: 'EQUAL', shareValue: 50, computedAmount: 50 },
+    ] as unknown as ExpenseSplit[];
+    const result = splitModeFromExistingSplits(splits);
+    expect(result.mode).toBe('EQUAL');
+    expect(result.selectedUserIds).toEqual(['a', 'b', 'c']);
+    expect(result.percentValues).toEqual({});
+    expect(result.fixedValues).toEqual({});
+  });
+
+  it('detects EQUAL mode and returns empty percentValues/fixedValues', () => {
+    const splits = [
+      { userId: 'x', displayName: 'Xavier', shareType: 'EQUAL', shareValue: 25, computedAmount: 25 },
+      { userId: 'y', displayName: 'Yvonne', shareType: 'EQUAL', shareValue: 25, computedAmount: 25 },
+    ] as unknown as ExpenseSplit[];
+    const result = splitModeFromExistingSplits(splits);
+    expect(result.mode).toBe('EQUAL');
+    expect(result.selectedUserIds).toEqual(['x', 'y']);
+    expect(result.percentValues).toEqual({});
+    expect(result.fixedValues).toEqual({});
+  });
 });

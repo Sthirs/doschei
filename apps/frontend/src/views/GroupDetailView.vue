@@ -216,14 +216,12 @@ const buildSplitPayload = (
   fValues: Record<string, number | ''>,
 ): ExpenseSplit[] => {
   if (mode === 'EQUAL') {
-    const amountCents = Math.round(amount * 100);
-    const computed = computeEqualFixedSplits(amountCents, userIds);
-    return computed.map((entry) => ({
-      userId: entry.userId,
-      displayName: selectableMembers.value.find((m) => m.id === entry.userId)?.displayName ?? '',
-      shareType: 'FIXED' as const,
-      shareValue: entry.shareValue,
-      computedAmount: entry.shareValue,
+    return userIds.map((userId) => ({
+      userId,
+      displayName: selectableMembers.value.find((m) => m.id === userId)?.displayName ?? '',
+      shareType: 'EQUAL' as const,
+      shareValue: 0,
+      computedAmount: 0,
     }));
   }
   if (mode === 'PERCENT') {

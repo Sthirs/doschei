@@ -63,6 +63,21 @@ export const splitModeFromExistingSplits = (
     };
   }
 
+  const allEqual = splits.every((split) => split.shareType === 'EQUAL');
+
+  if (allEqual) {
+    const selectedUserIds: string[] = [];
+    for (const split of splits) {
+      selectedUserIds.push(split.userId);
+    }
+    return {
+      mode: 'EQUAL',
+      selectedUserIds,
+      percentValues: {},
+      fixedValues: {},
+    };
+  }
+
   if (allFixed) {
     const fixedValues: Record<string, number> = {};
     const selectedUserIds: string[] = [];

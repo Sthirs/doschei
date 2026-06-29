@@ -57,12 +57,18 @@ export const validateSplits = (
       return { ok: false, message: 'Each split requires userId, shareType, and a positive shareValue.' };
     }
 
-    if (candidate.shareType !== 'PERCENT' && candidate.shareType !== 'FIXED') {
+    if (candidate.shareType !== 'PERCENT' && candidate.shareType !== 'FIXED' && candidate.shareType !== 'EQUAL') {
       return { ok: false, message: 'Each split requires userId, shareType, and a positive shareValue.' };
     }
 
-    if (!isFinitePositiveNumber(candidate.shareValue)) {
-      return { ok: false, message: 'Each split requires userId, shareType, and a positive shareValue.' };
+    if (candidate.shareType === 'EQUAL') {
+      if (typeof candidate.shareValue !== 'number' || !Number.isFinite(candidate.shareValue)) {
+        return { ok: false, message: 'Each split requires userId, shareType, and a numeric shareValue.' };
+      }
+    } else {
+      if (!isFinitePositiveNumber(candidate.shareValue)) {
+        return { ok: false, message: 'Each split requires userId, shareType, and a positive shareValue.' };
+      }
     }
 
     parsed.push({
@@ -79,19 +85,20 @@ export const validateSplits = (
     }
   }
 
-  const sumCents = parsed.reduce((acc, entry) => acc + toCents(entry.shareValue), 0);
-
   if (firstShareType === 'PERCENT') {
+    const sumCents = parsed.reduce((acc, entry) => acc + toCents(entry.shareValue), 0);
     const targetCents = 10000; // 100.00 in cents
     if (Math.abs(sumCents - targetCents) > SHARES_EPSILON_CENTS) {
       return { ok: false, message: 'Percentages must sum to 100.' };
     }
-  } else {
+  } else if (firstShareType === 'FIXED') {
+    const sumCents = parsed.reduce((acc, entry) => acc + toCents(entry.shareValue), 0);
     const amountCents = toCents(amount);
     if (Math.abs(sumCents - amountCents) > SHARES_EPSILON_CENTS) {
       return { ok: false, message: 'Fixed amounts must sum to the expense total.' };
     }
   }
+  // EQUAL: no sum validation — backend normalizes shareValue later
 
   return { ok: true, splits: parsed };
 };
@@ -134,18 +141,47 @@ export const computeAllocatedAmounts = (
     }));
   }
 
-  // FIXED: per spec, computedAmount equals shareValue. Guard the invariant.
-  const totalCents = splits.reduce((acc, entry) => acc + toCents(entry.shareValue), 0);
-  if (Math.abs(totalCents - amountCents) > SHARES_EPSILON_CENTS) {
-    throw new Error('Fixed amounts must sum to the expense total.');
+  if (shareType === 'EQUAL') {
+    const n = splits.length;
+    // 100.00 expressed in cents is 10000; balance the remainder across the first
+    // `percentRemainder` users so the derived percents always sum to 100.
+    const percentCentsEach = Math.floor(10000 / n);
+    const percentRemainder = 10000 - percentCentsEach * n;
+
+    // The recursive call is safe: percentSplits below all carry shareType
+    // 'PERCENT', so the call lands in the PERCENT branch and exits without
+    // re-entering this EQUAL branch.
+    const percentSplits: ParsedSplit[] = splits.map((entry, index) => ({
+      userId: entry.userId,
+      shareType: 'PERCENT',
+      shareValue: (percentCentsEach + (index < percentRemainder ? 1 : 0)) / 100,
+    }));
+
+    const allocated = computeAllocatedAmounts(amount, percentSplits);
+
+    return allocated.map((entry, index) => ({
+      userId: entry.userId,
+      shareType: 'EQUAL' as const,
+      shareValue: percentSplits[index].shareValue,
+      computedAmount: entry.computedAmount,
+    }));
   }
 
-  return splits.map((entry) => ({
-    userId: entry.userId,
-    shareType: entry.shareType,
-    shareValue: entry.shareValue,
-    computedAmount: entry.shareValue,
-  }));
+  if (shareType === 'FIXED') {
+    const totalCents = splits.reduce((acc, entry) => acc + toCents(entry.shareValue), 0);
+    if (Math.abs(totalCents - amountCents) > SHARES_EPSILON_CENTS) {
+      throw new Error('Fixed amounts must sum to the expense total.');
+    }
+
+    return splits.map((entry) => ({
+      userId: entry.userId,
+      shareType: entry.shareType,
+      shareValue: entry.shareValue,
+      computedAmount: entry.shareValue,
+    }));
+  }
+
+  throw new Error(`Unsupported shareType: ${shareType as string}`);
 };
 
 /**

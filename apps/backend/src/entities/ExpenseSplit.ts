@@ -10,7 +10,7 @@ import {
 import { Expense } from './Expense';
 import { User } from './User';
 
-export type ShareType = 'PERCENT' | 'FIXED';
+export type ShareType = 'PERCENT' | 'FIXED' | 'EQUAL';
 
 @Entity({ name: 'expense_splits' })
 export class ExpenseSplit {

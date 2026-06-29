@@ -13,7 +13,7 @@ import {
 type SerializedSplit = {
   userId: string;
   displayName: string;
-  shareType: 'PERCENT' | 'FIXED';
+  shareType: 'PERCENT' | 'FIXED' | 'EQUAL';
   shareValue: number;
   computedAmount: number;
 };

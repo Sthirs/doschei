@@ -494,3 +494,184 @@ describe('aggregateBalance', () => {
     expect(result.perUser.size).toBe(0);
   });
 });
+
+describe('validateSplits (EQUAL)', () => {
+  it('accepts a valid EQUAL split with positive shareValue', () => {
+    const result = validateSplits(
+      [
+        { userId: 'user-1', shareType: 'EQUAL', shareValue: 50 },
+        { userId: 'user-2', shareType: 'EQUAL', shareValue: 50 },
+        { userId: 'user-3', shareType: 'EQUAL', shareValue: 50 },
+      ],
+      100,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.splits).toEqual([
+        { userId: 'user-1', shareType: 'EQUAL', shareValue: 50 },
+        { userId: 'user-2', shareType: 'EQUAL', shareValue: 50 },
+        { userId: 'user-3', shareType: 'EQUAL', shareValue: 50 },
+      ]);
+    }
+  });
+
+  it('accepts EQUAL with shareValue 0 (backend normalizes)', () => {
+    const result = validateSplits(
+      [
+        { userId: 'user-1', shareType: 'EQUAL', shareValue: 0 },
+        { userId: 'user-2', shareType: 'EQUAL', shareValue: 0 },
+      ],
+      100,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('accepts EQUAL splits with arbitrary shareValues (no sum validation)', () => {
+    const result = validateSplits(
+      [
+        { userId: 'user-1', shareType: 'EQUAL', shareValue: 1 },
+        { userId: 'user-2', shareType: 'EQUAL', shareValue: 1 },
+        { userId: 'user-3', shareType: 'EQUAL', shareValue: 1 },
+      ],
+      100,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects mixed share types (EQUAL + PERCENT)', () => {
+    const result = validateSplits(
+      [
+        { userId: 'user-1', shareType: 'EQUAL', shareValue: 50 },
+        { userId: 'user-2', shareType: 'PERCENT', shareValue: 50 },
+      ],
+      100,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toBe('All splits must use the same share type.');
+    }
+  });
+
+  it('rejects a missing userId for EQUAL', () => {
+    const result = validateSplits(
+      [
+        { shareType: 'EQUAL', shareValue: 50 },
+      ],
+      50,
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toBe('Each split requires userId, shareType, and a positive shareValue.');
+    }
+  });
+
+  it('rejects a missing shareType', () => {
+    const result = validateSplits(
+      [
+        { userId: 'user-1', shareValue: 50 },
+      ],
+      50,
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects a non-numeric shareValue for EQUAL', () => {
+    const result = validateSplits(
+      [
+        { userId: 'user-1', shareType: 'EQUAL', shareValue: 'not-a-number' },
+      ],
+      50,
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it('does NOT reject a nonmember userId (membership is service-layer)', () => {
+    const result = validateSplits(
+      [
+        { userId: 'definitely-not-a-member', shareType: 'EQUAL', shareValue: 50 },
+      ],
+      50,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('rejects an empty array', () => {
+    const result = validateSplits([], 50);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toBe('At least one split is required.');
+    }
+  });
+
+  it('rejects a non-array input', () => {
+    const result = validateSplits({ userId: 'u', shareType: 'EQUAL', shareValue: 50 }, 50);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toBe('At least one split is required.');
+    }
+  });
+
+  it('rejects undefined splits', () => {
+    const result = validateSplits(undefined, 50);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toBe('At least one split is required.');
+    }
+  });
+});
+
+describe('computeAllocatedAmounts (EQUAL)', () => {
+  it('allocates 100 evenly across 2 users', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'user-1', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'user-2', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(100, splits);
+    const totalCents = result.reduce((acc, entry) => acc + Math.round(entry.computedAmount * 100), 0);
+    expect(totalCents).toBe(10000);
+    expect(result[0].computedAmount).toBe(50);
+    expect(result[1].computedAmount).toBe(50);
+  });
+
+  it('allocates 10.00 across 3 users with cent balancing', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'a', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'b', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'c', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(10, splits);
+    const totalCents = result.reduce((acc, entry) => acc + Math.round(entry.computedAmount * 100), 0);
+    expect(totalCents).toBe(1000);
+    // First user gets the remainder cent
+    expect(Math.round(result[0].computedAmount * 100)).toBe(334);
+    expect(Math.round(result[1].computedAmount * 100)).toBe(333);
+    expect(Math.round(result[2].computedAmount * 100)).toBe(333);
+  });
+
+  it('allocates full amount to single user', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'only', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(25, splits);
+    expect(result[0].computedAmount).toBe(25);
+    const totalCents = result.reduce((acc, entry) => acc + Math.round(entry.computedAmount * 100), 0);
+    expect(totalCents).toBe(2500);
+  });
+
+  it('returns empty array for no splits', () => {
+    const result = computeAllocatedAmounts(100, []);
+    expect(result).toEqual([]);
+  });
+
+  it('allocates 1.00 across 3 users', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'x', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'y', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'z', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(1, splits);
+    const totalCents = result.reduce((acc, entry) => acc + Math.round(entry.computedAmount * 100), 0);
+    expect(totalCents).toBe(100);
+    expect(Math.round(result[0].computedAmount * 100)).toBe(34);
+  });
+});

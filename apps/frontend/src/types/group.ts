@@ -12,14 +12,28 @@ export type Group = {
   members: GroupMember[];
 };
 
-export type ShareType = 'PERCENT' | 'FIXED';
+export type ShareType = 'PERCENT' | 'FIXED' | 'EQUAL';
 
+/**
+ * Read model for an expense split as returned by the backend (GET).
+ * `computedAmount` is always present in server responses.
+ */
 export type ExpenseSplit = {
   userId: string;
   displayName: string;
   shareType: ShareType;
   shareValue: number;
   computedAmount: number;
+};
+
+/**
+ * POST/PATCH expense split payload — computedAmount is backend-derived, never sent by client.
+ */
+export type ExpenseSplitPayload = {
+  userId: string;
+  displayName: string;
+  shareType: ShareType;
+  shareValue: number;
 };
 
 export type PerUserBalance = {
