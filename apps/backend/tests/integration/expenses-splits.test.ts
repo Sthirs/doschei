@@ -498,6 +498,62 @@ describe('Expense Splits Endpoints', () => {
       expect(response.status).toBe(400);
       expect(response.body.message).toBe('All splits must use the same share type.');
     });
+
+    it('returns computedAmount === 20 for all three users on a 60€ EQUAL split', async () => {
+      const user1 = await registerUser('splits-equal-per-split');
+      const user2 = await registerUser('splits-equal-per-split-other');
+      const user3 = await registerUser('splits-equal-per-split-third');
+
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user1.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('splits-equal-per-split-group') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      await createJsonRequest(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user1.body.token}` },
+        body: JSON.stringify({ email: user2.body.user.email }),
+      });
+
+      await createJsonRequest(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user1.body.token}` },
+        body: JSON.stringify({ email: user3.body.user.email }),
+      });
+
+      const response = await createJsonRequest<{
+        expense: {
+          amount: number;
+          splits: Array<{ userId: string; shareType: string; computedAmount: number }>;
+        };
+      }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user1.body.token}` },
+        body: JSON.stringify({
+          description: 'Even dinner',
+          amount: 60,
+          splits: [
+            { userId: user1.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+            { userId: user2.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+            { userId: user3.body.user.id, shareType: 'EQUAL', shareValue: 0 },
+          ],
+        }),
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.body.expense.amount).toBe(60);
+      expect(response.body.expense.splits).toHaveLength(3);
+
+      for (const split of response.body.expense.splits) {
+        expect(split.shareType).toBe('EQUAL');
+        expect(split.computedAmount).toBe(20);
+      }
+
+      const total = response.body.expense.splits.reduce((acc, split) => acc + split.computedAmount, 0);
+      expect(total).toBe(60);
+    });
   });
 
   describe('PATCH /api/groups/:id/expenses/:expenseId with EQUAL splits', () => {
