@@ -5,12 +5,13 @@ import { VueDatePicker } from '@vuepic/vue-datepicker';
 
 import { api } from '@/lib/api';
 import { DEFAULT_CATEGORY_KEY, getCategory } from '@/lib/categories';
+import { computeEqualFixedSplits, splitModeFromExistingSplits } from '@/lib/splitMath';
 import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 import CategoryPicker from '@/components/CategoryPicker.vue';
 import UserPicker from '@/components/UserPicker.vue';
 
-import type { GroupDetail, Expense } from '@/types/group';
+import type { GroupDetail, Expense, ExpenseSplit } from '@/types/group';
 
 const route = useRoute();
 const router = useRouter();
@@ -30,6 +31,12 @@ const expensePaidByUserId = ref('');
 const isSubmittingExpense = ref(false);
 const expenseErrorMessage = ref('');
 
+// Split state for create modal
+const selectedSplitUserIds = ref<string[]>([]);
+const splitMode = ref<'EQUAL' | 'PERCENT' | 'FIXED'>('EQUAL');
+const percentValues = ref<Record<string, number | ''>>({});
+const fixedValues = ref<Record<string, number | ''>>({});
+
 const showExpenseModal = ref(false);
 const selectedExpense = ref<Expense | null>(null);
 const showDeleteConfirm = ref(false);
@@ -40,6 +47,12 @@ const editCategory = ref(DEFAULT_CATEGORY_KEY);
 const isSubmittingEdit = ref(false);
 const isSubmittingDelete = ref(false);
 const editErrorMessage = ref('');
+
+// Split state for edit modal
+const editSelectedSplitUserIds = ref<string[]>([]);
+const editSplitMode = ref<'EQUAL' | 'PERCENT' | 'FIXED'>('EQUAL');
+const editPercentValues = ref<Record<string, number | ''>>({});
+const editFixedValues = ref<Record<string, number | ''>>({});
 
 const groupId = computed(() => route.params.id as string);
 const datePickerFormats = {
@@ -78,6 +91,178 @@ const defaultPaidByUserId = () => {
   return selectableMembers.value[0]?.id ?? '';
 };
 
+// --- Split computed helpers (create modal) ---
+
+const equalSplitPerPerson = computed(() => {
+  const amount = Number(expenseAmount.value);
+  if (!amount || amount <= 0 || selectedSplitUserIds.value.length === 0) return 0;
+  return amount / selectedSplitUserIds.value.length;
+});
+
+const percentSum = computed(() => {
+  let sum = 0;
+  for (const userId of selectedSplitUserIds.value) {
+    const val = percentValues.value[userId];
+    if (typeof val === 'number') sum += val;
+  }
+  return sum;
+});
+
+const fixedSum = computed(() => {
+  let sum = 0;
+  for (const userId of selectedSplitUserIds.value) {
+    const val = fixedValues.value[userId];
+    if (typeof val === 'number') sum += val;
+  }
+  return sum;
+});
+
+const isCreateSplitValid = computed(() => {
+  if (selectedSplitUserIds.value.length === 0) return false;
+  if (splitMode.value === 'PERCENT') {
+    return Math.abs(percentSum.value - 100) <= 0.01;
+  }
+  if (splitMode.value === 'FIXED') {
+    const amount = Number(expenseAmount.value);
+    if (!amount || amount <= 0) return false;
+    return Math.abs(fixedSum.value - amount) <= 0.01;
+  }
+  // EQUAL mode is always valid if at least one user is selected
+  return true;
+});
+
+const createSplitErrorMessage = computed(() => {
+  if (selectedSplitUserIds.value.length === 0) {
+    return 'Select at least one person to split with.';
+  }
+  if (splitMode.value === 'PERCENT') {
+    if (Math.abs(percentSum.value - 100) > 0.01) {
+      return `Percentages must sum to 100 (current: ${percentSum.value.toFixed(2)}).`;
+    }
+  }
+  if (splitMode.value === 'FIXED') {
+    const amount = Number(expenseAmount.value);
+    if (amount && amount > 0 && Math.abs(fixedSum.value - amount) > 0.01) {
+      return `Fixed amounts must sum to \u20AC${amount.toFixed(2)} (current: \u20AC${fixedSum.value.toFixed(2)}).`;
+    }
+  }
+  return '';
+});
+
+// --- Split computed helpers (edit modal) ---
+
+const editEqualSplitPerPerson = computed(() => {
+  const amount = Number(editAmount.value);
+  if (!amount || amount <= 0 || editSelectedSplitUserIds.value.length === 0) return 0;
+  return amount / editSelectedSplitUserIds.value.length;
+});
+
+const editPercentSum = computed(() => {
+  let sum = 0;
+  for (const userId of editSelectedSplitUserIds.value) {
+    const val = editPercentValues.value[userId];
+    if (typeof val === 'number') sum += val;
+  }
+  return sum;
+});
+
+const editFixedSum = computed(() => {
+  let sum = 0;
+  for (const userId of editSelectedSplitUserIds.value) {
+    const val = editFixedValues.value[userId];
+    if (typeof val === 'number') sum += val;
+  }
+  return sum;
+});
+
+const isEditSplitValid = computed(() => {
+  if (editSelectedSplitUserIds.value.length === 0) return false;
+  if (editSplitMode.value === 'PERCENT') {
+    return Math.abs(editPercentSum.value - 100) <= 0.01;
+  }
+  if (editSplitMode.value === 'FIXED') {
+    const amount = Number(editAmount.value);
+    if (!amount || amount <= 0) return false;
+    return Math.abs(editFixedSum.value - amount) <= 0.01;
+  }
+  return true;
+});
+
+const editSplitErrorMessage = computed(() => {
+  if (editSelectedSplitUserIds.value.length === 0) {
+    return 'Select at least one person to split with.';
+  }
+  if (editSplitMode.value === 'PERCENT') {
+    if (Math.abs(editPercentSum.value - 100) > 0.01) {
+      return `Percentages must sum to 100 (current: ${editPercentSum.value.toFixed(2)}).`;
+    }
+  }
+  if (editSplitMode.value === 'FIXED') {
+    const amount = Number(editAmount.value);
+    if (amount && amount > 0 && Math.abs(editFixedSum.value - amount) > 0.01) {
+      return `Fixed amounts must sum to \u20AC${amount.toFixed(2)} (current: \u20AC${editFixedSum.value.toFixed(2)}).`;
+    }
+  }
+  return '';
+});
+
+// --- Split payload builder ---
+
+const buildSplitPayload = (
+  mode: 'EQUAL' | 'PERCENT' | 'FIXED',
+  userIds: string[],
+  amount: number,
+  pValues: Record<string, number | ''>,
+  fValues: Record<string, number | ''>,
+): ExpenseSplit[] => {
+  if (mode === 'EQUAL') {
+    return userIds.map((userId) => ({
+      userId,
+      displayName: selectableMembers.value.find((m) => m.id === userId)?.displayName ?? '',
+      shareType: 'EQUAL' as const,
+      shareValue: 0,
+      computedAmount: 0,
+    }));
+  }
+  if (mode === 'PERCENT') {
+    return userIds.map((userId) => ({
+      userId,
+      displayName: selectableMembers.value.find((m) => m.id === userId)?.displayName ?? '',
+      shareType: 'PERCENT' as const,
+      shareValue: typeof pValues[userId] === 'number' ? pValues[userId] : 0,
+      computedAmount: 0,
+    }));
+  }
+  // FIXED
+  return userIds.map((userId) => ({
+    userId,
+    displayName: selectableMembers.value.find((m) => m.id === userId)?.displayName ?? '',
+    shareType: 'FIXED' as const,
+    shareValue: typeof fValues[userId] === 'number' ? fValues[userId] : 0,
+    computedAmount: typeof fValues[userId] === 'number' ? fValues[userId] : 0,
+  }));
+};
+
+const getInitial = (name: string) => name.charAt(0).toUpperCase();
+
+const toggleSplitUser = (userId: string) => {
+  const idx = selectedSplitUserIds.value.indexOf(userId);
+  if (idx >= 0) {
+    selectedSplitUserIds.value.splice(idx, 1);
+  } else {
+    selectedSplitUserIds.value.push(userId);
+  }
+};
+
+const toggleEditSplitUser = (userId: string) => {
+  const idx = editSelectedSplitUserIds.value.indexOf(userId);
+  if (idx >= 0) {
+    editSelectedSplitUserIds.value.splice(idx, 1);
+  } else {
+    editSelectedSplitUserIds.value.push(userId);
+  }
+};
+
 const loadGroup = async () => {
   isLoading.value = true;
   errorMessage.value = '';
@@ -101,6 +286,11 @@ const openAddExpenseModal = () => {
   expenseCategory.value = DEFAULT_CATEGORY_KEY;
   expensePaidByUserId.value = defaultPaidByUserId();
   expenseErrorMessage.value = '';
+  // Initialize split state: all members selected, EQUAL mode
+  selectedSplitUserIds.value = selectableMembers.value.map((m) => m.id);
+  splitMode.value = 'EQUAL';
+  percentValues.value = {};
+  fixedValues.value = {};
 };
 
 const closeAddExpenseModal = () => {
@@ -118,16 +308,34 @@ const addExpense = async () => {
     return;
   }
 
+  if (!isCreateSplitValid.value) {
+    expenseErrorMessage.value = createSplitErrorMessage.value || 'Please fix the split values.';
+    return;
+  }
+
   isSubmittingExpense.value = true;
   expenseErrorMessage.value = '';
 
   try {
+    const amount = Number(expenseAmount.value);
+    const splits = buildSplitPayload(
+      splitMode.value,
+      selectedSplitUserIds.value,
+      amount,
+      percentValues.value,
+      fixedValues.value,
+    );
     await api.post(`/groups/${groupId.value}/expenses`, {
       description: expenseDescription.value,
-      amount: Number(expenseAmount.value),
+      amount,
       date: expenseDate.value,
       category: expenseCategory.value,
       paidByUserId: expensePaidByUserId.value,
+      splits: splits.map((s) => ({
+        userId: s.userId,
+        shareType: s.shareType,
+        shareValue: s.shareValue,
+      })),
     });
     showAddExpenseModal.value = false;
     await loadGroup();
@@ -147,6 +355,32 @@ const openExpenseModal = (expense: Expense) => {
   showDeleteConfirm.value = false;
   editErrorMessage.value = '';
   showExpenseModal.value = true;
+
+  // Initialize edit split state from existing splits
+  const allMemberIds = selectableMembers.value.map((m) => m.id);
+  const detected = splitModeFromExistingSplits(expense.splits);
+
+  if (detected.selectedUserIds.length === 0) {
+    // No splits or empty: default to all members, EQUAL mode
+    editSelectedSplitUserIds.value = allMemberIds;
+    editSplitMode.value = 'EQUAL';
+    editPercentValues.value = {};
+    editFixedValues.value = {};
+  } else {
+    editSelectedSplitUserIds.value = detected.selectedUserIds;
+    editSplitMode.value = detected.mode;
+    editPercentValues.value = {};
+    editFixedValues.value = {};
+    if (detected.mode === 'PERCENT') {
+      for (const userId of detected.selectedUserIds) {
+        editPercentValues.value[userId] = detected.percentValues[userId] ?? '';
+      }
+    } else if (detected.mode === 'FIXED') {
+      for (const userId of detected.selectedUserIds) {
+        editFixedValues.value[userId] = detected.fixedValues[userId] ?? '';
+      }
+    }
+  }
 };
 
 const closeExpenseModal = () => {
@@ -164,15 +398,33 @@ const saveEdit = async () => {
     return;
   }
 
+  if (!isEditSplitValid.value) {
+    editErrorMessage.value = editSplitErrorMessage.value || 'Please fix the split values.';
+    return;
+  }
+
   isSubmittingEdit.value = true;
   editErrorMessage.value = '';
 
   try {
+    const amount = Number(editAmount.value);
+    const splits = buildSplitPayload(
+      editSplitMode.value,
+      editSelectedSplitUserIds.value,
+      amount,
+      editPercentValues.value,
+      editFixedValues.value,
+    );
     await api.patch(`/groups/${groupId.value}/expenses/${selectedExpense.value!.id}`, {
       description: editDescription.value,
-      amount: Number(editAmount.value),
+      amount,
       date: editDate.value,
       category: editCategory.value,
+      splits: splits.map((s) => ({
+        userId: s.userId,
+        shareType: s.shareType,
+        shareValue: s.shareValue,
+      })),
     });
     showExpenseModal.value = false;
     await loadGroup();
@@ -335,6 +587,54 @@ onBeforeUnmount(() => {
 
       <template v-else-if="group">
 
+        <!-- Balance summary card -->
+        <section v-if="group.balance" class="glass-panel rounded-md px-6 py-4 sm:px-8">
+          <h2 class="text-sm font-medium uppercase tracking-wide text-slate-400">
+            Balance
+          </h2>
+          <div class="mt-3">
+            <p
+              v-if="group.balance.netForCurrentUser > 0"
+              class="text-base font-semibold text-emerald-300"
+            >
+              You are owed &euro;{{ Math.abs(group.balance.netForCurrentUser).toFixed(2) }} overall
+            </p>
+            <p
+              v-else-if="group.balance.netForCurrentUser < 0"
+              class="text-base font-semibold text-rose-300"
+            >
+              You owe &euro;{{ Math.abs(group.balance.netForCurrentUser).toFixed(2) }} overall
+            </p>
+            <p v-else class="text-base font-semibold text-slate-300">
+              You are all settled up.
+            </p>
+          </div>
+          <details v-if="group.balance.perUser.length > 0" class="mt-3">
+            <summary class="cursor-pointer text-sm text-slate-400 transition hover:text-slate-200">
+              See breakdown
+            </summary>
+            <ul class="mt-2 flex flex-col gap-1.5">
+              <li
+                v-for="entry in group.balance.perUser"
+                :key="entry.userId"
+                class="text-sm"
+              >
+                <span
+                  v-if="entry.netForCurrentUser > 0"
+                  class="text-emerald-300"
+                >
+                  {{ entry.displayName }} owes you &euro;{{ Math.abs(entry.netForCurrentUser).toFixed(2) }}
+                </span>
+                <span
+                  v-else
+                  class="text-rose-300"
+                >
+                  You owe {{ entry.displayName }} &euro;{{ Math.abs(entry.netForCurrentUser).toFixed(2) }}
+                </span>
+              </li>
+            </ul>
+          </details>
+        </section>
 
         <div v-if="showAddExpenseModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
           <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl">
@@ -373,6 +673,123 @@ onBeforeUnmount(() => {
                 />
               </label>
 
+              <!-- Split between -->
+              <div class="flex flex-col gap-3">
+                <span class="text-sm text-slate-300">Split between</span>
+                <div class="flex flex-col gap-1.5">
+                  <label
+                    v-for="member in selectableMembers"
+                    :key="member.id"
+                    class="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-white/5"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="selectedSplitUserIds.includes(member.id)"
+                      class="h-4 w-4 rounded border-white/20 bg-white/5 text-brand-500 focus:ring-brand-500/40"
+                      @change="toggleSplitUser(member.id)"
+                    />
+                    <span
+                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/20 text-xs font-semibold text-brand-500"
+                    >
+                      {{ getInitial(member.displayName) }}
+                    </span>
+                    <span class="text-sm text-slate-200">{{ member.displayName }}</span>
+                  </label>
+                </div>
+
+                <!-- Split mode selector -->
+                <div class="flex rounded-md border border-white/10 bg-white/5 p-0.5">
+                  <button
+                    type="button"
+                    :class="[
+                      'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                      splitMode === 'EQUAL' ? 'bg-brand-500 text-slate-950' : 'text-slate-300 hover:text-slate-100',
+                    ]"
+                    @click="splitMode = 'EQUAL'"
+                  >
+                    Equal
+                  </button>
+                  <button
+                    type="button"
+                    :class="[
+                      'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                      splitMode === 'PERCENT' ? 'bg-brand-500 text-slate-950' : 'text-slate-300 hover:text-slate-100',
+                    ]"
+                    @click="splitMode = 'PERCENT'"
+                  >
+                    Percentage
+                  </button>
+                  <button
+                    type="button"
+                    :class="[
+                      'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                      splitMode === 'FIXED' ? 'bg-brand-500 text-slate-950' : 'text-slate-300 hover:text-slate-100',
+                    ]"
+                    @click="splitMode = 'FIXED'"
+                  >
+                    Fixed amount
+                  </button>
+                </div>
+
+                <!-- Equal mode hint -->
+                <p v-if="splitMode === 'EQUAL' && selectedSplitUserIds.length > 0 && expenseAmount && Number(expenseAmount) > 0" class="text-xs text-slate-400">
+                  Each person pays &euro;{{ equalSplitPerPerson.toFixed(2) }}
+                </p>
+
+                <!-- Percentage mode inputs -->
+                <div v-if="splitMode === 'PERCENT'" class="flex flex-col gap-1.5">
+                  <div
+                    v-for="userId in selectedSplitUserIds"
+                    :key="userId"
+                    class="flex items-center gap-2"
+                  >
+                    <span class="min-w-0 flex-1 truncate text-sm text-slate-200">
+                      {{ selectableMembers.find((m) => m.id === userId)?.displayName }}
+                    </span>
+                    <input
+                      v-model.number="percentValues[userId]"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      placeholder="0"
+                      class="w-24 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                    />
+                    <span class="text-xs text-slate-400">%</span>
+                  </div>
+                </div>
+
+                <!-- Fixed amount mode inputs -->
+                <div v-if="splitMode === 'FIXED'" class="flex flex-col gap-1.5">
+                  <div
+                    v-for="userId in selectedSplitUserIds"
+                    :key="userId"
+                    class="flex items-center gap-2"
+                  >
+                    <span class="min-w-0 flex-1 truncate text-sm text-slate-200">
+                      {{ selectableMembers.find((m) => m.id === userId)?.displayName }}
+                    </span>
+                    <input
+                      v-model.number="fixedValues[userId]"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      class="w-24 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                    />
+                    <span class="text-xs text-slate-400">&euro;</span>
+                  </div>
+                </div>
+
+                <!-- Split validation error -->
+                <p
+                  v-if="createSplitErrorMessage"
+                  class="text-xs text-rose-300"
+                >
+                  {{ createSplitErrorMessage }}
+                </p>
+              </div>
+
               <label class="flex flex-col gap-1.5">
                 <span class="text-sm text-slate-300">Date</span>
                 <VueDatePicker
@@ -405,7 +822,7 @@ onBeforeUnmount(() => {
                 <button
                   type="submit"
                   class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400 disabled:opacity-60"
-                  :disabled="isSubmittingExpense"
+                  :disabled="isSubmittingExpense || !isCreateSplitValid"
                 >
                   {{ isSubmittingExpense ? 'Saving...' : 'Save' }}
                 </button>
@@ -463,6 +880,123 @@ onBeforeUnmount(() => {
                   />
                 </label>
 
+                <!-- Edit split between -->
+                <div class="flex flex-col gap-3">
+                  <span class="text-sm text-slate-300">Split between</span>
+                  <div class="flex flex-col gap-1.5">
+                    <label
+                      v-for="member in selectableMembers"
+                      :key="member.id"
+                      class="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-white/5"
+                    >
+                      <input
+                        type="checkbox"
+                        :checked="editSelectedSplitUserIds.includes(member.id)"
+                        class="h-4 w-4 rounded border-white/20 bg-white/5 text-brand-500 focus:ring-brand-500/40"
+                        @change="toggleEditSplitUser(member.id)"
+                      />
+                      <span
+                        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/20 text-xs font-semibold text-brand-500"
+                      >
+                        {{ getInitial(member.displayName) }}
+                      </span>
+                      <span class="text-sm text-slate-200">{{ member.displayName }}</span>
+                    </label>
+                  </div>
+
+                  <!-- Edit split mode selector -->
+                  <div class="flex rounded-md border border-white/10 bg-white/5 p-0.5">
+                    <button
+                      type="button"
+                      :class="[
+                        'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                        editSplitMode === 'EQUAL' ? 'bg-brand-500 text-slate-950' : 'text-slate-300 hover:text-slate-100',
+                      ]"
+                      @click="editSplitMode = 'EQUAL'"
+                    >
+                      Equal
+                    </button>
+                    <button
+                      type="button"
+                      :class="[
+                        'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                        editSplitMode === 'PERCENT' ? 'bg-brand-500 text-slate-950' : 'text-slate-300 hover:text-slate-100',
+                      ]"
+                      @click="editSplitMode = 'PERCENT'"
+                    >
+                      Percentage
+                    </button>
+                    <button
+                      type="button"
+                      :class="[
+                        'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                        editSplitMode === 'FIXED' ? 'bg-brand-500 text-slate-950' : 'text-slate-300 hover:text-slate-100',
+                      ]"
+                      @click="editSplitMode = 'FIXED'"
+                    >
+                      Fixed amount
+                    </button>
+                  </div>
+
+                  <!-- Edit Equal mode hint -->
+                  <p v-if="editSplitMode === 'EQUAL' && editSelectedSplitUserIds.length > 0 && editAmount && Number(editAmount) > 0" class="text-xs text-slate-400">
+                    Each person pays &euro;{{ editEqualSplitPerPerson.toFixed(2) }}
+                  </p>
+
+                  <!-- Edit Percentage mode inputs -->
+                  <div v-if="editSplitMode === 'PERCENT'" class="flex flex-col gap-1.5">
+                    <div
+                      v-for="userId in editSelectedSplitUserIds"
+                      :key="userId"
+                      class="flex items-center gap-2"
+                    >
+                      <span class="min-w-0 flex-1 truncate text-sm text-slate-200">
+                        {{ selectableMembers.find((m) => m.id === userId)?.displayName }}
+                      </span>
+                      <input
+                        v-model.number="editPercentValues[userId]"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        placeholder="0"
+                        class="w-24 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                      />
+                      <span class="text-xs text-slate-400">%</span>
+                    </div>
+                  </div>
+
+                  <!-- Edit Fixed amount mode inputs -->
+                  <div v-if="editSplitMode === 'FIXED'" class="flex flex-col gap-1.5">
+                    <div
+                      v-for="userId in editSelectedSplitUserIds"
+                      :key="userId"
+                      class="flex items-center gap-2"
+                    >
+                      <span class="min-w-0 flex-1 truncate text-sm text-slate-200">
+                        {{ selectableMembers.find((m) => m.id === userId)?.displayName }}
+                      </span>
+                      <input
+                        v-model.number="editFixedValues[userId]"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        class="w-24 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                      />
+                      <span class="text-xs text-slate-400">&euro;</span>
+                    </div>
+                  </div>
+
+                  <!-- Edit split validation error -->
+                  <p
+                    v-if="editSplitErrorMessage"
+                    class="text-xs text-rose-300"
+                  >
+                    {{ editSplitErrorMessage }}
+                  </p>
+                </div>
+
                 <p v-if="editErrorMessage" class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
                   {{ editErrorMessage }}
                 </p>
@@ -479,7 +1013,7 @@ onBeforeUnmount(() => {
                   <button
                     type="submit"
                     class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400 disabled:opacity-60"
-                    :disabled="isSubmittingEdit"
+                    :disabled="isSubmittingEdit || !isEditSplitValid"
                   >
                     {{ isSubmittingEdit ? 'Saving...' : 'Save' }}
                   </button>
