@@ -1,14 +1,63 @@
 import { AppDataSource } from '../db/data-source';
 import { Expense } from '../entities/Expense';
+import { ExpenseSplit } from '../entities/ExpenseSplit';
 import { Group } from '../entities/Group';
 import { User } from '../entities/User';
+import {
+  aggregateBalance,
+  computeAllocatedAmounts,
+  validateSplits,
+  type ParsedSplit,
+} from './expenseSplitMath';
+
+type SerializedSplit = {
+  userId: string;
+  displayName: string;
+  shareType: 'PERCENT' | 'FIXED' | 'EQUAL';
+  shareValue: number;
+  computedAmount: number;
+};
+
+type SerializedExpense = {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  paidByUserId: string;
+  paidByName: string;
+  date: string;
+  createdAt: string;
+  splits: SerializedSplit[];
+};
+
+type SerializedGroup = {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  memberCount: number;
+  members: { id: string; displayName: string; email: string }[];
+};
+
+type SerializedBalanceEntry = {
+  userId: string;
+  displayName: string;
+  netForCurrentUser: number;
+};
+
+type SerializedBalance = {
+  currentUserId: string;
+  currentUserName: string;
+  netForCurrentUser: number;
+  perUser: SerializedBalanceEntry[];
+};
 
 export class GroupService {
   private groupRepository = AppDataSource.getRepository(Group);
   private expenseRepository = AppDataSource.getRepository(Expense);
   private userRepository = AppDataSource.getRepository(User);
+  private splitRepository = AppDataSource.getRepository(ExpenseSplit);
 
-  private serializeGroup(group: Group) {
+  private serializeGroup(group: Group): SerializedGroup {
     return {
       id: group.id,
       name: group.name,
@@ -22,6 +71,63 @@ export class GroupService {
     };
   }
 
+  private serializeExpense(expense: Expense): SerializedExpense {
+    return {
+      id: expense.id,
+      description: expense.description,
+      amount: Number(expense.amount),
+      category: expense.category,
+      paidByUserId: expense.paidBy.id,
+      paidByName: expense.paidBy.displayName,
+      date: expense.date,
+      createdAt: expense.createdAt.toISOString(),
+      splits: (expense.splits ?? []).map((split) => ({
+        userId: split.user.id,
+        displayName: split.user.displayName,
+        shareType: split.shareType,
+        shareValue: Number(split.shareValue),
+        computedAmount: Number(split.computedAmount),
+      })),
+    };
+  }
+
+  private computeBalance(
+    group: Group,
+    expenses: SerializedExpense[],
+    currentUserId: string,
+  ): SerializedBalance {
+    const currentMember = group.members.find((member) => member.id === currentUserId);
+    const currentUserName = currentMember?.displayName ?? '';
+
+    const aggregation = aggregateBalance(
+      expenses.map((expense) => ({
+        paidByUserId: expense.paidByUserId,
+        splits: expense.splits.map((split) => ({
+          userId: split.userId,
+          computedAmount: split.computedAmount,
+        })),
+      })),
+      currentUserId,
+    );
+
+    const perUser: SerializedBalanceEntry[] = [];
+    for (const [userId, netForCurrentUser] of aggregation.perUser) {
+      const otherMember = group.members.find((member) => member.id === userId);
+      perUser.push({
+        userId,
+        displayName: otherMember?.displayName ?? '',
+        netForCurrentUser,
+      });
+    }
+
+    return {
+      currentUserId,
+      currentUserName,
+      netForCurrentUser: aggregation.netForCurrentUser,
+      perUser,
+    };
+  }
+
   /**
    * Verifies the user is a member of the group and returns the group entity.
    * Throws if not found or user is not a member.
@@ -30,6 +136,7 @@ export class GroupService {
     const group = await this.groupRepository
       .createQueryBuilder('group')
       .innerJoin('group.members', 'membership', 'membership.id = :userId', { userId })
+      .leftJoinAndSelect('group.members', 'member')
       .where('group.id = :groupId', { groupId })
       .getOne();
 
@@ -82,21 +189,17 @@ export class GroupService {
 
     const expenses = await this.expenseRepository.find({
       where: { group: { id: groupId } },
-      relations: { paidBy: true },
+      relations: { paidBy: true, splits: { user: true } },
       order: { date: 'DESC', createdAt: 'DESC' },
     });
 
+    const serializedExpenses = expenses.map((expense) => this.serializeExpense(expense));
+    const balance = this.computeBalance(group, serializedExpenses, userId);
+
     return {
       ...this.serializeGroup(group),
-      expenses: expenses.map((expense) => ({
-        id: expense.id,
-        description: expense.description,
-        amount: Number(expense.amount),
-        category: expense.category,
-        paidByName: expense.paidBy.displayName,
-        date: expense.date,
-        createdAt: expense.createdAt.toISOString(),
-      })),
+      expenses: serializedExpenses,
+      balance,
     };
   }
 
@@ -176,6 +279,7 @@ export class GroupService {
     category: string | undefined,
     requesterUserId: string,
     paidByUserId: string,
+    splitsInput: unknown,
   ) {
     const group = await this.groupRepository
       .createQueryBuilder('group')
@@ -193,6 +297,28 @@ export class GroupService {
       throw new Error('The selected user is not a member of this group.');
     }
 
+    const splitsValidation = validateSplits(splitsInput, amount);
+    if (!splitsValidation.ok) {
+      throw new Error(splitsValidation.message);
+    }
+
+    this.assertAllSplitUsersAreMembers(splitsValidation.splits, group);
+
+    const allocated = computeAllocatedAmounts(amount, splitsValidation.splits);
+
+    const splitEntities = allocated.map((entry) => {
+      const user = group.members.find((member) => member.id === entry.userId);
+      if (!user) {
+        throw new Error(`Split user ${entry.userId} is not a member of this group.`);
+      }
+      return this.splitRepository.create({
+        user,
+        shareType: entry.shareType,
+        shareValue: entry.shareValue,
+        computedAmount: entry.computedAmount,
+      });
+    });
+
     const expense = this.expenseRepository.create({
       description,
       amount,
@@ -200,37 +326,71 @@ export class GroupService {
       category: category ?? 'general',
       paidBy: paidByUser,
       group,
+      splits: splitEntities,
     });
 
     const savedExpense = await this.expenseRepository.save(expense);
 
-    return {
-      id: savedExpense.id,
-      description: savedExpense.description,
-      amount: Number(savedExpense.amount),
-      category: savedExpense.category,
-      paidByName: savedExpense.paidBy.displayName,
-      date: savedExpense.date,
-      createdAt: savedExpense.createdAt.toISOString(),
-    };
+    const reloaded = await this.expenseRepository.findOne({
+      where: { id: savedExpense.id },
+      relations: { paidBy: true, splits: { user: true } },
+    });
+
+    if (!reloaded) {
+      throw new Error('Created expense could not be reloaded.');
+    }
+
+    return this.serializeExpense(reloaded);
   }
 
   async updateExpenseForGroup(
     groupId: string,
     expenseId: string,
-    updates: { description?: string; amount?: number; date?: string; category?: string },
+    updates: {
+      description?: string;
+      amount?: number;
+      date?: string;
+      category?: string;
+      splits?: unknown;
+    },
     userId: string,
   ) {
-    await this.getGroupForMember(groupId, userId);
+    const group = await this.getGroupForMember(groupId, userId);
 
     const expense = await this.expenseRepository.findOne({
       where: { id: expenseId, group: { id: groupId } },
-      relations: { paidBy: true },
+      relations: { paidBy: true, splits: { user: true } },
     });
 
     if (!expense) {
       throw new Error('Expense not found.');
     }
+
+    // `splits` is always required on PATCH. The previous splits are deleted
+    // and the new ones are inserted in a single transaction, regardless of
+    // which expense fields are also being updated.
+    const effectiveAmount = updates.amount ?? Number(expense.amount);
+    const splitsValidation = validateSplits(updates.splits, effectiveAmount);
+    if (!splitsValidation.ok) {
+      throw new Error(splitsValidation.message);
+    }
+
+    this.assertAllSplitUsersAreMembers(splitsValidation.splits, group);
+
+    const allocated = computeAllocatedAmounts(effectiveAmount, splitsValidation.splits);
+    const nextSplits = allocated.map((entry) => {
+      const user = group.members.find((member) => member.id === entry.userId);
+      if (!user) {
+        throw new Error(`Split user ${entry.userId} is not a member of this group.`);
+      }
+      return this.splitRepository.create({
+        expense,
+        user,
+        shareType: entry.shareType,
+        shareValue: entry.shareValue,
+        computedAmount: entry.computedAmount,
+      });
+    });
 
     if (updates.description !== undefined) {
       expense.description = updates.description;
@@ -245,17 +405,23 @@ export class GroupService {
       expense.category = updates.category;
     }
 
-    const savedExpense = await this.expenseRepository.save(expense);
+    const savedExpense = await AppDataSource.transaction(async (manager) => {
+      const splitRepo = manager.getRepository(ExpenseSplit);
+      await splitRepo.delete({ expense: { id: expense.id } });
+      expense.splits = nextSplits;
+      return manager.getRepository(Expense).save(expense);
+    });
 
-    return {
-      id: savedExpense.id,
-      description: savedExpense.description,
-      amount: Number(savedExpense.amount),
-      category: savedExpense.category,
-      paidByName: savedExpense.paidBy.displayName,
-      date: savedExpense.date,
-      createdAt: savedExpense.createdAt.toISOString(),
-    };
+    const reloaded = await this.expenseRepository.findOne({
+      where: { id: savedExpense.id },
+      relations: { paidBy: true, splits: { user: true } },
+    });
+
+    if (!reloaded) {
+      throw new Error('Updated expense could not be reloaded.');
+    }
+
+    return this.serializeExpense(reloaded);
   }
 
   async deleteExpenseForGroup(groupId: string, expenseId: string, userId: string) {
@@ -271,5 +437,13 @@ export class GroupService {
     }
 
     await this.expenseRepository.remove(expense);
+  }
+
+  private assertAllSplitUsersAreMembers(splits: ParsedSplit[], group: Group): void {
+    for (const split of splits) {
+      if (!group.members.some((member) => member.id === split.userId)) {
+        throw new Error(`Split user ${split.userId} is not a member of this group.`);
+      }
+    }
   }
 }

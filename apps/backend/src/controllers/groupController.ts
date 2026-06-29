@@ -98,12 +98,13 @@ export const createGroup = async (request: AuthenticatedRequest, response: Respo
 
 export const createExpense = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
-  const { description, amount, date, category, paidByUserId } = request.body as {
+  const { description, amount, date, category, paidByUserId, splits } = request.body as {
     description?: unknown;
     amount?: unknown;
     date?: unknown;
     category?: unknown;
     paidByUserId?: unknown;
+    splits?: unknown;
   };
   const normalizedCategory = typeof category === 'string' ? category.trim() : undefined;
 
@@ -148,6 +149,7 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
       normalizedCategory && normalizedCategory.length > 0 ? normalizedCategory : undefined,
       request.auth!.userId,
       resolvedPaidByUserId,
+      splits,
     );
 
     response.status(201).json({ expense });
@@ -159,7 +161,13 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
 export const updateExpense = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
   const expenseId = request.params.expenseId as string;
-  const { description, amount, date, category } = request.body as { description?: unknown; amount?: unknown; date?: unknown; category?: unknown };
+  const { description, amount, date, category, splits } = request.body as {
+    description?: unknown;
+    amount?: unknown;
+    date?: unknown;
+    category?: unknown;
+    splits?: unknown;
+  };
   const normalizedCategory = typeof category === 'string' ? category.trim() : undefined;
 
   if (description !== undefined && (typeof description !== 'string' || description.trim().length === 0)) {
@@ -196,6 +204,7 @@ export const updateExpense = async (request: AuthenticatedRequest, response: Res
         amount: typeof amount === 'number' ? amount : undefined,
         date: typeof date === 'string' ? date : undefined,
         category: normalizedCategory && normalizedCategory.length > 0 ? normalizedCategory : undefined,
+        splits,
       },
       request.auth!.userId
     );
