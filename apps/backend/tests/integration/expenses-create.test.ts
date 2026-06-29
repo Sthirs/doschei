@@ -18,7 +18,13 @@ describe('Expenses Endpoints', () => {
       const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; category: string; paidByName: string; date: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Dinner', amount: 50.5, date: '2026-06-01', category: 'groceries' }),
+        body: JSON.stringify({
+          description: 'Dinner',
+          amount: 50.5,
+          date: '2026-06-01',
+          category: 'groceries',
+          splits: [{ userId: user.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
 
       expect(response.status).toBe(201);
@@ -93,7 +99,11 @@ describe('Expenses Endpoints', () => {
       const response = await createJsonRequest<{ expense: { date: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Breakfast', amount: 12.5 }),
+        body: JSON.stringify({
+          description: 'Breakfast',
+          amount: 12.5,
+          splits: [{ userId: user.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
 
       expect(response.status).toBe(201);
@@ -124,6 +134,7 @@ describe('Expenses Endpoints', () => {
           description: 'Lunch paid by other',
           amount: 30,
           paidByUserId: otherMember.body.user.id,
+          splits: [{ userId: otherMember.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
         }),
       });
 
@@ -149,6 +160,7 @@ describe('Expenses Endpoints', () => {
           description: 'Forbidden attribution',
           amount: 20,
           paidByUserId: outsider.body.user.id,
+          splits: [{ userId: author.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
         }),
       });
 
@@ -170,14 +182,22 @@ describe('Expenses Endpoints', () => {
       const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Lunch', amount: 20, category: 'general' }),
+        body: JSON.stringify({
+          description: 'Lunch',
+          amount: 20,
+          category: 'general',
+          splits: [{ userId: user.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
       const expenseId = expRes.body.expense.id;
 
       const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; category: string; paidByName: string; date: string; createdAt?: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Lunch updated', amount: 25.5, date: '2026-06-03', category: 'taxi' }),
+        body: JSON.stringify({
+          description: 'Lunch updated', amount: 25.5, date: '2026-06-03', category: 'taxi',
+          splits: [{ userId: user.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
 
       expect(response.status).toBe(200);
@@ -211,14 +231,21 @@ describe('Expenses Endpoints', () => {
       const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${author.body.token}` },
-        body: JSON.stringify({ description: 'Drinks', amount: 15 }),
+        body: JSON.stringify({
+          description: 'Drinks',
+          amount: 15,
+          splits: [{ userId: author.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
       const expenseId = expRes.body.expense.id;
 
       const response = await createJsonRequest<{ expense: { id: string; description: string; amount: number; paidByName: string; date: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${otherUser.body.token}` },
-        body: JSON.stringify({ amount: 20, date: '2026-06-05' }),
+        body: JSON.stringify({
+        amount: 20, date: '2026-06-05',
+        splits: [{ userId: author.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+      }),
       });
 
       expect(response.status).toBe(200);
@@ -241,7 +268,11 @@ describe('Expenses Endpoints', () => {
       const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Dinner', amount: 50 }),
+        body: JSON.stringify({
+          description: 'Dinner',
+          amount: 50,
+          splits: [{ userId: user.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
       const expenseId = expRes.body.expense.id;
 
@@ -267,7 +298,12 @@ describe('Expenses Endpoints', () => {
       const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Dinner', amount: 50, category: 'general' }),
+        body: JSON.stringify({
+          description: 'Dinner',
+          amount: 50,
+          category: 'general',
+          splits: [{ userId: user.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
       const expenseId = expRes.body.expense.id;
 
@@ -295,7 +331,11 @@ describe('Expenses Endpoints', () => {
       const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${user.body.token}` },
-        body: JSON.stringify({ description: 'Snacks', amount: 10 }),
+        body: JSON.stringify({
+          description: 'Snacks',
+          amount: 10,
+          splits: [{ userId: user.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
       const expenseId = expRes.body.expense.id;
 
@@ -333,7 +373,11 @@ describe('Expenses Endpoints', () => {
       const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${author.body.token}` },
-        body: JSON.stringify({ description: 'Tickets', amount: 100 }),
+        body: JSON.stringify({
+          description: 'Tickets',
+          amount: 100,
+          splits: [{ userId: author.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
       });
       const expenseId = expRes.body.expense.id;
 
