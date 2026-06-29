@@ -26,16 +26,6 @@ export type ExpenseSplit = {
   computedAmount: number;
 };
 
-/**
- * POST/PATCH expense split payload — computedAmount is backend-derived, never sent by client.
- */
-export type ExpenseSplitPayload = {
-  userId: string;
-  displayName: string;
-  shareType: ShareType;
-  shareValue: number;
-};
-
 export type PerUserBalance = {
   userId: string;
   displayName: string;
