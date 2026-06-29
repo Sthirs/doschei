@@ -22,12 +22,11 @@ const SEED_USERS: SeedUser[] = [
 ];
 
 const SEED_GROUPS: SeedGroup[] = [
-  // Existing baseline group, kept for backwards compatibility.
-  { name: 'Weekend in Venice', memberEmails: [DEMO_EMAIL] },
-  // New groups for exhaustive expense-author testing: shared memberships so
-  // some users belong to multiple groups and some belong to only one.
-  { name: 'Trip to Rome', memberEmails: [DEMO_EMAIL, 'alice@doschei.local', 'bob@doschei.local'] },
+  { name: 'Personal Spending', memberEmails: [DEMO_EMAIL] },
+  // Overlapping memberships across groups exercise expense-author edge cases.
+  { name: 'Weekend in Venice', memberEmails: [DEMO_EMAIL, 'alice@doschei.local'] },
   { name: 'Office Lunch', memberEmails: ['alice@doschei.local', 'carol@doschei.local'] },
+  { name: 'Holiday in Palermo', memberEmails: [DEMO_EMAIL, 'alice@doschei.local', 'bob@doschei.local'] },
 ];
 
 const COMMON_PASSWORD = 'password123';
