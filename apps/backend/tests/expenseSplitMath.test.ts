@@ -674,4 +674,121 @@ describe('computeAllocatedAmounts (EQUAL)', () => {
     expect(totalCents).toBe(100);
     expect(Math.round(result[0].computedAmount * 100)).toBe(34);
   });
+
+  it('allocates 60.00 evenly across 3 users with no remainder', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'a', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'b', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'c', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(60, splits);
+    const totalCents = result.reduce((acc, entry) => acc + Math.round(entry.computedAmount * 100), 0);
+    expect(totalCents).toBe(6000);
+    // All three users should get exactly 20.00 — current buggy code gives 20.01/20.00/19.99
+    expect(result[0].computedAmount).toBe(20);
+    expect(result[1].computedAmount).toBe(20);
+    expect(result[2].computedAmount).toBe(20);
+  });
+
+  it('regression: allocates 100.00 across 3 users as [3334, 3333, 3333] cents', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'a', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'b', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'c', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(100, splits);
+    expect(Math.round(result[0].computedAmount * 100)).toBe(3334);
+    expect(Math.round(result[1].computedAmount * 100)).toBe(3333);
+    expect(Math.round(result[2].computedAmount * 100)).toBe(3333);
+    const totalCents = result.reduce((acc, entry) => acc + Math.round(entry.computedAmount * 100), 0);
+    expect(totalCents).toBe(10000);
+  });
+
+  it('regression: allocates 1.00 across 3 users as [34, 33, 33] cents', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'a', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'b', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'c', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(1, splits);
+    expect(Math.round(result[0].computedAmount * 100)).toBe(34);
+    expect(Math.round(result[1].computedAmount * 100)).toBe(33);
+    expect(Math.round(result[2].computedAmount * 100)).toBe(33);
+    const totalCents = result.reduce((acc, entry) => acc + Math.round(entry.computedAmount * 100), 0);
+    expect(totalCents).toBe(100);
+  });
+
+  it('regression: allocates 0.01 across 3 users as [1, 0, 0] cents (edge case)', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'a', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'b', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'c', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(0.01, splits);
+    expect(Math.round(result[0].computedAmount * 100)).toBe(1);
+    expect(Math.round(result[1].computedAmount * 100)).toBe(0);
+    expect(Math.round(result[2].computedAmount * 100)).toBe(0);
+    const totalCents = result.reduce((acc, entry) => acc + Math.round(entry.computedAmount * 100), 0);
+    expect(totalCents).toBe(1);
+  });
+
+  it('regression: allocates 99999.99 across 7 users conserving the total and spreading evenly', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'a', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'b', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'c', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'd', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'e', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'f', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'g', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(99999.99, splits);
+    const totalCents = result.reduce((acc, entry) => acc + Math.round(entry.computedAmount * 100), 0);
+    expect(totalCents).toBe(9999999);
+    const cents = result.map((entry) => Math.round(entry.computedAmount * 100));
+    const max = Math.max(...cents);
+    const min = Math.min(...cents);
+    expect(max - min).toBeLessThanOrEqual(1);
+  });
+
+  it('regression: 2-user 50/50 split yields [25.00, 25.00]', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'a', shareType: 'EQUAL', shareValue: 0 },
+      { userId: 'b', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(50, splits);
+    expect(result[0].computedAmount).toBe(25);
+    expect(result[1].computedAmount).toBe(25);
+  });
+
+  it('regression: single-user 25 split yields [25.00]', () => {
+    const splits: ParsedSplit[] = [
+      { userId: 'only', shareType: 'EQUAL', shareValue: 0 },
+    ];
+    const result = computeAllocatedAmounts(25, splits);
+    expect(result).toHaveLength(1);
+    expect(result[0].computedAmount).toBe(25);
+  });
+
+  it('regression: shareValue sums to 100 across 100/3, 1/3, and 0.01/3 cases', () => {
+    const cases = [
+      { amount: 100, users: 3, label: '100/3' },
+      { amount: 1, users: 3, label: '1/3' },
+      { amount: 0.01, users: 3, label: '0.01/3' },
+    ];
+
+    for (const { amount, users, label } of cases) {
+      const splits: ParsedSplit[] = Array.from({ length: users }, (_, i) => ({
+        userId: `u${i}`,
+        shareType: 'EQUAL' as const,
+        shareValue: 0,
+      }));
+      const result = computeAllocatedAmounts(amount, splits);
+      const percentSum = result.reduce(
+        (acc, entry) => acc + Math.round(entry.shareValue * 100),
+        0,
+      );
+      expect(percentSum, `shareValue should sum to 100 for ${label}`).toBe(10000);
+    }
+  });
 });

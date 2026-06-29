@@ -143,27 +143,26 @@ export const computeAllocatedAmounts = (
 
   if (shareType === 'EQUAL') {
     const n = splits.length;
-    // 100.00 expressed in cents is 10000; balance the remainder across the first
-    // `percentRemainder` users so the derived percents always sum to 100.
+    const amountCents = toCents(amount);
+
+    // Allocate amount directly in cents — base share + remainder distributed in input order.
+    const base = Math.floor(amountCents / n);
+    const remainder = amountCents - base * n;
+
+    // Derive display percentages (must sum to 100.00 for display/round-trip consistency).
+    // IMPORTANT: shareValue is a derived percent for display only — it may not satisfy
+    // shareValue × amount = computedAmount due to independent rounding. This is intentional:
+    // EQUAL shareValue is never displayed to users (the frontend computes amount/userCount
+    // fresh) and balances are computed from computedAmount via aggregateBalance, not from
+    // shareValue.
     const percentCentsEach = Math.floor(10000 / n);
     const percentRemainder = 10000 - percentCentsEach * n;
 
-    // The recursive call is safe: percentSplits below all carry shareType
-    // 'PERCENT', so the call lands in the PERCENT branch and exits without
-    // re-entering this EQUAL branch.
-    const percentSplits: ParsedSplit[] = splits.map((entry, index) => ({
-      userId: entry.userId,
-      shareType: 'PERCENT',
-      shareValue: (percentCentsEach + (index < percentRemainder ? 1 : 0)) / 100,
-    }));
-
-    const allocated = computeAllocatedAmounts(amount, percentSplits);
-
-    return allocated.map((entry, index) => ({
+    return splits.map((entry, index) => ({
       userId: entry.userId,
       shareType: 'EQUAL' as const,
-      shareValue: percentSplits[index].shareValue,
-      computedAmount: entry.computedAmount,
+      shareValue: (percentCentsEach + (index < percentRemainder ? 1 : 0)) / 100,
+      computedAmount: (base + (index < remainder ? 1 : 0)) / 100,
     }));
   }
 
