@@ -15,6 +15,10 @@ yarn-error.log*
 tmp/
 .omo
 .playwright-mcp
+tests/e2e/.auth/
+test-results/
+playwright-report/
+playwright/.cache/
 
 *.log
 *.tmp
