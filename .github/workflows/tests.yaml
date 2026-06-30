@@ -29,6 +29,9 @@ jobs:
       - name: Run unit tests
         run: npm run test
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Start minikube
         uses: medyagh/setup-minikube@e9e035a86bbc3caea26a450bd4dbf9d0c453682e # v0.0.21
 
@@ -79,89 +82,6 @@ jobs:
 
           npm run test:integration -- "http://${DEV_HOST}"
 
-      - name: Debug on failure
-        if: failure()
-        run: |
-          echo "=== Pod status ==="
-          kubectl -n doschei get pods
-          echo "=== Pod logs (backend) ==="
-          kubectl -n doschei logs -l app=doschei-backend --tail=50 || true
-          echo "=== Pod logs (frontend) ==="
-          kubectl -n doschei logs -l app=doschei-frontend --tail=50 || true
-          echo "=== Events ==="
-          kubectl -n doschei get events --sort-by=.lastTimestamp | tail -20 || true
-
-  playwright:
-    needs: test
-    runs-on: ubuntu-latest
-    # This job is self-sufficient: it re-deploys the chart because GH Actions
-    # runners are NOT shared across jobs — the test job's minikube state does
-    # not persist to a sibling job.
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Start minikube
-        uses: medyagh/setup-minikube@e9e035a86bbc3caea26a450bd4dbf9d0c453682e # v0.0.21
-
-      - name: Enable ingress addon
-        run: minikube addons enable ingress
-
-      - name: Build images in minikube
-        run: |
-          minikube image build -f apps/backend/Dockerfile -t doschei/backend:dev .
-          minikube image build -f apps/frontend/Dockerfile -t doschei/frontend:dev .
-
-      - name: Deploy with Helm
-        run: |
-          MINIKUBE_IP=$(minikube ip)
-          DEV_HOST="doschei.${MINIKUBE_IP}.nip.io"
-
-          helm upgrade --install doschei ./helm/doschei \
-            --namespace doschei \
-            --create-namespace \
-            --wait \
-            --timeout 5m \
-            --set devMode.enabled=true \
-            --set ingress.host="$DEV_HOST" \
-            --set backend.env.CORS_ORIGIN="http://$DEV_HOST"
-
-      - name: Wait for pods to be ready
-        run: |
-          kubectl -n doschei wait --for=condition=ready pod --all --timeout=120s
-
-      - name: Wait for ingress controller
-        run: |
-          kubectl -n ingress-nginx wait --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=120s
-
-      - name: Wait for backend to be ready
-        run: |
-          MINIKUBE_IP=$(minikube ip)
-          DEV_HOST="doschei.${MINIKUBE_IP}.nip.io"
-
-          # Wait for backend to respond
-          for i in $(seq 1 30); do
-            if curl -sf "http://${DEV_HOST}/api/health" > /dev/null 2>&1; then
-              echo "Backend is ready"
-              break
-            fi
-            echo "Waiting for backend... ($i/30)"
-            sleep 5
-          done
-
       - name: Run Playwright tests
         run: |
           MINIKUBE_IP=$(minikube ip)
@@ -174,7 +94,7 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 7
+          retention-days: 3
 
       - name: Debug on failure
         if: failure()
