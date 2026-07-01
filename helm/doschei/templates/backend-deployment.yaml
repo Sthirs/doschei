@@ -35,6 +35,18 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       {{- end }}
+      {{- if and .Values.dex.enabled .Values.devMode.enabled }}
+      initContainers:
+        - name: wait-for-dex
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until wget -q -O /dev/null http://doschei-dex.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.dex.service.port }}/dex/.well-known/openid-configuration; do
+                echo "waiting for dex..."; sleep 2
+              done
+      {{- end }}
       volumes:
         - name: backend-tmp
           emptyDir: {}
@@ -100,6 +112,20 @@ spec:
                 secretKeyRef:
                   name: {{ include "doschei.backendJwtSecretName" . }}
                   key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "jwt") }}
+            - name: FRONTEND_URL
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "FRONTEND_URL") | quote }}
+            - name: OAUTH_CONFIG
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.backendOauthSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "oauthConfig") }}
+                  optional: true
+            - name: OAUTH_STATE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.backendOauthSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "oauthStateSecret") }}
+                  optional: true
           readinessProbe:
             httpGet:
               path: /api/health

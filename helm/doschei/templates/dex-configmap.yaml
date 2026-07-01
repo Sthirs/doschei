@@ -1,0 +1,25 @@
+{{- if and .Values.dex.enabled .Values.devMode.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doschei-dex
+  labels:
+    app.kubernetes.io/component: dex
+    app.kubernetes.io/instance: {{ .Values.fullnameOverride }}
+data:
+  config.yaml: |
+    issuer: http://{{ .Values.ingress.host }}/dex
+    storage:
+      type: sqlite3
+      config:
+        file: /var/dex/dex.db
+    web:
+      http: 0.0.0.0:5556
+    staticClients:
+      - id: doschei
+        name: 'Do Schèi'
+        secret: ${DOSCHEI_OAUTH_CLIENT_SECRET}
+        redirectURIs:
+          - 'http://{{ .Values.ingress.host }}/api/auth/oauth/callback'
+    enablePasswordDB: true
+{{- end }}

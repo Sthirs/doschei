@@ -8,5 +8,6 @@ helm upgrade --install doschei ./helm/doschei \
   --create-namespace \
   --wait \
   --set devMode.enabled=true \
+  --set dex.enabled=true \
   --set ingress.host="$DEV_HOST" \
   --set backend.env.CORS_ORIGIN="http://$DEV_HOST"
