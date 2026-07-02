@@ -1,0 +1,18 @@
+{{- if and .Values.dex.enabled .Values.devMode.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: doschei-dex
+  labels:
+    app.kubernetes.io/component: dex
+    app.kubernetes.io/instance: {{ .Values.fullnameOverride }}
+spec:
+  type: {{ .Values.dex.service.type }}
+  ports:
+    - port: {{ .Values.dex.service.port }}
+      targetPort: {{ .Values.dex.service.targetPort }}
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: dex
+    app.kubernetes.io/instance: {{ .Values.fullnameOverride }}
+{{- end }}

@@ -17,8 +17,8 @@ export class User {
   @Column({ type: 'varchar', unique: true })
   email!: string;
 
-  @Column({ type: 'varchar', name: 'password_hash' })
-  passwordHash!: string;
+  @Column({ type: 'varchar', name: 'password_hash', nullable: true })
+  passwordHash?: string | null;
 
   @Column({ type: 'varchar', name: 'display_name' })
   displayName!: string;

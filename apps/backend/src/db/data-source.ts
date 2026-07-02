@@ -7,13 +7,14 @@ import { Expense } from '../entities/Expense';
 import { ExpenseSplit } from '../entities/ExpenseSplit';
 import { Group } from '../entities/Group';
 import { User } from '../entities/User';
+import { UserIdentity } from '../entities/UserIdentity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
   url: env.DATABASE_URL,
   synchronize: env.DB_SYNC,
   logging: false,
-  entities: [User, Group, Expense, ExpenseSplit],
+  entities: [User, UserIdentity, Group, Expense, ExpenseSplit],
 });
 
 export const initializeDatabase = async (): Promise<DataSource> => {
