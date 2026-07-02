@@ -31,6 +31,15 @@ spec:
                 name: {{ include "doschei.fullname" . }}-backend
                 port:
                   number: {{ .Values.backend.service.port }}
+          {{- if and .Values.dex.enabled .Values.devMode.enabled }}
+          - path: /dex
+            pathType: Prefix
+            backend:
+              service:
+                name: doschei-dex
+                port:
+                  number: {{ .Values.dex.service.port }}
+          {{- end }}
           - path: /
             pathType: Prefix
             backend:

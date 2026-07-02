@@ -52,5 +52,10 @@ export const useAuthStore = defineStore('auth', {
       this.user = null;
       localStorage.removeItem(TOKEN_KEY);
     },
+    async loginWithToken(token: string) {
+      this.token = token;
+      localStorage.setItem(TOKEN_KEY, token);
+      await this.fetchCurrentUser();
+    },
   },
 });

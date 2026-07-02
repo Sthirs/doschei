@@ -41,7 +41,7 @@ export class AuthService {
   async login(input: LoginInput): Promise<User> {
     const user = await this.userRepository.findOne({ where: { email: input.email.toLowerCase() } });
 
-    if (!user) {
+    if (!user || !user.passwordHash) {
       throw new Error('Invalid email or password.');
     }
 
