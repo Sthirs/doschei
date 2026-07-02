@@ -35,6 +35,7 @@ backend:
     DB_SYNC: "false"
     SEED_ON_STARTUP: "false"
     CORS_ORIGIN: https://doschei.example.com
+    FRONTEND_URL: ""
   secrets:
     jwt:
       secretName: doschei-backend-secrets
@@ -47,6 +48,11 @@ backend:
         username: DB_USERNAME
         password: DB_PASSWORD
         databaseName: DB_DATABASE_NAME
+    oauth:
+      secretName: doschei-backend-oauth
+      keys:
+        config: OAUTH_CONFIG
+        stateSecret: OAUTH_STATE_SECRET
 
 ingress:
   enabled: true
@@ -74,3 +80,29 @@ postgres:
       database: POSTGRES_DB
   persistence:
     enabled: false
+
+dex:
+  enabled: false
+  image:
+    repository: dexidp/dex
+    tag: "v2.41.1"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5556
+    targetPort: 5556
+  config:
+    issuer: http://doschei-dex.doschei.svc.cluster.local:5556/dex
+    storage:
+      type: sqlite3
+      config:
+        file: /var/dex/dex.db
+    web:
+      http: 0.0.0.0:5556
+    staticClients:
+      - id: doschei
+        name: 'Do Schèi'
+        secret: ${DOSCHEI_OAUTH_CLIENT_SECRET}
+        redirectURIs:
+          - 'http://doschei.127.0.0.1.nip.io/api/auth/oauth/callback'
+    enablePasswordDB: true

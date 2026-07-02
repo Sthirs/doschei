@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
+import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
@@ -14,6 +15,7 @@ const form = reactive({
 });
 
 const errorMessage = ref('');
+const oauthConfig = ref<{ enabled: boolean; buttonText: string; autoLaunch: boolean } | null>(null);
 
 const redirectTarget = computed(() => String(route.query.redirect ?? '/groups'));
 
@@ -27,6 +29,18 @@ const submit = async () => {
     errorMessage.value = 'We could not sign you in with those credentials.';
   }
 };
+
+onMounted(async () => {
+  try {
+    const { data } = await api.get('/auth/oauth/config');
+    oauthConfig.value = data;
+    if (data.autoLaunch && data.enabled) {
+      window.location.href = '/api/auth/oauth';
+    }
+  } catch {
+    // OAuth config endpoint unavailable — hide the button
+  }
+});
 </script>
 
 <template>
@@ -93,6 +107,25 @@ const submit = async () => {
               {{ authStore.isLoading ? 'Signing in...' : 'Sign in' }}
             </button>
           </form>
+
+          <template v-if="oauthConfig?.enabled">
+            <div class="mt-6 flex items-center gap-3">
+              <span class="h-px flex-1 bg-white/10"></span>
+              <span class="text-xs uppercase tracking-widest text-slate-400">or</span>
+              <span class="h-px flex-1 bg-white/10"></span>
+            </div>
+
+            <a
+              href="/api/auth/oauth"
+              class="mt-6 flex w-full items-center justify-center gap-3 rounded-md border border-white/10 bg-white/5 px-4 py-3 font-medium text-slate-50 transition hover:bg-white/10"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              {{ oauthConfig.buttonText }}
+            </a>
+          </template>
         </div>
       </section>
     </div>

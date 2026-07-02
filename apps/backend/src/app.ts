@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 
@@ -17,6 +18,7 @@ export const createApp = () => {
     }),
   );
   app.use(express.json());
+  app.use(cookieParser());
 
   app.get('/api/health', healthHandler);
 

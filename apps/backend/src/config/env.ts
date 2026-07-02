@@ -22,6 +22,27 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === 'true'),
   CORS_ORIGIN: z.string().default('http://doschei.127.0.0.1.nip.io'),
+  OAUTH_CONFIG: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (!val) return undefined;
+      const parsed = JSON.parse(val);
+      return z
+        .object({
+          autoLaunch: z.boolean().default(false),
+          autoRegister: z.boolean().default(true),
+          buttonText: z.string().default('Sign in with OAuth'),
+          clientId: z.string(),
+          clientSecret: z.string(),
+          enabled: z.boolean().default(true),
+          issuerUrl: z.string(),
+          scope: z.string().default('openid email profile'),
+        })
+        .parse(parsed);
+    }),
+  FRONTEND_URL: z.string().optional(),
+  OAUTH_STATE_SECRET: z.string().optional(),
 });
 
 const parsedEnv = envSchema.parse(process.env);
@@ -39,4 +60,8 @@ const databaseUrl =
 export const env = {
   ...parsedEnv,
   DATABASE_URL: databaseUrl,
+  FRONTEND_URL: parsedEnv.FRONTEND_URL ?? parsedEnv.CORS_ORIGIN,
+  oauthEnabled:
+    parsedEnv.OAUTH_CONFIG?.enabled === true &&
+    Boolean(parsedEnv.OAUTH_STATE_SECRET),
 };
