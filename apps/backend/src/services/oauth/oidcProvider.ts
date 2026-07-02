@@ -119,8 +119,8 @@ export class OidcProvider implements OAuthProvider {
       // for any subsequent OAuth attempt. Caller (initOAuthProviders) is
       // responsible for logging + skipping registration.
       console.warn(
-        `[oauth] OAuth discovery failed for issuer ${this.issuer}; provider will be unavailable until restart.`,
-        error,
+        '[oauth] OAuth discovery failed; provider will be unavailable until restart.',
+        { issuer: this.issuer, error },
       );
     }
   }

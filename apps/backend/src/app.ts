@@ -1,8 +1,8 @@
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 
 import { env } from './config/env';
-import { parseCookies } from './middleware/parseCookies';
 import { apiRouter } from './routes';
 
 const healthHandler = (_request: express.Request, response: express.Response) => {
@@ -18,7 +18,7 @@ export const createApp = () => {
     }),
   );
   app.use(express.json());
-  app.use(parseCookies);
+  app.use(cookieParser());
 
   app.get('/api/health', healthHandler);
 
