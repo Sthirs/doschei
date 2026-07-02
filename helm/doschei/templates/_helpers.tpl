@@ -45,6 +45,7 @@ dev
 {{- else if eq $key "DB_SYNC" -}}true
 {{- else if eq $key "SEED_ON_STARTUP" -}}true
 {{- else if eq $key "JWT_SECRET" -}}change-me-dev-secret
+{{- else if eq $key "FRONTEND_URL" -}}{{ printf "http://%s" $root.Values.ingress.host }}
 {{- else -}}{{- index $root.Values.backend.env $key -}}
 {{- end -}}
 {{- else -}}
@@ -68,6 +69,14 @@ dev
 {{- end -}}
 {{- end -}}
 
+{{- define "doschei.backendOauthSecretName" -}}
+{{- if .Values.devMode.enabled -}}
+{{- printf "%s-backend" (include "doschei.fullname" .) -}}
+{{- else -}}
+{{- .Values.backend.secrets.oauth.secretName -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "doschei.backendSecretKey" -}}
 {{- $root := .root -}}
 {{- $type := .type -}}
@@ -87,6 +96,12 @@ dev
 {{- $root.Values.backend.secrets.database.keys.username -}}
 {{- else if eq $type "password" -}}
 {{- $root.Values.backend.secrets.database.keys.password -}}
+{{- else if and $root.Values.devMode.enabled (eq $type "oauthConfig") -}}OAUTH_CONFIG
+{{- else if and $root.Values.devMode.enabled (eq $type "oauthStateSecret") -}}OAUTH_STATE_SECRET
+{{- else if eq $type "oauthConfig" -}}
+{{- $root.Values.backend.secrets.oauth.keys.config -}}
+{{- else if eq $type "oauthStateSecret" -}}
+{{- $root.Values.backend.secrets.oauth.keys.stateSecret -}}
 {{- else -}}
 {{- $root.Values.backend.secrets.database.keys.databaseName -}}
 {{- end -}}
