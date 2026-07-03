@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/Sthirs/doschei/compare/v0.1.10...v0.1.11) (2026-07-03)
+
+
+### Bug Fixes
+
+* **oauth2:** build redirect from FRONTEND_URL and trust local proxy ([#26](https://github.com/Sthirs/doschei/issues/26)) ([234e0e3](https://github.com/Sthirs/doschei/commit/234e0e37ca239feef21add772f77ffcf01ec4516))
+
 ## [0.1.10](https://github.com/Sthirs/doschei/compare/v0.1.9...v0.1.10) (2026-07-02)
 
 
