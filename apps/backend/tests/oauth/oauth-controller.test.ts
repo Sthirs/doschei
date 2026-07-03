@@ -149,6 +149,41 @@ describe('oauthController', () => {
     expect(cleared).toMatch(/Max-Age=0|Expires=Thu, 01 Jan 1970/i);
   });
 
+  // SECURITY REGRESSION: openid-client v6 derives the token-exchange
+  // `redirect_uri` from the callbackUrl's origin+path via stripParams()
+  // (see node_modules/openid-client/build/index.js:974). If the controller
+  // built the callbackUrl from `req.get('host')`, a spoofed Host header
+  // would poison the redirect_uri sent to Google; on a proxied deployment
+  // without `app.set('trust proxy', ...)`, `req.protocol` would be 'http'
+  // and cause a redirect_uri_mismatch at Google's token endpoint. This
+  // test locks the invariant: the callbackUrl passed to handleCallback
+  // MUST be derived from env.FRONTEND_URL, with only the query string
+  // contributed by the request.
+  it('SECURITY: spoofed Host header does NOT affect the callbackUrl passed to handleCallback', async () => {
+    const state = 'state-security-host';
+    const cookieJwt = signedStateCookie('oauth', state);
+    callbackSpy.mockResolvedValue({
+      token: 'T',
+      user: { id: 'u1', email: 'u@doschei.local', displayName: 'U' },
+    });
+
+    const app = createApp();
+    const response = await request(app)
+      .get(`/api/auth/oauth/callback?code=abc&state=${state}`)
+      .set('Cookie', `doschei.oauth.state=${cookieJwt}`)
+      .set('Host', 'evil.attacker.com');
+
+    expect(response.status).toBe(302);
+    expect(callbackSpy).toHaveBeenCalledTimes(1);
+    // handleCallback(provider, callbackUrl, queryState, cookieJwt) — the
+    // 2nd positional arg is the callbackUrl we care about here.
+    const passedCallbackUrl = callbackSpy.mock.calls[0]![1] as string;
+    expect(passedCallbackUrl).toBe(
+      `${FRONTEND_URL}/api/auth/oauth/callback?code=abc&state=${state}`,
+    );
+    expect(passedCallbackUrl).not.toContain('evil.attacker.com');
+  });
+
   it('State mismatch (handleCallback throws StateMismatchError) → 400 { message, code: state_mismatch }', async () => {
     const state = 'state-mismatch';
     callbackSpy.mockRejectedValue(new StateMismatchError());
