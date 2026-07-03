@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 
 import { env } from '../config/env';
 import {
+  buildOAuthRedirectUri,
   OAuthNotConfiguredError,
   OAuthService,
   StateMismatchError,
@@ -63,7 +64,17 @@ export const oauthCallback = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const callbackUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  // Build the callback URL from the server-controlled redirect URI (same
+  // source of truth as /authorize — see buildOAuthRedirectUri in
+  // oauthService.ts) and append ONLY the request's query string. openid-client
+  // v6 derives the token-exchange `redirect_uri` from this URL's origin+path
+  // via `stripParams()` (see openid-client/build/index.js:974) — using
+  // req.protocol / req.get('host') here would let a spoofed Host header or a
+  // missing `trust proxy` produce a redirect_uri that does not match the one
+  // Google saw at /authorize, triggering `redirect_uri_mismatch`.
+  const questionMarkIdx = req.originalUrl.indexOf('?');
+  const queryString = questionMarkIdx >= 0 ? req.originalUrl.slice(questionMarkIdx) : '';
+  const callbackUrl = `${buildOAuthRedirectUri()}${queryString}`;
 
   try {
     const { token } = await oauthService.handleCallback(provider, callbackUrl, queryState, cookieJwt);
