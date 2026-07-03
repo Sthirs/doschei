@@ -80,6 +80,10 @@ spec:
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "DB_SYNC") | quote }}
             - name: SEED_ON_STARTUP
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "SEED_ON_STARTUP") | quote }}
+            - name: AUTH_LOCAL_LOGIN_ENABLED
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "AUTH_LOCAL_LOGIN_ENABLED") | quote }}
+            - name: AUTH_LOCAL_REGISTRATION_ENABLED
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "AUTH_LOCAL_REGISTRATION_ENABLED") | quote }}
             - name: CORS_ORIGIN
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "CORS_ORIGIN") | quote }}
             - name: DB_HOSTNAME
