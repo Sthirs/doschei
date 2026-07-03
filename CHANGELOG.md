@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.10](https://github.com/Sthirs/doschei/compare/v0.1.9...v0.1.10) (2026-07-02)
+
+
+### Features
+
+* add oauth2 support ([#25](https://github.com/Sthirs/doschei/issues/25)) ([74105bd](https://github.com/Sthirs/doschei/commit/74105bd08e3214b0111abd9952a456f2013fb375))
+* select user that paid for the expense ([#18](https://github.com/Sthirs/doschei/issues/18)) ([40dbb1e](https://github.com/Sthirs/doschei/commit/40dbb1ed236c5017587f6abbd32e940a17af7581))
+* split expense with groups members ([#23](https://github.com/Sthirs/doschei/issues/23)) ([de72653](https://github.com/Sthirs/doschei/commit/de7265346ecc57550f71ce8962a67f95f6e84d5d))
+
+
+### Bug Fixes
+
+* **deps:** upgrade vuln dep ([#20](https://github.com/Sthirs/doschei/issues/20)) ([99df8d4](https://github.com/Sthirs/doschei/commit/99df8d491aa580a747be7252666841e3f7924c96))
+
 ## [0.1.9](https://github.com/Sthirs/doschei/compare/v0.1.8...v0.1.9) (2026-06-07)
 
 
