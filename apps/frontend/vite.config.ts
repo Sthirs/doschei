@@ -13,6 +13,13 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        // Without this, Workbox's default NavigationRoute intercepts every
+        // top-level browser navigation and returns the cached index.html —
+        // including navigations to /api/* (e.g. GET /api/auth/oauth, which
+        // must reach the backend to issue the OAuth redirect to the IdP).
+        navigateFallbackDenylist: [/^\/api\//],
+      },
       includeAssets: ['favicon.svg', 'logo.svg', 'logo-192.png', 'logo-512.png'],
       manifest: {
         name: 'Do Schèi',
