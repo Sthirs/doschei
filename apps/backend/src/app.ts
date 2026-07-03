@@ -12,6 +12,10 @@ const healthHandler = (_request: express.Request, response: express.Response) =>
 export const createApp = () => {
   const app = express();
 
+  // Trust reverse-proxy headers (X-Forwarded-Proto / -Host / -For) ONLY when
+  // the immediate peer is on a private / loopback / link-local address range.
+  app.set('trust proxy', 'loopback, linklocal, uniquelocal');
+
   app.use(
     cors({
       origin: env.CORS_ORIGIN,
