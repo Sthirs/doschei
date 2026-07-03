@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.12](https://github.com/Sthirs/doschei/compare/v0.1.11...v0.1.12) (2026-07-03)
+
+
+### Features
+
+* **auth:** add options to disable local login and local registration ([#28](https://github.com/Sthirs/doschei/issues/28)) ([0c272a5](https://github.com/Sthirs/doschei/commit/0c272a5628c7e7bb00df42945b1d28c55836dbde))
+
 ## [0.1.11](https://github.com/Sthirs/doschei/compare/v0.1.10...v0.1.11) (2026-07-03)
 
 
