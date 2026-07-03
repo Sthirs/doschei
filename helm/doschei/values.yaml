@@ -34,6 +34,8 @@ backend:
     NODE_ENV: production
     DB_SYNC: "false"
     SEED_ON_STARTUP: "false"
+    AUTH_LOCAL_LOGIN_ENABLED: "true"
+    AUTH_LOCAL_REGISTRATION_ENABLED: "true"
     CORS_ORIGIN: https://doschei.example.com
     FRONTEND_URL: ""
   secrets:

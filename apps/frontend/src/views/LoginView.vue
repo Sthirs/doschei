@@ -16,6 +16,7 @@ const form = reactive({
 
 const errorMessage = ref('');
 const oauthConfig = ref<{ enabled: boolean; buttonText: string; autoLaunch: boolean } | null>(null);
+const authConfig = ref<{ localLoginEnabled: boolean; localRegistrationEnabled: boolean } | null>(null);
 
 const redirectTarget = computed(() => String(route.query.redirect ?? '/groups'));
 
@@ -40,6 +41,12 @@ onMounted(async () => {
   } catch {
     // OAuth config endpoint unavailable — hide the button
   }
+  try {
+    const { data } = await api.get('/auth/config');
+    authConfig.value = data;
+  } catch {
+    // auth/config unavailable — default to showing form
+  }
 });
 </script>
 
@@ -55,14 +62,16 @@ onMounted(async () => {
           <img src="/logo.svg">
         </div>
         <div class="mt-10 grid gap-4 sm:grid-cols-2">
-          <div class="glass-panel rounded-md p-5">
-            <p class="text-xs uppercase tracking-[0.3em] text-brand-100/70">Demo user</p>
-            <p class="mt-3 font-medium">demo@doschei.local</p>
-          </div>
-          <div class="glass-panel rounded-md p-5">
-            <p class="text-xs uppercase tracking-[0.3em] text-brand-100/70">Password</p>
-            <p class="mt-3 font-medium">password123</p>
-          </div>
+          <template v-if="authConfig === null || authConfig.localLoginEnabled">
+            <div class="glass-panel rounded-md p-5">
+              <p class="text-xs uppercase tracking-[0.3em] text-brand-100/70">Demo user</p>
+              <p class="mt-3 font-medium">demo@doschei.local</p>
+            </div>
+            <div class="glass-panel rounded-md p-5">
+              <p class="text-xs uppercase tracking-[0.3em] text-brand-100/70">Password</p>
+              <p class="mt-3 font-medium">password123</p>
+            </div>
+          </template>
         </div>
       </section>
 
@@ -70,11 +79,12 @@ onMounted(async () => {
         <div class="mx-auto max-w-md">
           <p class="text-sm uppercase tracking-[0.35em] text-brand-100/70">Welcome back</p>
           <h2 class="mt-3 text-3xl font-semibold">Sign in to your workspace</h2>
-          <p class="mt-3 text-sm leading-6 text-slate-300">
-            Local email/password auth is enabled first so the bootstrap can be tested quickly in development.
-          </p>
+          <template v-if="authConfig === null || authConfig.localLoginEnabled">
+            <p class="mt-3 text-sm leading-6 text-slate-300">
+              Local email/password auth is enabled first so the bootstrap can be tested quickly in development.
+            </p>
 
-          <form class="mt-10 space-y-5" @submit.prevent="submit">
+            <form class="mt-10 space-y-5" @submit.prevent="submit">
             <label class="block">
               <span class="mb-2 block text-sm text-slate-200">Email</span>
               <input
@@ -107,6 +117,12 @@ onMounted(async () => {
               {{ authStore.isLoading ? 'Signing in...' : 'Sign in' }}
             </button>
           </form>
+          </template>
+          <template v-else-if="!oauthConfig?.enabled">
+            <p class="mt-6 rounded-md border border-white/10 bg-white/5 px-4 py-4 text-sm text-slate-300 text-center">
+              Sign-in is not available — contact an administrator.
+            </p>
+          </template>
 
           <template v-if="oauthConfig?.enabled">
             <div class="mt-6 flex items-center gap-3">

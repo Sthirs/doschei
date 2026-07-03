@@ -1,10 +1,12 @@
 import { Router } from 'express';
 
-import { login, me, register } from '../controllers/authController';
-import { requireAuth } from '../middleware/auth';
+import { authConfig, login, me, register } from '../controllers/authController';
+import { requireAuth, requireLocalAuthEnabled } from '../middleware/auth';
+import { env } from '../config/env';
 
 export const authRouter = Router();
 
-authRouter.post('/register', register);
-authRouter.post('/login', login);
+authRouter.post('/register', requireLocalAuthEnabled(env.localRegistrationEnabled, 'Local registration is disabled.', 'local_registration_disabled'), register);
+authRouter.post('/login', requireLocalAuthEnabled(env.localLoginEnabled, 'Local login is disabled.', 'local_login_disabled'), login);
+authRouter.get('/config', authConfig);
 authRouter.get('/me', requireAuth, me);
