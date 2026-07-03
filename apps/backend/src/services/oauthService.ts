@@ -111,6 +111,18 @@ export type CallbackResult = {
   user: ReturnType<typeof sanitizeUser>;
 };
 
+/**
+ * SINGLE source of truth for the OAuth `redirect_uri`. Both /authorize
+ * (initiate) and the token exchange (handleCallback) MUST send the exact
+ * same string, or Google returns `redirect_uri_mismatch`. Deriving it from
+ * `env.FRONTEND_URL` (server-controlled) instead of `req.get('host')`
+ * (client-controlled Host header) eliminates a whole class of failure
+ * modes and blocks Host-header manipulation from reaching openid-client.
+ */
+export function buildOAuthRedirectUri(): string {
+  return `${env.FRONTEND_URL}/api/auth/oauth/callback`;
+}
+
 export class OAuthService {
   async initiate(provider: string): Promise<InitiateResult> {
     const p = providerRegistry.get(provider);
@@ -122,7 +134,7 @@ export class OAuthService {
     const codeVerifier = oidc.randomPKCECodeVerifier();
     const state = oidc.randomState();
 
-    const redirectUri = `${env.FRONTEND_URL}/api/auth/oauth/callback`;
+    const redirectUri = buildOAuthRedirectUri();
     const url = await p.getAuthorizationUrl(
       redirectUri,
       state,
