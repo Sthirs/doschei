@@ -5,7 +5,7 @@ import { VueDatePicker } from '@vuepic/vue-datepicker';
 
 import { api } from '@/lib/api';
 import { DEFAULT_CATEGORY_KEY, getCategory } from '@/lib/categories';
-import { computeEqualFixedSplits, splitModeFromExistingSplits } from '@/lib/splitMath';
+import { splitModeFromExistingSplits } from '@/lib/splitMath';
 import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 import CategoryPicker from '@/components/CategoryPicker.vue';
