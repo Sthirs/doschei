@@ -121,6 +121,16 @@ npm run test
 npm run test:integration -- http://doschei.127.0.0.1.nip.io
 ```
 
+## Auth toggles
+
+Two environment variables control whether local (password-based) auth is available.
+OAuth sign-in is unaffected by these flags.
+
+| Variable                           | Default   | Effect when set to `"false"`                                            |
+|------------------------------------|-----------|-------------------------------------------------------------------------|
+| `AUTH_LOCAL_LOGIN_ENABLED`         | `"true"`  | `POST /api/auth/login` returns 403; the login form is hidden in the UI  |
+| `AUTH_LOCAL_REGISTRATION_ENABLED`  | `"true"`  | `POST /api/auth/register` returns 403                                   |
+
 ## Backend integration tests
 
 The backend integration suite targets an already running backend deployment. It does not start a local server process.

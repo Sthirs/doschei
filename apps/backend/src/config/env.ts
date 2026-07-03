@@ -17,6 +17,14 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => value !== 'false'),
+  AUTH_LOCAL_LOGIN_ENABLED: z
+    .string()
+    .optional()
+    .transform((value) => value !== 'false'),
+  AUTH_LOCAL_REGISTRATION_ENABLED: z
+    .string()
+    .optional()
+    .transform((value) => value !== 'false'),
   SEED_ON_STARTUP: z
     .string()
     .optional()
@@ -61,6 +69,8 @@ export const env = {
   ...parsedEnv,
   DATABASE_URL: databaseUrl,
   FRONTEND_URL: parsedEnv.FRONTEND_URL ?? parsedEnv.CORS_ORIGIN,
+  localLoginEnabled: parsedEnv.AUTH_LOCAL_LOGIN_ENABLED,
+  localRegistrationEnabled: parsedEnv.AUTH_LOCAL_REGISTRATION_ENABLED,
   oauthEnabled:
     parsedEnv.OAUTH_CONFIG?.enabled === true &&
     Boolean(parsedEnv.OAUTH_STATE_SECRET),

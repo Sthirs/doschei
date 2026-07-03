@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express';
+import { NextFunction, Request, RequestHandler, Response } from 'express';
 
 import { AuthService, sanitizeUser } from '../services/authService';
 import { verifyAuthToken } from '../utils/jwt';
@@ -40,3 +40,16 @@ export const requireAuth = async (
     response.status(401).json({ message: 'Invalid authentication token.' });
   }
 };
+
+export const requireLocalAuthEnabled = (
+  enabled: boolean,
+  message: string,
+  code: string,
+): RequestHandler =>
+  (_request, response, next): void => {
+    if (!enabled) {
+      response.status(403).json({ message, code });
+      return;
+    }
+    next();
+  };

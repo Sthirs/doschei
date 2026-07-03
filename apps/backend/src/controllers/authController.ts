@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 
+import { env } from '../config/env';
 import { AuthService, sanitizeUser } from '../services/authService';
 import { signAuthToken } from '../utils/jwt';
 
@@ -29,4 +30,11 @@ export const login = async (request: Request, response: Response): Promise<void>
 
 export const me = async (_request: Request, response: Response): Promise<void> => {
   response.json({ user: response.locals.user });
+};
+
+export const authConfig = (_request: Request, response: Response): void => {
+  response.json({
+    localLoginEnabled: env.localLoginEnabled,
+    localRegistrationEnabled: env.localRegistrationEnabled,
+  });
 };
