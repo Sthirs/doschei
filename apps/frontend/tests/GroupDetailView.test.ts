@@ -20,7 +20,59 @@ vi.mock('@/lib/api', () => ({
             { id: 'user-2', displayName: 'Bob', email: 'bob@test.com' },
             { id: 'user-3', displayName: 'Charlie', email: 'charlie@test.com' },
           ],
-          expenses: [],
+          expenses: [
+            {
+              id: 'settlement-1',
+              kind: 'SETTLEMENT',
+              description: 'Settlement',
+              amount: 10,
+              category: 'general',
+              paidByName: 'Alice',
+              paidByUserId: 'user-1',
+              settledWithUserId: 'user-2',
+              settledWithName: 'Bob',
+              date: '2026-01-15',
+              createdAt: '2026-01-15T00:00:00.000Z',
+              splits: [
+                {
+                  userId: 'user-2',
+                  displayName: 'Bob',
+                  shareType: 'FIXED',
+                  shareValue: 10,
+                  computedAmount: 10,
+                },
+              ],
+            },
+            {
+              id: 'expense-1',
+              kind: 'EXPENSE',
+              description: 'Dinner',
+              amount: 50,
+              category: 'food',
+              paidByName: 'Alice',
+              paidByUserId: 'user-1',
+              settledWithUserId: null,
+              settledWithName: null,
+              date: '2026-01-15',
+              createdAt: '2026-01-15T00:00:00.000Z',
+              splits: [
+                {
+                  userId: 'user-1',
+                  displayName: 'Alice',
+                  shareType: 'EQUAL',
+                  shareValue: 50,
+                  computedAmount: 25,
+                },
+                {
+                  userId: 'user-2',
+                  displayName: 'Bob',
+                  shareType: 'EQUAL',
+                  shareValue: 50,
+                  computedAmount: 25,
+                },
+              ],
+            },
+          ],
           balance: {
             currentUserId: 'user-1',
             currentUserName: 'Alice',
@@ -110,5 +162,62 @@ describe('GroupDetailView', () => {
 
     const html = wrapper.html();
     expect(html).toContain('Expenses');
+  });
+
+  it('renders settlement rows with payer paid payee format', async () => {
+    const wrapper = mount(GroupDetailView, {
+      global: {
+        stubs: {
+          Teleport: true,
+          VueDatePicker: true,
+          UserPicker: true,
+          CategoryPicker: true,
+        },
+      },
+    });
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    const html = wrapper.html();
+    expect(html).toContain('Alice paid Bob');
+  });
+
+  it('renders the Settle up button', async () => {
+    const wrapper = mount(GroupDetailView, {
+      global: {
+        stubs: {
+          Teleport: true,
+          VueDatePicker: true,
+          UserPicker: true,
+          CategoryPicker: true,
+        },
+      },
+    });
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    const html = wrapper.html();
+    expect(html).toContain('Settle up');
+  });
+
+  it('EXPENSE rows still render Paid by format', async () => {
+    const wrapper = mount(GroupDetailView, {
+      global: {
+        stubs: {
+          Teleport: true,
+          VueDatePicker: true,
+          UserPicker: true,
+          CategoryPicker: true,
+        },
+      },
+    });
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    const html = wrapper.html();
+    expect(html).toContain('Paid by Alice');
   });
 });

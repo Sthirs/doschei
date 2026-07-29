@@ -9,6 +9,7 @@ import {
   validateSplits,
   type ParsedSplit,
 } from './expenseSplitMath';
+import { buildSettlementSplit, validateSettlementInput } from './settlementRules';
 
 type SerializedSplit = {
   userId: string;
@@ -27,6 +28,9 @@ type SerializedExpense = {
   paidByName: string;
   date: string;
   createdAt: string;
+  kind: 'EXPENSE' | 'SETTLEMENT';
+  settledWithUserId: string | null;
+  settledWithName: string | null;
   splits: SerializedSplit[];
 };
 
@@ -81,6 +85,15 @@ export class GroupService {
       paidByName: expense.paidBy.displayName,
       date: expense.date,
       createdAt: expense.createdAt.toISOString(),
+      kind: expense.kind,
+      settledWithUserId:
+        expense.kind === 'SETTLEMENT' && (expense.splits ?? []).length > 0
+          ? expense.splits[0].user.id
+          : null,
+      settledWithName:
+        expense.kind === 'SETTLEMENT' && (expense.splits ?? []).length > 0
+          ? expense.splits[0].user.displayName
+          : null,
       splits: (expense.splits ?? []).map((split) => ({
         userId: split.user.id,
         displayName: split.user.displayName,
@@ -366,6 +379,10 @@ export class GroupService {
       throw new Error('Expense not found.');
     }
 
+    if (expense.kind === 'SETTLEMENT') {
+      throw new Error('Settlements must be updated through the settlements endpoint.');
+    }
+
     // `splits` is always required on PATCH. The previous splits are deleted
     // and the new ones are inserted in a single transaction, regardless of
     // which expense fields are also being updated.
@@ -434,6 +451,182 @@ export class GroupService {
 
     if (!expense) {
       throw new Error('Expense not found.');
+    }
+
+    if (expense.kind === 'SETTLEMENT') {
+      throw new Error('Settlements must be deleted through the settlements endpoint.');
+    }
+
+    await this.expenseRepository.remove(expense);
+  }
+
+  async createSettlementForGroup(
+    groupId: string,
+    requesterUserId: string,
+    input: { paidByUserId?: unknown; paidToUserId: unknown; amount: unknown; date?: unknown },
+  ) {
+    const group = await this.groupRepository
+      .createQueryBuilder('group')
+      .innerJoin('group.members', 'membership', 'membership.id = :requesterUserId', { requesterUserId })
+      .leftJoinAndSelect('group.members', 'member')
+      .where('group.id = :groupId', { groupId })
+      .getOne();
+
+    if (!group) {
+      throw new Error('Group not found or you are not a member.');
+    }
+
+    const resolvedPayer =
+      typeof input.paidByUserId === 'string' && input.paidByUserId.trim().length > 0
+        ? input.paidByUserId
+        : requesterUserId;
+
+    const result = validateSettlementInput(
+      {
+        paidByUserId: resolvedPayer,
+        paidToUserId: input.paidToUserId,
+        amount: input.amount,
+        date: input.date,
+      },
+      group.members.map((m) => m.id),
+    );
+
+    if (!result.ok) {
+      throw new Error(result.message);
+    }
+
+    const paidByUser = group.members.find((m) => m.id === result.settlement.paidByUserId);
+    if (!paidByUser) {
+      throw new Error('The selected user is not a member of this group.');
+    }
+
+    const payeeUser = group.members.find((m) => m.id === result.settlement.paidToUserId);
+    if (!payeeUser) {
+      throw new Error('The selected user is not a member of this group.');
+    }
+
+    const splitSpec = buildSettlementSplit(result.settlement.paidToUserId, result.settlement.amount);
+    const splitEntity = this.splitRepository.create({
+      user: payeeUser,
+      shareType: splitSpec.shareType,
+      shareValue: splitSpec.shareValue,
+      computedAmount: result.settlement.amount,
+    });
+
+    const expense = this.expenseRepository.create({
+      description: 'Settlement',
+      amount: result.settlement.amount,
+      date: result.settlement.date ?? new Date().toISOString().slice(0, 10),
+      category: 'general',
+      kind: 'SETTLEMENT',
+      paidBy: paidByUser,
+      group,
+      splits: [splitEntity],
+    });
+
+    const savedExpense = await this.expenseRepository.save(expense);
+
+    const reloaded = await this.expenseRepository.findOne({
+      where: { id: savedExpense.id },
+      relations: { paidBy: true, splits: { user: true } },
+    });
+
+    if (!reloaded) {
+      throw new Error('Created settlement could not be reloaded.');
+    }
+
+    return this.serializeExpense(reloaded);
+  }
+
+  async updateSettlementForGroup(
+    groupId: string,
+    settlementId: string,
+    updates: { paidByUserId?: unknown; paidToUserId?: unknown; amount?: unknown; date?: unknown },
+    userId: string,
+  ) {
+    const group = await this.getGroupForMember(groupId, userId);
+
+    const expense = await this.expenseRepository.findOne({
+      where: { id: settlementId, group: { id: groupId } },
+      relations: { paidBy: true, splits: { user: true } },
+    });
+
+    if (!expense || expense.kind !== 'SETTLEMENT') {
+      throw new Error('Settlement not found.');
+    }
+
+    const paidByUserId =
+      typeof updates.paidByUserId === 'string' && updates.paidByUserId.trim().length > 0
+        ? updates.paidByUserId
+        : expense.paidBy.id;
+    const paidToUserId =
+      typeof updates.paidToUserId === 'string' && updates.paidToUserId.trim().length > 0
+        ? updates.paidToUserId
+        : expense.splits[0].user.id;
+    const amount = typeof updates.amount === 'number' ? updates.amount : Number(expense.amount);
+    const date = typeof updates.date === 'string' ? updates.date : expense.date;
+
+    const result = validateSettlementInput(
+      { paidByUserId, paidToUserId, amount, date },
+      group.members.map((m) => m.id),
+    );
+
+    if (!result.ok) {
+      throw new Error(result.message);
+    }
+
+    const paidByUser = group.members.find((m) => m.id === result.settlement.paidByUserId);
+    if (!paidByUser) {
+      throw new Error('The selected user is not a member of this group.');
+    }
+
+    const payeeUser = group.members.find((m) => m.id === result.settlement.paidToUserId);
+    if (!payeeUser) {
+      throw new Error('The selected user is not a member of this group.');
+    }
+
+    const splitSpec = buildSettlementSplit(result.settlement.paidToUserId, result.settlement.amount);
+    const nextSplit = this.splitRepository.create({
+      expense,
+      user: payeeUser,
+      shareType: splitSpec.shareType,
+      shareValue: splitSpec.shareValue,
+      computedAmount: result.settlement.amount,
+    });
+
+    expense.paidBy = paidByUser;
+    expense.amount = result.settlement.amount;
+    expense.date = result.settlement.date ?? expense.date;
+
+    const savedExpense = await AppDataSource.transaction(async (manager) => {
+      const splitRepo = manager.getRepository(ExpenseSplit);
+      await splitRepo.delete({ expense: { id: expense.id } });
+      expense.splits = [nextSplit];
+      return manager.getRepository(Expense).save(expense);
+    });
+
+    const reloaded = await this.expenseRepository.findOne({
+      where: { id: savedExpense.id },
+      relations: { paidBy: true, splits: { user: true } },
+    });
+
+    if (!reloaded) {
+      throw new Error('Updated settlement could not be reloaded.');
+    }
+
+    return this.serializeExpense(reloaded);
+  }
+
+  async deleteSettlementForGroup(groupId: string, settlementId: string, userId: string) {
+    await this.getGroupForMember(groupId, userId);
+
+    const expense = await this.expenseRepository.findOne({
+      where: { id: settlementId, group: { id: groupId } },
+      relations: { paidBy: true },
+    });
+
+    if (!expense || expense.kind !== 'SETTLEMENT') {
+      throw new Error('Settlement not found.');
     }
 
     await this.expenseRepository.remove(expense);

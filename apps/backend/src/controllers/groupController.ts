@@ -236,6 +236,87 @@ export const deleteExpense = async (request: AuthenticatedRequest, response: Res
   }
 };
 
+export const createSettlement = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+  const groupId = request.params.id as string;
+  const { paidByUserId, paidToUserId, amount, date } = request.body as {
+    paidByUserId?: unknown;
+    paidToUserId?: unknown;
+    amount?: unknown;
+    date?: unknown;
+  };
+
+  try {
+    const expense = await groupService.createSettlementForGroup(
+      groupId,
+      request.auth!.userId,
+      {
+        paidByUserId,
+        paidToUserId,
+        amount,
+        date,
+      },
+    );
+
+    response.status(201).json({ expense });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      response.status(404).json({ message: error.message });
+      return;
+    }
+    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to create settlement.' });
+  }
+};
+
+export const updateSettlement = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+  const groupId = request.params.id as string;
+  const settlementId = request.params.settlementId as string;
+  const { paidByUserId, paidToUserId, amount, date } = request.body as {
+    paidByUserId?: unknown;
+    paidToUserId?: unknown;
+    amount?: unknown;
+    date?: unknown;
+  };
+
+  try {
+    const expense = await groupService.updateSettlementForGroup(
+      groupId,
+      settlementId,
+      {
+        paidByUserId,
+        paidToUserId,
+        amount,
+        date,
+      },
+      request.auth!.userId,
+    );
+
+    response.status(200).json({ expense });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      response.status(404).json({ message: error.message });
+      return;
+    }
+    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to update settlement.' });
+  }
+};
+
+export const deleteSettlement = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+  const groupId = request.params.id as string;
+  const settlementId = request.params.settlementId as string;
+
+  try {
+    await groupService.deleteSettlementForGroup(groupId, settlementId, request.auth!.userId);
+
+    response.status(204).send();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      response.status(404).json({ message: error.message });
+      return;
+    }
+    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to delete settlement.' });
+  }
+};
+
 export const updateGroup = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
   const { name } = request.body as { name?: unknown };

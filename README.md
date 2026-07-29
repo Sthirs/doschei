@@ -151,7 +151,7 @@ Notes:
 
 - The endpoint must expose `/api/health` and `/api/*`.
 - Tests use unique emails and group names so they can run against the shared Minikube database.
-- There is one test file per endpoint: `auth/register`, `auth/login`, `auth/me`, `groups GET`, `groups POST`.
+- There is one test file per endpoint: `auth/register`, `auth/login`, `auth/me`, `groups GET`, `groups POST`, `settlements POST`, `settlements PATCH`, `settlements DELETE`.
 - The backend itself exposes health only on `/api/health`.
 
 ## Structure

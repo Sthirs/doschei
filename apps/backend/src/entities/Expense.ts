@@ -12,6 +12,8 @@ import { ExpenseSplit } from './ExpenseSplit';
 import { Group } from './Group';
 import { User } from './User';
 
+export type ExpenseKind = 'EXPENSE' | 'SETTLEMENT';
+
 @Entity({ name: 'expenses' })
 export class Expense {
   @PrimaryGeneratedColumn('uuid')
@@ -25,6 +27,9 @@ export class Expense {
 
   @Column({ type: 'varchar', default: 'general' })
   category!: string;
+
+  @Column({ type: 'varchar', default: 'EXPENSE' })
+  kind!: ExpenseKind;
 
   @Column({ type: 'date', default: () => 'CURRENT_DATE' })
   date!: string;
