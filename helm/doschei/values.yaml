@@ -87,7 +87,7 @@ dex:
   enabled: false
   image:
     repository: dexidp/dex
-    tag: "v2.41.1"
+    tag: "v2.45.1@sha256:8499afd690c437f52301efd2b05b2455da5bd2dfc20332cd697dc9937f808462"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP

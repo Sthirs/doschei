@@ -34,7 +34,7 @@ repos:
       - id: gitleaks
 
   - repo: https://github.com/codespell-project/codespell
-    rev: 2ccb47ff45ad361a21071a7eedda4c37e6ae8c5a # frozen: v2.4.2
+    rev: 57b21406f092110c18776e39b0bda50d37c945c8 # frozen: v2.4.3
     hooks:
       - id: codespell
         exclude: package-lock\.json$
@@ -52,7 +52,7 @@ repos:
       - id: shellcheck
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 22f0422809455ec89ffdcf5a00170ba816e42ddb # frozen: v0.15.16
+    rev: cb8c523fd4835aba42af70f4cad5568db4df0b6c # frozen: v0.16.0
     hooks:
       - id: ruff-check
         args:
@@ -60,12 +60,12 @@ repos:
       - id: ruff-format
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: c665864e22f27255a10d82e14f8ccea6843fd65e # frozen: 0.11.19
+    rev: 5900cba2cfe6d20f562458d4d308ac55569f92eb # frozen: 0.12.0
     hooks:
       - id: uv-lock
 
   - repo: https://github.com/ansible/ansible-lint
-    rev: 5fac056c45595896c973fbde871f01f6cb14d74c # frozen: v26.4.0
+    rev: 262624cd0ab22a4221293216856c59671ce7aa5e # frozen: v26.6.0
     hooks:
       - id: ansible-lint
 
@@ -75,13 +75,13 @@ repos:
       - id: hadolint-docker
 
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: 996abf60411a8d954288ac9856aae7602b80cbda # frozen: v0.22.1
+    rev: b82a6c8896e491b9cb377a99ff3412131920681b # frozen: v0.23.2
     hooks:
       - id: markdownlint-cli2
         exclude: CHANGELOG\.md$
 
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: a402fea7ae7c7d0857e4dcfa2e3a510fbd8b99e8 # frozen: 43.214.0
+    rev: bf252c92d5fccab3ce0b7e1f7ad1ca8615338465 # frozen: 43.288.0
     hooks:
       - id: renovate-config-validator
         args: [--strict]
