@@ -1,11 +1,13 @@
-# Do Schèi bootstrap
+# Do Schèi
 
-Initial monorepo bootstrap for the shared-expenses app described in `docs/specs.md`.
+> A web app to track shared expenses and split them with friends.
+
+Do Schèi is a web application for tracking shared expenses and splitting them with friends. The frontend is a Vue 3 + TypeScript PWA, the backend runs on Node.js with Express and PostgreSQL, and the whole stack deploys to a Kubernetes cluster through a cloud-native Helm chart. See [`docs/specs.md`](docs/specs.md) for the full product spec.
 
 ## Included
 
-- Vue 3 + TypeScript frontend with login, auth guard, groups screen, Pinia, Vue Router, Axios, Tailwind, PWA, ESLint, Prettier, Jest, and Cypress scaffolding
-- Node.js + TypeScript + Express backend with TypeORM, JWT local auth, seeded demo user, and groups endpoint
+- Vue 3 + TypeScript PWA frontend with login, auth guard, groups screen, Pinia, Vue Router, Axios, Tailwind, ESLint, Prettier, Vitest + Vue Test Utils for unit tests, and Cypress + Playwright for e2e
+- Node.js + TypeScript + Express backend with TypeORM, JWT local auth + OAuth2 (Google), seeded demo user, groups and settlements, Vitest + Supertest for tests
 - Helm chart that deploys frontend, backend, and PostgreSQL into Minikube
 - Telepresence-based development flow to run frontend and/or backend locally while the rest of the stack stays in cluster
 
@@ -99,7 +101,7 @@ npm run telepresence:leave
 - The backend local process uses the in-cluster PostgreSQL service over the Telepresence network.
 - The frontend local process is expected to be reached through the Minikube ingress host, not directly through `localhost:5173`.
 - Vite HMR is configured for the ingress host so the frontend can stay behind a Telepresence intercept.
-- For this first bootstrap, TypeORM still uses schema synchronization in development (`DB_SYNC=true`).
+- TypeORM still uses schema synchronization in development (`DB_SYNC=true`).
 - Seed data is created by the in-cluster backend startup path.
 
 ## Useful commands
