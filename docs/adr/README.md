@@ -1,0 +1,41 @@
+# Architecture Decision Records
+
+This directory contains all Architecture Decision Records (ADRs) for this project.
+Accepted ADRs are **binding** for humans and coding agents alike (see [`AGENTS.md`](../../AGENTS.md)
+in the repository root). ADRs derive from the specification in [`docs/specifications.md`](../specifications.md).
+
+## Process
+
+1. Copy [`template.md`](template.md) to `NNNN-short-title.md` (next free number).
+2. Fill in context, decision, alternatives, and consequences. Set status `proposed`.
+3. A human reviewer accepts or rejects the ADR. **Only humans change the status.**
+4. Add the ADR to the index below, with its status shown via the colored bullet from the legend.
+5. A decision is changed by a *new* ADR that supersedes the old one — never by editing an
+   accepted ADR.
+6. **Once this template is in use, ADRs are immutable and their numbers are permanent.** Never
+   renumber, delete, or merge ADRs — other ADRs, commits (`Implements ADR-NNNN`), and code may
+   reference a number. Superseded ADRs stay as historical record (status `superseded by ADR-NNNN`);
+   filter active ones via the Status column. To curb sprawl, supersede — do not consolidate. (The
+   template itself may still consolidate its own seed ADRs before any project builds on them, since
+   nothing external references those numbers yet.)
+7. **Never reference an ADR number that does not exist yet.** Every `ADR-NNNN` reference must point
+   to a file that is already present in this directory. Expected follow-up decisions are
+   described by a topic (e.g., "a follow-up ADR on session storage") in the Consequences section —
+   the concrete number is cited only once that ADR file exists.
+
+## Index
+
+**Status legend:** 🟢 accepted · 🟡 proposed · 🔴 rejected · ⚪ superseded
+
+| ADR | Title | Status |
+|-----|-------|--------|
+| [ADR-0001](0001-monorepo-layout.md) | Monorepo layout with npm workspaces | 🟢 accepted |
+| [ADR-0002](0002-frontend-stack.md) | Frontend stack — Vue 3, TypeScript, Vite, Pinia, Tailwind, PWA | 🟢 accepted |
+| [ADR-0003](0003-backend-stack.md) | Backend stack — Node, TypeScript, Express 5, TypeORM, REST API | 🟢 accepted |
+| [ADR-0004](0004-postgresql-and-schema-management.md) | PostgreSQL with TypeORM synchronize (no migrations) | 🟢 accepted |
+| [ADR-0005](0005-authentication-and-identity.md) | Authentication & identity — JWT local auth + OIDC PKCE provider registry | 🟢 accepted |
+| [ADR-0006](0006-money-ledger-and-balance-math.md) | Money, ledger, and balance math — integer-cent pure functions | 🟢 accepted |
+| [ADR-0007](0007-kubernetes-helm-deployment.md) | Kubernetes + Helm deployment with toggleable dev services | 🟢 accepted |
+| [ADR-0008](0008-dev-workflow-minikube-telepresence.md) | Single supported dev workflow — Minikube + Telepresence | 🟢 accepted |
+| [ADR-0009](0009-testing-strategy.md) | Testing strategy — Vitest, Supertest, Playwright against deployed apps | 🟢 accepted |
+| [ADR-0010](0010-ci-and-release-automation.md) | CI & release automation — GitHub Actions, release-please single version | 🟢 accepted |
