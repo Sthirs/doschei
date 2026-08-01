@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.0](https://github.com/Sthirs/doschei/compare/v0.1.12...v1.0.0) (2026-08-01)
+
+
+### Features
+
+* add settle up ([#39](https://github.com/Sthirs/doschei/issues/39)) ([7a10529](https://github.com/Sthirs/doschei/commit/7a105299f87f67b6c4fda0be7632561462e50fd8))
+
+
+### Bug Fixes
+
+* **deps:** pin dependencies ([#43](https://github.com/Sthirs/doschei/issues/43)) ([135100b](https://github.com/Sthirs/doschei/commit/135100bbe8315ff3c26dd3519eaf0838689d88b6))
+* **deps:** update dependency pinia to v4 ([#55](https://github.com/Sthirs/doschei/issues/55)) ([7c29e51](https://github.com/Sthirs/doschei/commit/7c29e51f9a71cdc7ed0e24bd6c1ec0a933f8f7bc))
+* **deps:** update dependency typeorm to v1.1.0 [security] ([#41](https://github.com/Sthirs/doschei/issues/41)) ([20ca3ba](https://github.com/Sthirs/doschei/commit/20ca3ba9c78dcf6974deeb6bf520962307c9de80))
+* **deps:** update minor and patch updates ([#57](https://github.com/Sthirs/doschei/issues/57)) ([1c96d6d](https://github.com/Sthirs/doschei/commit/1c96d6dc4a2372219e74cab3eb39f7cd481b0018))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0 ([fdfaa96](https://github.com/Sthirs/doschei/commit/fdfaa96b40fb84529f79e5736a966a75e4c07c9e))
+
 ## [0.1.12](https://github.com/Sthirs/doschei/compare/v0.1.11...v0.1.12) (2026-07-03)
 
 
