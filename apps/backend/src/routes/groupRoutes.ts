@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { createGroup, getGroup, listGroups, updateGroup, addMember, removeMember, createExpense, updateExpense, deleteExpense } from '../controllers/groupController';
+import { createGroup, getGroup, listGroups, updateGroup, addMember, removeMember, createExpense, updateExpense, deleteExpense, createSettlement, updateSettlement, deleteSettlement } from '../controllers/groupController';
 import { requireAuth } from '../middleware/auth';
 
 export const groupRouter = Router();
@@ -14,3 +14,6 @@ groupRouter.delete('/:id/members/:userId', requireAuth, removeMember);
 groupRouter.post('/:id/expenses', requireAuth, createExpense);
 groupRouter.patch('/:id/expenses/:expenseId', requireAuth, updateExpense);
 groupRouter.delete('/:id/expenses/:expenseId', requireAuth, deleteExpense);
+groupRouter.post('/:id/settlements', requireAuth, createSettlement);
+groupRouter.patch('/:id/settlements/:settlementId', requireAuth, updateSettlement);
+groupRouter.delete('/:id/settlements/:settlementId', requireAuth, deleteSettlement);

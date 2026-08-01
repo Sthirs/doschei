@@ -10,6 +10,7 @@ import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 import CategoryPicker from '@/components/CategoryPicker.vue';
 import UserPicker from '@/components/UserPicker.vue';
+import SettleUpModal from '@/components/SettleUpModal.vue';
 
 import type { GroupDetail, Expense, ExpenseSplit } from '@/types/group';
 
@@ -53,6 +54,10 @@ const editSelectedSplitUserIds = ref<string[]>([]);
 const editSplitMode = ref<'EQUAL' | 'PERCENT' | 'FIXED'>('EQUAL');
 const editPercentValues = ref<Record<string, number | ''>>({});
 const editFixedValues = ref<Record<string, number | ''>>({});
+
+// Settle-up state
+const showSettleUpModal = ref(false);
+const editingSettlement = ref<Expense | null>(null);
 
 const groupId = computed(() => route.params.id as string);
 const datePickerFormats = {
@@ -383,6 +388,28 @@ const openExpenseModal = (expense: Expense) => {
   }
 };
 
+const openSettleUpModal = (mode: 'create' | 'edit', settlement?: Expense) => {
+  editingSettlement.value = settlement ?? null;
+  showSettleUpModal.value = true;
+};
+
+const onSettlementSaved = () => {
+  showSettleUpModal.value = false;
+  editingSettlement.value = null;
+  loadGroup();
+};
+
+const onSettlementDeleted = () => {
+  showSettleUpModal.value = false;
+  editingSettlement.value = null;
+  loadGroup();
+};
+
+const closeSettleUpModal = () => {
+  showSettleUpModal.value = false;
+  editingSettlement.value = null;
+};
+
 const closeExpenseModal = () => {
   showExpenseModal.value = false;
   selectedExpense.value = null;
@@ -608,6 +635,17 @@ onBeforeUnmount(() => {
             <p v-else class="text-base font-semibold text-slate-300">
               You are all settled up.
             </p>
+          </div>
+          <div class="mt-3">
+            <button
+              type="button"
+              class="rounded-md bg-indigo-600/20 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="group.members.length < 2"
+              :title="group.members.length < 2 ? 'Invite someone to this group first' : 'Record a payment between members'"
+              @click="openSettleUpModal('create')"
+            >
+              Settle up
+            </button>
           </div>
           <details v-if="group.balance.perUser.length > 0" class="mt-3">
             <summary class="cursor-pointer text-sm text-slate-400 transition hover:text-slate-200">
@@ -1060,6 +1098,20 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
+        <!-- Settle-up modal -->
+        <SettleUpModal
+          v-if="showSettleUpModal && group.balance"
+          :mode="editingSettlement ? 'edit' : 'create'"
+          :group-id="groupId"
+          :members="selectableMembers"
+          :balance="group.balance"
+          :current-user-id="authStore.user?.id ?? ''"
+          :settlement="editingSettlement ?? undefined"
+          @saved="onSettlementSaved"
+          @deleted="onSettlementDeleted"
+          @close="closeSettleUpModal"
+        />
+
         <section class="glass-panel overflow-hidden rounded-md">
           <h2 class="px-6 py-4 text-sm font-medium uppercase tracking-wide text-slate-400 sm:px-8">
             Expenses
@@ -1080,7 +1132,7 @@ onBeforeUnmount(() => {
                   v-for="expense in monthGroup.expenses"
                   :key="expense.id"
                   class="cursor-pointer px-6 py-4 transition hover:bg-white/5 sm:px-8"
-                  @click="openExpenseModal(expense)"
+                  @click="expense.kind === 'SETTLEMENT' ? openSettleUpModal('edit', expense) : openExpenseModal(expense)"
                 >
                   <div class="flex items-center justify-between gap-3 sm:gap-4">
                     <!-- Date on the left -->
@@ -1096,15 +1148,19 @@ onBeforeUnmount(() => {
                     <!-- Category icon -->
                     <div
                       class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base"
-                      :title="getCategory(expense.category).label"
+                      :title="expense.kind === 'SETTLEMENT' ? 'Settlement' : getCategory(expense.category).label"
                     >
-                      <span aria-hidden="true">{{ getCategory(expense.category).icon }}</span>
+                      <span v-if="expense.kind === 'SETTLEMENT'" aria-hidden="true">🤝</span>
+                      <span v-else aria-hidden="true">{{ getCategory(expense.category).icon }}</span>
                     </div>
 
                     <!-- Description and who paid in the middle -->
                     <div class="min-w-0 flex-1">
                       <p class="truncate text-sm font-medium text-slate-100 sm:text-base">{{ expense.description }}</p>
-                      <p class="text-xs text-slate-400 sm:text-sm">Paid by {{ expense.paidByName }}</p>
+                      <p v-if="expense.kind === 'SETTLEMENT'" class="text-xs text-slate-400 sm:text-sm">
+                        {{ expense.paidByName }} paid {{ expense.settledWithName }}
+                      </p>
+                      <p v-else class="text-xs text-slate-400 sm:text-sm">Paid by {{ expense.paidByName }}</p>
                     </div>
 
                     <!-- Amount on the right -->

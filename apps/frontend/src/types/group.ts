@@ -41,11 +41,14 @@ export type BalanceSummary = {
 
 export type Expense = {
   id: string;
+  kind: 'EXPENSE' | 'SETTLEMENT';
   description: string;
   amount: number;
   category: string;
   paidByName: string;
   paidByUserId: string;
+  settledWithUserId: string | null;
+  settledWithName: string | null;
   date: string;
   createdAt: string;
   splits: ExpenseSplit[];

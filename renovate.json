@@ -1,4 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>neteye-platform/repo-commons", ":semanticCommits", ":dependencyDashboard", "schedule:weekly"]
+  "extends": ["github>neteye-platform/repo-commons", ":semanticCommits", ":dependencyDashboard", "schedule:weekly"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "minor and patch updates"
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "groupName": "security updates",
+    "schedule": ["at any time"]
+  }
 }
