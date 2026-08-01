@@ -35,9 +35,7 @@ test('settle-up lifecycle: create → edit amount → delete', async ({ authenti
   await groupDetailPage.saveExpense();
 
   // --- Assert pre-settlement balance: "You owe Alice Rossi €10.00". ---
-  await expect(page.getByText('You owe')).toBeVisible();
-  await expect(page.getByText(/Alice Rossi/)).toBeVisible();
-  await expect(page.getByText('€10.00')).toBeVisible();
+  await expect(page.getByText('You owe Alice Rossi €10.00')).toBeVisible();
 
   // --- Open Settle up and assert the pre-filled amount + payer. ---
   // T3.1 spec: defaults pick the candidate with greatest |net|; here Demo User
