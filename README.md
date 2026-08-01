@@ -121,6 +121,7 @@ npm run build
 npm run lint
 npm run test
 npm run test:integration -- http://doschei.127.0.0.1.nip.io
+npm run test:playwright -- http://doschei.127.0.0.1.nip.io
 ```
 
 ## Auth toggles
