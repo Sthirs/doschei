@@ -28,7 +28,7 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 **Status legend:** 🟢 accepted · 🟡 proposed · 🔴 rejected · ⚪ superseded
 
 | ADR | Title | Status |
-|-----|-------|--------|
+| --- | --- | --- |
 | [ADR-0001](0001-monorepo-layout.md) | Monorepo layout with npm workspaces | 🟢 accepted |
 | [ADR-0002](0002-frontend-stack.md) | Frontend stack — Vue 3, TypeScript, Vite, Pinia, Tailwind, PWA | 🟢 accepted |
 | [ADR-0003](0003-backend-stack.md) | Backend stack — Node, TypeScript, Express 5, TypeORM, REST API | 🟢 accepted |

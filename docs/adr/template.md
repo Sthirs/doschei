@@ -1,4 +1,4 @@
-# ADR-NNNN: <short title of the decision>
+# ADR-NNNN: short title of the decision
 
 - **Status:** 🟡 proposed | 🟢 accepted | 🔴 rejected | ⚪ superseded by ADR-NNNN
 - **Date:** YYYY-MM-DD
@@ -15,8 +15,8 @@ What did we decide? One clear, active sentence ("We will …").
 
 ## Alternatives considered
 
-- **<Alternative A>** — why it was not chosen.
-- **<Alternative B>** — why it was not chosen.
+- **Alternative A** — why it was not chosen.
+- **Alternative B** — why it was not chosen.
 
 ## Sources / Prior art
 
