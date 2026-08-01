@@ -35,9 +35,14 @@ test('settle-up lifecycle: create → edit amount → delete', async ({ authenti
   await groupDetailPage.saveExpense();
 
   // --- Assert pre-settlement balance: "You owe Alice Rossi €10.00". ---
-  await expect(page.getByText('You owe')).toBeVisible();
-  await expect(page.getByText(/Alice Rossi/)).toBeVisible();
-  await expect(page.getByText('€10.00')).toBeVisible();
+  // The per-user balance rows live inside a native <details> disclosure
+  // (GroupDetailView.vue:650-674, summary "See breakdown") that is
+  // COLLAPSED by default — the span renders but is hidden. Expand it
+  // before asserting. (A subsequent full settlement zeroes perUser and
+  // tears down the <details>, so later balances anchor on the always-
+  // visible overall line instead — see EDIT B/C.)
+  await page.getByText('See breakdown').click();
+  await expect(page.getByText('You owe Alice Rossi €10.00')).toBeVisible();
 
   // --- Open Settle up and assert the pre-filled amount + payer. ---
   // T3.1 spec: defaults pick the candidate with greatest |net|; here Demo User
@@ -64,13 +69,16 @@ test('settle-up lifecycle: create → edit amount → delete', async ({ authenti
   await groupDetailPage.setSettleUpAmount('5');
   await groupDetailPage.saveSettleUp();
 
-  // --- Assert partial-balance: "You owe Alice Rossi €5.00". ---
-  await expect(page.getByText('You owe')).toBeVisible();
-  await expect(page.getByText('€5.00')).toBeVisible();
+  // --- Assert partial-balance: overall line "You owe €5.00 overall". ---
+  // Anchor on the ALWAYS-VISIBLE overall line (GroupDetailView.vue:629-634),
+  // not the per-user row: the edit-to-5 step recreated a fresh closed
+  // <details>, and the overall line is a single exact match (no strict-
+  // mode ambiguity, no disclosure dependency).
+  await expect(page.getByText('You owe €5.00 overall', { exact: true })).toBeVisible();
 
   // --- Delete the settlement, balance returns to the pre-settlement state. ---
   await groupDetailPage.openSettlement('Demo User', 'Alice Rossi');
   await groupDetailPage.deleteCurrentSettlement();
-  await expect(page.getByText('You owe')).toBeVisible();
-  await expect(page.getByText('€10.00')).toBeVisible();
+  // Overall line — single exact match, no strict-mode ambiguity.
+  await expect(page.getByText('You owe €10.00 overall', { exact: true })).toBeVisible();
 });

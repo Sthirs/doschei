@@ -339,11 +339,8 @@ describe('Settlements Endpoints', () => {
       expect(response.body.message).toMatch(/missing bearer token/i);
     });
 
-    // DEVIATION: the parent plan T2.1 and the contract table both specify 404 for a
-    // non-member calling POST /api/groups/:id/settlements, but the createSettlement
-    // controller (T1.4) maps ALL thrown errors to 400 with no 404 branch. The test
-    // asserts 400 to match the as-built behaviour. See plan 0002 Deviations.
-    it('returns 400 when a non-member calls the endpoint', async () => {
+    // Controller maps "...not found..." errors to 404; the membership guard throws "Group not found or you are not a member.", so non-members get 404 per contract T2.1.
+    it('returns 404 when a non-member calls the endpoint', async () => {
       const { groupId } = await createTwoMemberGroup('settle-post-non-member');
       const outsider = await registerUser('settle-post-non-member-outsider');
 
@@ -356,7 +353,7 @@ describe('Settlements Endpoints', () => {
         }),
       });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(404);
       expect(response.body.message).toMatch(/not (a |found).*member/i);
     });
   });

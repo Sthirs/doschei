@@ -70,7 +70,7 @@ postgres:
   enabled: true
   image:
     repository: postgres
-    tag: "16-alpine@sha256:e013e867e712fec275706a6c51c966f0bb0c93cfa8f51000f85a15f9865a28cb"
+    tag: "18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15"
     pullPolicy: IfNotPresent
   service:
     port: 5432
@@ -87,7 +87,7 @@ dex:
   enabled: false
   image:
     repository: dexidp/dex
-    tag: "v2.41.1"
+    tag: "v2.45.1@sha256:8499afd690c437f52301efd2b05b2455da5bd2dfc20332cd697dc9937f808462"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP

@@ -2,7 +2,7 @@
 
 > A web app to track shared expenses and split them with friends.
 
-Do Schèi is a web application for tracking shared expenses and splitting them with friends. The frontend is a Vue 3 + TypeScript PWA, the backend runs on Node.js with Express and PostgreSQL, and the whole stack deploys to a Kubernetes cluster through a cloud-native Helm chart. See [`docs/specifications.md`](docs/specifications.md) for the full product spec.
+Do Schèi is a web application for tracking shared expenses and splitting them with friends. The frontend is a Vue 3 + TypeScript PWA, the backend runs on Node.js with Express and PostgreSQL, and the whole stack deploys to a Kubernetes cluster through a cloud-native Helm chart. See [`docs/specs.md`](docs/specs.md) for the full product spec.
 
 ## Included
 
@@ -121,6 +121,7 @@ npm run build
 npm run lint
 npm run test
 npm run test:integration -- http://doschei.127.0.0.1.nip.io
+npm run test:playwright -- http://doschei.127.0.0.1.nip.io
 ```
 
 ## Auth toggles
