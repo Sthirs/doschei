@@ -1,3 +1,5 @@
+import { promises as fs } from 'node:fs';
+
 import { expect, type Page } from '@playwright/test';
 
 export class GroupDetailPage {
@@ -28,6 +30,11 @@ export class GroupDetailPage {
   private settleUpDeleteButton = this.settleUpDialog.getByRole('button', { name: 'Delete' });
   // SettleUpModal.vue:249-256 — only visible after Delete is clicked (showDeleteConfirm).
   private settleUpConfirmDeleteButton = this.settleUpDialog.getByRole('button', { name: 'Confirm' });
+
+  // Export controls (GroupDetailView.vue:688-694). `Exporting…` is the in-flight
+  // label, so anchor the button regex to `^Export CSV$` to skip the busy state.
+  private exportMonthInput = this.page.getByLabel('Export month');
+  private exportCsvButton = this.page.getByRole('button', { name: /^Export CSV$/ });
 
   constructor(private page: Page) {}
 
@@ -233,5 +240,23 @@ export class GroupDetailPage {
     await this.settleUpConfirmDeleteButton.click();
     // The parent closes the dialog on the `deleted` emit.
     await expect(this.settleUpDialog).not.toBeVisible({ timeout: 10000 });
+  }
+
+  async setExportMonth(yyyyMm: string) {
+    // Native `<input type="month">` accepts YYYY-MM as its `value`; `.fill()` sets it.
+    await this.exportMonthInput.fill(yyyyMm);
+  }
+
+  async clickExportAndExpectDownload(): Promise<{ filename: string; text: string }> {
+    // Playwright hands us the download via the `download` event; race the wait
+    // against the click so we never miss it. `download.path()` is a real
+    // filesystem path managed by Playwright (no dialog interception needed).
+    const [download] = await Promise.all([
+      this.page.waitForEvent('download'),
+      this.exportCsvButton.click(),
+    ]);
+    const filename = download.suggestedFilename();
+    const text = (await fs.readFile(await download.path())).toString('utf8');
+    return { filename, text };
   }
 }
