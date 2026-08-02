@@ -31,10 +31,13 @@ export class GroupDetailPage {
   // SettleUpModal.vue:249-256 — only visible after Delete is clicked (showDeleteConfirm).
   private settleUpConfirmDeleteButton = this.settleUpDialog.getByRole('button', { name: 'Confirm' });
 
-  // Export controls (GroupDetailView.vue:688-694). `Exporting…` is the in-flight
-  // label, so anchor the button regex to `^Export CSV$` to skip the busy state.
-  private exportMonthInput = this.page.getByLabel('Export month');
-  private exportCsvButton = this.page.getByRole('button', { name: /^Export CSV$/ });
+  // Export controls (GroupDetailView.vue — "Export" button next to "Settle up" opens
+  // a modal with a vue-datepicker month picker and an "Export" action button).
+  // `exact: true` on the trigger so it doesn't match "Exporting…" (in-flight state).
+  private exportTriggerButton = this.page.getByRole('button', { name: /^Export$/, exact: true });
+  private exportDialog = this.page.getByRole('dialog', { name: 'Export CSV' });
+  private exportMonthPicker = this.exportDialog.locator('[data-test-id="dp-input"]');
+  private exportActionButton = this.exportDialog.getByRole('button', { name: /^Export$/, exact: true });
 
   constructor(private page: Page) {}
 
@@ -242,9 +245,18 @@ export class GroupDetailPage {
     await expect(this.settleUpDialog).not.toBeVisible({ timeout: 10000 });
   }
 
-  async setExportMonth(yyyyMm: string) {
-    // Native `<input type="month">` accepts YYYY-MM as its `value`; `.fill()` sets it.
-    await this.exportMonthInput.fill(yyyyMm);
+  async openExportModal(): Promise<void> {
+    await this.exportTriggerButton.click();
+    await expect(this.exportDialog).toBeVisible();
+  }
+
+  async setExportMonth(yyyyMm: string): Promise<void> {
+    // @vuepic/vue-datepicker exposes `data-test-id="dp-input"` on the input element.
+    // Scoped to exportDialog so it doesn't collide with the expense date picker.
+    await this.exportMonthPicker.click();
+    await this.exportMonthPicker.clear();
+    await this.exportMonthPicker.fill(yyyyMm);
+    await this.exportMonthPicker.press('Enter'); // auto-apply commits
   }
 
   async clickExportAndExpectDownload(): Promise<{ filename: string; text: string }> {
@@ -253,7 +265,7 @@ export class GroupDetailPage {
     // filesystem path managed by Playwright (no dialog interception needed).
     const [download] = await Promise.all([
       this.page.waitForEvent('download'),
-      this.exportCsvButton.click(),
+      this.exportActionButton.click(),
     ]);
     const filename = download.suggestedFilename();
     const text = (await fs.readFile(await download.path())).toString('utf8');

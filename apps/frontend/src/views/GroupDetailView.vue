@@ -83,6 +83,7 @@ const todayDateValue = () => {
 const exportMonth = ref(todayDateValue().slice(0, 7));
 const isExporting = ref(false);
 const exportErrorMessage = ref('');
+const showExportModal = ref(false);
 
 const getExpenseDateValue = (expense: Expense) => {
   return expense.date || expense.createdAt.slice(0, 10);
@@ -563,6 +564,7 @@ const exportCsv = async () => {
     a.click();
     a.remove();
     URL.revokeObjectURL(objectUrl);
+    showExportModal.value = false;
   } catch {
     exportErrorMessage.value = 'Export failed. Please try again.';
   } finally {
@@ -673,7 +675,7 @@ onBeforeUnmount(() => {
               You are all settled up.
             </p>
           </div>
-          <div class="mt-3">
+          <div class="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
               class="rounded-md bg-indigo-600/20 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
@@ -683,16 +685,14 @@ onBeforeUnmount(() => {
             >
               Settle up
             </button>
-          </div>
-          <div class="mt-3 flex flex-wrap items-center gap-2">
-            <label class="flex flex-col gap-1 text-xs text-slate-400">
-              <span>Export month</span>
-              <input v-model="exportMonth" type="month" :disabled="!group" aria-label="Export month" class="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-sm text-slate-100" />
-            </label>
-            <button type="button" class="self-end rounded-md border border-white/10 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40" :disabled="!group || isExporting" @click="exportCsv">
-              {{ isExporting ? 'Exporting…' : 'Export CSV' }}
+            <button
+              type="button"
+              class="rounded-md bg-indigo-600/20 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="!group"
+              @click="showExportModal = true"
+            >
+              Export
             </button>
-            <p v-if="exportErrorMessage" class="self-end text-xs text-rose-300">{{ exportErrorMessage }}</p>
           </div>
           <details v-if="group.balance.perUser.length > 0" class="mt-3">
             <summary class="cursor-pointer text-sm text-slate-400 transition hover:text-slate-200">
@@ -720,6 +720,33 @@ onBeforeUnmount(() => {
             </ul>
           </details>
         </section>
+
+        <div v-if="showExportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm" @click.self="showExportModal = false">
+          <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl" role="dialog" aria-modal="true" aria-label="Export CSV">
+            <h3 class="mb-4 text-lg font-medium text-slate-100">Export CSV</h3>
+            <div class="flex flex-col gap-4">
+              <label class="flex flex-col gap-1.5">
+                <span class="text-sm text-slate-300">Month</span>
+                <VueDatePicker
+                  v-model="exportMonth"
+                  month-picker
+                  auto-apply
+                  model-type="yyyy-MM"
+                  :formats="{ input: 'yyyy-MM' }"
+                  dark
+                  :clearable="false"
+                />
+              </label>
+              <p v-if="exportErrorMessage" class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{{ exportErrorMessage }}</p>
+              <div class="flex justify-end gap-2">
+                <button type="button" class="rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5" @click="showExportModal = false">Cancel</button>
+                <button type="button" class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-40" :disabled="isExporting" @click="exportCsv">
+                  {{ isExporting ? 'Exporting…' : 'Export' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div v-if="showAddExpenseModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
           <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl">

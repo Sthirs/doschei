@@ -37,6 +37,7 @@ test('export a group month as CSV', async ({ authenticatedPage: page }) => {
   await groupDetailPage.saveExpense();
 
   // --- Trigger export and capture the download. ---
+  await groupDetailPage.openExportModal();
   await groupDetailPage.setExportMonth('2024-03');
   const { filename, text } = await groupDetailPage.clickExportAndExpectDownload();
 
