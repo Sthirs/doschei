@@ -317,6 +317,34 @@ export const deleteSettlement = async (request: AuthenticatedRequest, response: 
   }
 };
 
+export const exportExpenses = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+  const groupId = request.params.id as string;
+  const month = request.query.month;
+
+  if (typeof month !== 'string' || !/^(\d{4})-(0[1-9]|1[0-2])$/.test(month)) {
+    response.status(400).json({ message: 'A "month" query parameter (YYYY-MM) is required.' });
+    return;
+  }
+
+  try {
+    await groupService.streamExpensesCsv(groupId, request.auth!.userId, month, response);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Group not found')) {
+      if (!response.headersSent) {
+        response.status(404).json({ message: error.message });
+      }
+      return;
+    }
+    if (error instanceof Error && error.message.includes('Invalid month')) {
+      response.status(400).json({ message: error.message });
+      return;
+    }
+    if (!response.headersSent) {
+      response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to export expenses.' });
+    }
+  }
+};
+
 export const updateGroup = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
   const { name } = request.body as { name?: unknown };
