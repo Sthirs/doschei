@@ -79,6 +79,11 @@ const todayDateValue = () => {
   return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`;
 };
 
+// Export state
+const exportMonth = ref(todayDateValue().slice(0, 7));
+const isExporting = ref(false);
+const exportErrorMessage = ref('');
+
 const getExpenseDateValue = (expense: Expense) => {
   return expense.date || expense.createdAt.slice(0, 10);
 };
@@ -533,6 +538,38 @@ const groupExpensesByMonth = computed(() => {
   return groups;
 });
 
+const exportCsv = async () => {
+  if (!group.value) return;
+  isExporting.value = true;
+  exportErrorMessage.value = '';
+  try {
+    const token = localStorage.getItem('doschei.auth.token');
+    const url = `/api/groups/${groupId.value}/expenses/export?month=${encodeURIComponent(exportMonth.value)}`;
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      exportErrorMessage.value = data.message ?? 'Export failed.';
+      return;
+    }
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    const contentDisp = response.headers.get('content-disposition') ?? '';
+    const filenameMatch = contentDisp.match(/filename\*?=(?:UTF-8''|")([^"]+)/);
+    const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : `${group.value.name}-export.csv`;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    exportErrorMessage.value = 'Export failed. Please try again.';
+  } finally {
+    isExporting.value = false;
+  }
+};
+
 onMounted(() => {
   if (history.state.groupName) {
     currentPageTitle.value = String(history.state.groupName);
@@ -646,6 +683,16 @@ onBeforeUnmount(() => {
             >
               Settle up
             </button>
+          </div>
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <label class="flex flex-col gap-1 text-xs text-slate-400">
+              <span>Export month</span>
+              <input v-model="exportMonth" type="month" :disabled="!group" aria-label="Export month" class="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-sm text-slate-100" />
+            </label>
+            <button type="button" class="self-end rounded-md border border-white/10 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40" :disabled="!group || isExporting" @click="exportCsv">
+              {{ isExporting ? 'Exporting…' : 'Export CSV' }}
+            </button>
+            <p v-if="exportErrorMessage" class="self-end text-xs text-rose-300">{{ exportErrorMessage }}</p>
           </div>
           <details v-if="group.balance.perUser.length > 0" class="mt-3">
             <summary class="cursor-pointer text-sm text-slate-400 transition hover:text-slate-200">
