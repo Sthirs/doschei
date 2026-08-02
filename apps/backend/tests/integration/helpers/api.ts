@@ -56,6 +56,28 @@ export const createJsonRequest = async <T>(
   };
 };
 
+/**
+ * Performs a raw fetch against the backend and returns the response text
+ * without JSON parsing, for non-JSON responses such as CSV.
+ */
+export const createRawRequest = async (
+  path: string,
+  init?: RequestInit,
+): Promise<{ status: number; headers: Headers; text: string }> => {
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...init,
+    headers: {
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  return {
+    status: response.status,
+    headers: response.headers,
+    text: await response.text(),
+  };
+};
+
 export const uniqueValue = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export const createTestUserPayload = (prefix: string) => {

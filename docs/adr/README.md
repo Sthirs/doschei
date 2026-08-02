@@ -39,3 +39,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0008](0008-dev-workflow-minikube-telepresence.md) | Single supported dev workflow — Minikube + Telepresence | 🟢 accepted |
 | [ADR-0009](0009-testing-strategy.md) | Testing strategy — Vitest, Supertest, Playwright against deployed apps | 🟢 accepted |
 | [ADR-0010](0010-ci-and-release-automation.md) | CI & release automation — GitHub Actions, release-please single version | 🟢 accepted |
+| [ADR-0011](0011-group-expenses-csv-export.md) | Group expenses CSV export — streaming, per-expense net, single-month | 🟢 accepted |

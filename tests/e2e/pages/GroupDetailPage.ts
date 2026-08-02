@@ -1,3 +1,5 @@
+import { promises as fs } from 'node:fs';
+
 import { expect, type Page } from '@playwright/test';
 
 export class GroupDetailPage {
@@ -28,6 +30,14 @@ export class GroupDetailPage {
   private settleUpDeleteButton = this.settleUpDialog.getByRole('button', { name: 'Delete' });
   // SettleUpModal.vue:249-256 — only visible after Delete is clicked (showDeleteConfirm).
   private settleUpConfirmDeleteButton = this.settleUpDialog.getByRole('button', { name: 'Confirm' });
+
+  // Export controls (GroupDetailView.vue — "Export" button next to "Settle up" opens
+  // a modal with a vue-datepicker month picker and an "Export" action button).
+  // `exact: true` on the trigger so it doesn't match "Exporting…" (in-flight state).
+  private exportTriggerButton = this.page.getByRole('button', { name: /^Export$/, exact: true });
+  private exportDialog = this.page.getByRole('dialog', { name: 'Export CSV' });
+  private exportMonthPicker = this.exportDialog.locator('[data-test-id="dp-input"]');
+  private exportActionButton = this.exportDialog.getByRole('button', { name: /^Export$/, exact: true });
 
   constructor(private page: Page) {}
 
@@ -233,5 +243,32 @@ export class GroupDetailPage {
     await this.settleUpConfirmDeleteButton.click();
     // The parent closes the dialog on the `deleted` emit.
     await expect(this.settleUpDialog).not.toBeVisible({ timeout: 10000 });
+  }
+
+  async openExportModal(): Promise<void> {
+    await this.exportTriggerButton.click();
+    await expect(this.exportDialog).toBeVisible();
+  }
+
+  async setExportMonth(yyyyMm: string): Promise<void> {
+    // @vuepic/vue-datepicker exposes `data-test-id="dp-input"` on the input element.
+    // Scoped to exportDialog so it doesn't collide with the expense date picker.
+    await this.exportMonthPicker.click();
+    await this.exportMonthPicker.clear();
+    await this.exportMonthPicker.fill(yyyyMm);
+    await this.exportMonthPicker.press('Enter'); // auto-apply commits
+  }
+
+  async clickExportAndExpectDownload(): Promise<{ filename: string; text: string }> {
+    // Playwright hands us the download via the `download` event; race the wait
+    // against the click so we never miss it. `download.path()` is a real
+    // filesystem path managed by Playwright (no dialog interception needed).
+    const [download] = await Promise.all([
+      this.page.waitForEvent('download'),
+      this.exportActionButton.click(),
+    ]);
+    const filename = download.suggestedFilename();
+    const text = (await fs.readFile(await download.path())).toString('utf8');
+    return { filename, text };
   }
 }
