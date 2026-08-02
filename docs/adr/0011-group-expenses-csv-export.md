@@ -1,6 +1,6 @@
 # ADR-0011: Group expenses CSV export — streaming, per-expense net, single-month
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-08-02
 - **Deciders:** Sthirs
 
