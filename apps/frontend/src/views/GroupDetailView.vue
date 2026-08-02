@@ -675,25 +675,6 @@ onBeforeUnmount(() => {
               You are all settled up.
             </p>
           </div>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              class="rounded-md bg-indigo-600/20 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
-              :disabled="group.members.length < 2"
-              :title="group.members.length < 2 ? 'Invite someone to this group first' : 'Record a payment between members'"
-              @click="openSettleUpModal('create')"
-            >
-              Settle up
-            </button>
-            <button
-              type="button"
-              class="rounded-md bg-indigo-600/20 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
-              :disabled="!group"
-              @click="showExportModal = true"
-            >
-              Export
-            </button>
-          </div>
           <details v-if="group.balance.perUser.length > 0" class="mt-3">
             <summary class="cursor-pointer text-sm text-slate-400 transition hover:text-slate-200">
               See breakdown
@@ -720,6 +701,26 @@ onBeforeUnmount(() => {
             </ul>
           </details>
         </section>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="rounded-md bg-indigo-600/20 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
+            :disabled="group.members.length < 2"
+            :title="group.members.length < 2 ? 'Invite someone to this group first' : 'Record a payment between members'"
+            @click="openSettleUpModal('create')"
+          >
+            Settle up
+          </button>
+          <button
+            type="button"
+            class="rounded-md bg-indigo-600/20 px-3 py-1.5 text-xs font-medium text-indigo-300 transition hover:bg-indigo-600/30 disabled:cursor-not-allowed disabled:opacity-40"
+            :disabled="!group"
+            @click="showExportModal = true"
+          >
+            Export
+          </button>
+        </div>
 
         <div v-if="showExportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm" @click.self="showExportModal = false">
           <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl" role="dialog" aria-modal="true" aria-label="Export CSV">
