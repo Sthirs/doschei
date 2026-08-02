@@ -350,7 +350,7 @@ export const exportExpenses = async (request: AuthenticatedRequest, response: Re
 
   try {
     for await (const row of stream.rows) {
-      response.write(row);
+      response.write(row); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write — CSV file download, fields pre-escaped via csvEscapeField; not HTML
     }
     response.end();
   } catch (error) {
