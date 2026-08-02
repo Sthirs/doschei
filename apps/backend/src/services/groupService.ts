@@ -1,8 +1,11 @@
+import { Between } from 'typeorm';
+
 import { AppDataSource } from '../db/data-source';
 import { Expense } from '../entities/Expense';
 import { ExpenseSplit } from '../entities/ExpenseSplit';
 import { Group } from '../entities/Group';
 import { User } from '../entities/User';
+import { csvEscapeField, rfc5987Filename, sanitizeLatin1Filename } from './csvExport';
 import {
   aggregateBalance,
   computeAllocatedAmounts,
@@ -10,6 +13,9 @@ import {
   type ParsedSplit,
 } from './expenseSplitMath';
 import { buildSettlementSplit, validateSettlementInput } from './settlementRules';
+
+const MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
+const CSV_PAGE_SIZE = 10000;
 
 type SerializedSplit = {
   userId: string;
@@ -630,6 +636,115 @@ export class GroupService {
     }
 
     await this.expenseRepository.remove(expense);
+  }
+
+  /**
+   * Streams a single month's expenses as RFC-4180 CSV. Settlements use
+   * the same per-member formula as expenses (payer net = +amount,
+   * payee net = −amount) — do not invert or special-case by kind.
+   */
+  async streamExpensesCsv(
+    groupId: string,
+    userId: string,
+    month: string,
+    res: import('express').Response,
+  ): Promise<void> {
+    if (!MONTH_PATTERN.test(month)) {
+      throw new Error('Invalid month. Expected format YYYY-MM.');
+    }
+
+    const group = await this.groupRepository
+      .createQueryBuilder('group')
+      .innerJoin('group.members', 'membership', 'membership.id = :userId', { userId })
+      .leftJoinAndSelect('group.members', 'member')
+      .where('group.id = :groupId', { groupId })
+      .getOne();
+
+    if (!group) {
+      throw new Error('Group not found or you are not a member.');
+    }
+
+    const orderedMembers = [...group.members].sort((a, b) =>
+      a.displayName.localeCompare(b.displayName),
+    );
+
+    const year = Number(month.slice(0, 4));
+    const monthNum = Number(month.slice(5, 7));
+    const lastDay = new Date(Date.UTC(year, monthNum, 0)).getUTCDate();
+    const pad = (n: number): string => String(n).padStart(2, '0');
+    const startStr = `${year}-${pad(monthNum)}-01`;
+    const endStr = `${year}-${pad(monthNum)}-${pad(lastDay)}`;
+
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const rawGroupName = group.name;
+    const safeLatin1 = sanitizeLatin1Filename(rawGroupName);
+    const rfc5987 = rfc5987Filename(rawGroupName);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${safeLatin1}-${todayISO}.csv"; filename*=UTF-8''${rfc5987}-${todayISO}.csv`,
+    );
+    res.flushHeaders();
+
+    const headerRow =
+      ['date', 'description', 'category', 'expense', 'currency', ...orderedMembers.map((m) => m.displayName)]
+        .map(csvEscapeField)
+        .join(',') + '\r\n';
+    res.write(headerRow);
+
+    const formatNet = (expense: Expense, memberId: string): string => {
+      const paidCents =
+        expense.paidBy.id === memberId ? Math.round(Number(expense.amount) * 100) : 0;
+      const owedCents = expense.splits
+        .filter((split) => split.user.id === memberId)
+        .reduce((acc, split) => acc + Math.round(Number(split.computedAmount) * 100), 0);
+      return ((paidCents - owedCents) / 100).toFixed(2);
+    };
+
+    try {
+      for (let skip = 0; ; skip += CSV_PAGE_SIZE) {
+        const page = await this.expenseRepository.find({
+          where: { group: { id: groupId }, date: Between(startStr, endStr) },
+          relations: { paidBy: true, splits: { user: true } },
+          order: { date: 'ASC', createdAt: 'ASC' },
+          take: CSV_PAGE_SIZE,
+          skip,
+        });
+
+        if (page.length === 0) {
+          break;
+        }
+
+        for (const expense of page) {
+          const row =
+            [
+              expense.date,
+              expense.description,
+              expense.category,
+              Number(expense.amount).toFixed(2),
+              'EUR',
+              ...orderedMembers.map((m) => formatNet(expense, m.id)),
+            ]
+              .map(csvEscapeField)
+              .join(',') + '\r\n';
+          res.write(row);
+        }
+
+        if (page.length < CSV_PAGE_SIZE) {
+          break;
+        }
+      }
+
+      res.end();
+    } catch (error) {
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Unable to export expenses.' });
+        return;
+      }
+      res.destroy(error instanceof Error ? error : new Error('Unable to export expenses.'));
+    }
   }
 
   private assertAllSplitUsersAreMembers(splits: ParsedSplit[], group: Group): void {
