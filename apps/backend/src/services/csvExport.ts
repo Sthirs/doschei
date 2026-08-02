@@ -1,4 +1,14 @@
 /**
+ * Reconsidered (vs ADR-0011 §Alternatives): STILL keep in-house, no library.
+ * Flip to `csv-stringify` (Node streaming CSV writer, Papa Parse server-side
+ * sibling) IF formula-injection mitigation (CWE-1236) must cover Excel/Sheets
+ * quirks beyond a leading-`'` prefix, OR if multi-currency / arbitrary-
+ * delimiter / TSV exports are added. Its stringifier maps cleanly onto the
+ * new `startExpensesCsv` async-iterable shape — this refactor does not
+ * foreclose adopting it later.
+ */
+
+/**
  * Pure helpers for building CSV exports.
  *
  * - `csvEscapeField` applies RFC 4180 §2 quoting to a single CSV field.
@@ -61,4 +71,48 @@ export const rfc5987Filename = (name: string): string => {
       : `%${byte.toString(16).toUpperCase().padStart(2, '0')}`;
   }
   return encoded;
+};
+
+/**
+ * Header metadata describing a streamed CSV response. The controller applies
+ * these via `res.setHeader(...)` + `res.flushHeaders()` before iterating the
+ * row stream — keeping all Express I/O out of the service layer.
+ */
+export interface CsvExportHeaders {
+  contentType: string;
+  contentDisposition: string;
+  cacheControl: string;
+}
+
+/**
+ * Result of `GroupService.startExpensesCsv`: header metadata + an async
+ * iterable of pre-formatted RFC-4180 row strings (each including the
+ * trailing `\r\n`). The consumer iterates one row at a time and writes it
+ * straight to the sink — the service never accumulates the whole CSV in
+ * memory, never touches disk, and never imports Express.
+ */
+export interface CsvExportStream {
+  headers: CsvExportHeaders;
+  rows: AsyncIterable<string>;
+}
+
+/**
+ * Pure per-expense net (ADR-0006 integer-cent math): for each member `m`,
+ * `net(m) = (m is the payer ? amount : 0) − Σ split.computedAmount where
+ * split.userId === m`. `+` means the member will receive (creditor); `−`
+ * means they owe (debtor). Same formula for expenses and settlements —
+ * do not invert by `kind`. Inputs are primitives so the helper stays free
+ * of entity-coupling and is unit-testable without a database.
+ */
+export const formatMemberNet = (
+  paidByUserId: string,
+  memberId: string,
+  amount: number,
+  splits: ReadonlyArray<{ userId: string; computedAmount: number }>,
+): string => {
+  const paidCents = paidByUserId === memberId ? Math.round(amount * 100) : 0;
+  const owedCents = splits
+    .filter((split) => split.userId === memberId)
+    .reduce((acc, split) => acc + Math.round(split.computedAmount * 100), 0);
+  return ((paidCents - owedCents) / 100).toFixed(2);
 };

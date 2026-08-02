@@ -1,6 +1,7 @@
 import { Response } from 'express';
 
 import { AuthenticatedRequest } from '../middleware/auth';
+import type { CsvExportStream } from '../services/csvExport';
 import { GroupService } from '../services/groupService';
 
 const groupService = new GroupService();
@@ -326,22 +327,34 @@ export const exportExpenses = async (request: AuthenticatedRequest, response: Re
     return;
   }
 
+  let stream: CsvExportStream;
   try {
-    await groupService.streamExpensesCsv(groupId, request.auth!.userId, month, response);
+    stream = await groupService.startExpensesCsv(groupId, request.auth!.userId, month);
   } catch (error) {
     if (error instanceof Error && error.message.includes('Group not found')) {
-      if (!response.headersSent) {
-        response.status(404).json({ message: error.message });
-      }
+      response.status(404).json({ message: error.message });
       return;
     }
     if (error instanceof Error && error.message.includes('Invalid month')) {
       response.status(400).json({ message: error.message });
       return;
     }
-    if (!response.headersSent) {
-      response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to export expenses.' });
+    response.status(500).json({ message: 'Unable to export expenses.' });
+    return;
+  }
+
+  response.setHeader('Content-Type', stream.headers.contentType);
+  response.setHeader('Cache-Control', stream.headers.cacheControl);
+  response.setHeader('Content-Disposition', stream.headers.contentDisposition);
+  response.flushHeaders();
+
+  try {
+    for await (const row of stream.rows) {
+      response.write(row);
     }
+    response.end();
+  } catch (error) {
+    response.destroy(error instanceof Error ? error : new Error('Unable to export expenses.'));
   }
 };
 

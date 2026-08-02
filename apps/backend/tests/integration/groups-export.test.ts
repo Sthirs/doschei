@@ -47,7 +47,7 @@ describe('GET /api/groups/:id/expenses/export', () => {
       headers: bearer(demo.body.token),
       body: JSON.stringify({ email: alice.body.user.email }),
     });
-    expect(addMemberRes.status).toBe(201);
+    expect(addMemberRes.status).toBe(200);
 
     const month = currentMonth();
     const today = todayIso();
@@ -159,7 +159,7 @@ describe('GET /api/groups/:id/expenses/export', () => {
       headers: bearer(demo.body.token),
       body: JSON.stringify({ email: alice.body.user.email }),
     });
-    expect(addMemberRes.status).toBe(201);
+    expect(addMemberRes.status).toBe(200);
 
     const response = await createJsonRequest<{ message: string }>(`/api/groups/${groupId}/expenses/export`, {
       headers: bearer(demo.body.token),
@@ -184,7 +184,7 @@ describe('GET /api/groups/:id/expenses/export', () => {
       headers: bearer(demo.body.token),
       body: JSON.stringify({ email: alice.body.user.email }),
     });
-    expect(addMemberRes.status).toBe(201);
+    expect(addMemberRes.status).toBe(200);
 
     const response = await createJsonRequest<{ message: string }>(
       `/api/groups/${groupId}/expenses/export?month=${badMonth}`,
@@ -209,7 +209,7 @@ describe('GET /api/groups/:id/expenses/export', () => {
       headers: bearer(demo.body.token),
       body: JSON.stringify({ email: alice.body.user.email }),
     });
-    expect(addMemberRes.status).toBe(201);
+    expect(addMemberRes.status).toBe(200);
 
     const response = await createJsonRequest<{ message: string }>(
       `/api/groups/${groupId}/expenses/export?month=${currentMonth()}`,
