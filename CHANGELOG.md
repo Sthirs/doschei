@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/Sthirs/doschei/compare/v1.0.0...v1.1.0) (2026-08-02)
+
+
+### Features
+
+* add export functionality ([#62](https://github.com/Sthirs/doschei/issues/62)) ([0eccd03](https://github.com/Sthirs/doschei/commit/0eccd032c04ac8c4d2b03f5810bab8928cd7fca3))
+
 ## [1.0.0](https://github.com/Sthirs/doschei/compare/v0.1.12...v1.0.0) (2026-08-01)
 
 
