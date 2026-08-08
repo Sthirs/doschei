@@ -35,14 +35,14 @@ test('settle-up lifecycle: create → edit amount → delete', async ({ authenti
   await groupDetailPage.saveExpense();
 
   // --- Assert pre-settlement balance: "You owe Alice Rossi €10.00". ---
-  // The per-user balance rows live inside a native <details> disclosure
-  // (GroupDetailView.vue:650-674, summary "See breakdown") that is
-  // COLLAPSED by default — the span renders but is hidden. Expand it
-  // before asserting. (A subsequent full settlement zeroes perUser and
-  // tears down the <details>, so later balances anchor on the always-
-  // visible overall line instead — see EDIT B/C.)
+  // The per-user balance rows live behind a "See breakdown" button
+  // (GroupDetailView.vue:736-764) that is COLLAPSED by default. Expand it
+  // before asserting. The entry renders the name and amount as two separate
+  // spans inside the row, so anchor on the name span only. (A subsequent
+  // full settlement zeroes perUser and removes the toggle, so later balances
+  // anchor on the always-visible overall line instead — see EDIT B/C.)
   await page.getByText('See breakdown').click();
-  await expect(page.getByText('You owe Alice Rossi €10.00')).toBeVisible();
+  await expect(page.getByText('You owe Alice Rossi', { exact: true })).toBeVisible();
 
   // --- Open Settle up and assert the pre-filled amount + payer. ---
   // T3.1 spec: defaults pick the candidate with greatest |net|; here Demo User
@@ -58,7 +58,7 @@ test('settle-up lifecycle: create → edit amount → delete', async ({ authenti
     payeeName: 'Alice Rossi',
     amount: '10',
   });
-  await expect(page.getByText('You are all settled up.')).toBeVisible();
+  await expect(page.getByText('Settled', { exact: true })).toBeVisible();
 
   // --- Open the settlement, change amount to 5, save. ---
   // The T3.5 notepad warns that opening a settlement for editing may silently
@@ -69,16 +69,19 @@ test('settle-up lifecycle: create → edit amount → delete', async ({ authenti
   await groupDetailPage.setSettleUpAmount('5');
   await groupDetailPage.saveSettleUp();
 
-  // --- Assert partial-balance: overall line "You owe €5.00 overall". ---
-  // Anchor on the ALWAYS-VISIBLE overall line (GroupDetailView.vue:629-634),
+  // --- Assert partial-balance: overall line "You owe €5.00". ---
+  // Anchor on the ALWAYS-VISIBLE overall line (GroupDetailView.vue:707-710),
   // not the per-user row: the edit-to-5 step recreated a fresh closed
-  // <details>, and the overall line is a single exact match (no strict-
+  // breakdown toggle, and the overall line is a single exact match (no strict-
   // mode ambiguity, no disclosure dependency).
-  await expect(page.getByText('You owe €5.00 overall', { exact: true })).toBeVisible();
+  await expect(page.getByText('You owe €5.00', { exact: true })).toBeVisible();
 
   // --- Delete the settlement, balance returns to the pre-settlement state. ---
   await groupDetailPage.openSettlement('Demo User', 'Alice Rossi');
   await groupDetailPage.deleteCurrentSettlement();
-  // Overall line — single exact match, no strict-mode ambiguity.
-  await expect(page.getByText('You owe €10.00 overall', { exact: true })).toBeVisible();
+  // Overall line — scope to the balance card because the expense row badge
+  // also renders exactly "You owe €10.00" (the €20 expense split equal).
+  await expect(
+    page.locator('section').filter({ hasText: 'Your Balance' }).getByText('You owe €10.00', { exact: true }),
+  ).toBeVisible();
 });

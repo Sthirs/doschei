@@ -5,7 +5,7 @@ import { expect, type Page } from '@playwright/test';
 export class GroupDetailPage {
   // Add Expense buttons (GroupDetailView.vue:565 desk, :572 mobile — two aria variants)
   private addExpenseButton = this.page.getByRole('button', { name: 'Add Expense' })
-      .or(this.page.getByRole('button', { name: 'Add expense' }));
+      .or(this.page.getByRole('button', { name: 'Add expense' })).first();
 
   private categoryPicker = this.page.getByRole('button', { name: /^Category:/ });
   // Both modals' description input — create has placeholder="E.g., Dinner, Taxi...",
@@ -31,13 +31,15 @@ export class GroupDetailPage {
   // SettleUpModal.vue:249-256 — only visible after Delete is clicked (showDeleteConfirm).
   private settleUpConfirmDeleteButton = this.settleUpDialog.getByRole('button', { name: 'Confirm' });
 
-  // Export controls (GroupDetailView.vue — "Export" button next to "Settle up" opens
-  // a modal with a vue-datepicker month picker and an "Export" action button).
+  // Export controls (GroupDetailView.vue — "Export" button next to "Settle up"
+  // opens a modal with native Month/Year <select>s and an "Export Expenses"
+  // action button).
   // `exact: true` on the trigger so it doesn't match "Exporting…" (in-flight state).
   private exportTriggerButton = this.page.getByRole('button', { name: /^Export$/, exact: true });
-  private exportDialog = this.page.getByRole('dialog', { name: 'Export CSV' });
-  private exportMonthPicker = this.exportDialog.locator('[data-test-id="dp-input"]');
-  private exportActionButton = this.exportDialog.getByRole('button', { name: /^Export$/, exact: true });
+  private exportDialog = this.page.getByRole('dialog', { name: 'Export expenses' });
+  private exportMonthSelect = this.exportDialog.getByLabel('Month');
+  private exportYearSelect = this.exportDialog.getByLabel('Year');
+  private exportActionButton = this.exportDialog.getByRole('button', { name: 'Export Expenses' });
 
   constructor(private page: Page) {}
 
@@ -251,12 +253,12 @@ export class GroupDetailPage {
   }
 
   async setExportMonth(yyyyMm: string): Promise<void> {
-    // @vuepic/vue-datepicker exposes `data-test-id="dp-input"` on the input element.
-    // Scoped to exportDialog so it doesn't collide with the expense date picker.
-    await this.exportMonthPicker.click();
-    await this.exportMonthPicker.clear();
-    await this.exportMonthPicker.fill(yyyyMm);
-    await this.exportMonthPicker.press('Enter'); // auto-apply commits
+    // The redesigned modal uses native Month/Year <select>s (GroupDetailView.vue:802-820)
+    // instead of a datepicker. Pick the option for the requested YYYY-MM period.
+    const [year, month] = yyyyMm.split('-').map(Number);
+    const monthName = new Date(2000, month - 1, 1).toLocaleDateString('en-US', { month: 'long' });
+    await this.exportMonthSelect.selectOption({ label: monthName });
+    await this.exportYearSelect.selectOption({ label: String(year) });
   }
 
   async clickExportAndExpectDownload(): Promise<{ filename: string; text: string }> {

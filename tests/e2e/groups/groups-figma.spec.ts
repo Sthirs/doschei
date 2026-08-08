@@ -26,8 +26,11 @@ test('groups list matches Figma design: thumbnails, avatars, balance chips', asy
   ).toBeVisible();
 
   // 4. Holiday in Palermo — CORAL "You owe €..." (seeded demo net -88)
-  await expect(page.getByRole('heading', { name: 'Holiday in Palermo', level: 2 })).toBeVisible();
-  await expect(page.getByText(/You owe €/)).toBeVisible();
+  const palermoCard = page.locator('li').filter({
+    has: page.getByRole('heading', { name: 'Holiday in Palermo', level: 2 }),
+  });
+  await expect(palermoCard).toBeVisible();
+  await expect(palermoCard.getByText(/You owe €/)).toBeVisible();
 
   // 5. Personal Spending — GRAY "Settled" (demo solo, net 0)
   await expect(page.getByRole('heading', { name: 'Personal Spending', level: 2 })).toBeVisible();
@@ -49,9 +52,6 @@ test('groups list matches Figma design: thumbnails, avatars, balance chips', asy
   await expect(veniceCard.getByLabel('Alice Rossi')).toBeVisible(); // Alice Rossi initial
 
   // 9. Holiday in Palermo has 3 members (demo + alice + bob) — "+N" NOT shown since count = 3
-  const palermoCard = page.locator('li').filter({
-    has: page.getByRole('heading', { name: 'Holiday in Palermo', level: 2 }),
-  });
   await expect(palermoCard.getByLabel('Demo User')).toBeVisible(); // Demo
   await expect(palermoCard.getByLabel('Alice Rossi')).toBeVisible(); // Alice
   await expect(palermoCard.getByLabel('Bob Bianchi')).toBeVisible(); // Bob Bianchi
