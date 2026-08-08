@@ -137,7 +137,7 @@ onUnmounted(() => {
           </div>
           <div
             v-else
-            class="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#485d4f] text-white font-semibold text-lg"
+            class="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
             :aria-label="`${group.name} thumbnail`"
           >
             {{ groupInitials(group.name) }}
@@ -157,7 +157,7 @@ onUnmounted(() => {
               <div
                 v-for="(member, i) in group.members.slice(0, 3)"
                 :key="member.id"
-                class="h-6 w-6 rounded-full flex items-center justify-center bg-gradient-to-br from-[#6554E7]/60 to-[#485d4f]/60 text-white text-[11px] font-semibold ring-2 ring-[#13121B]"
+                class="h-6 w-6 rounded-full flex items-center justify-center bg-gradient-to-br from-[#6554E7]/60 to-[#4a485d]/60 text-white text-[11px] font-semibold ring-2 ring-[#13121B]"
                 :style="{ zIndex: 3 - i }"
                 :aria-label="member.displayName"
               >
