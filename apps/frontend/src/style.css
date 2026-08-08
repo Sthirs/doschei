@@ -1,19 +1,28 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-brand-50: #f4f7ff;
-  --color-brand-100: #e7eeff;
-  --color-brand-500: #4f6cf7;
-  --color-brand-600: #3b57db;
-  --color-brand-900: #111936;
+  --color-brand-50: #f4f0ff;
+  --color-brand-100: #e8e1ff;
+  --color-brand-200: #C6BFFF;
+  --color-brand-500: #6c5ce7;
+  --color-brand-600: #5a3fcf;
+  --color-brand-900: #13121B;
 
-  --shadow-glow: 0 20px 60px -20px rgba(79, 108, 247, 0.45);
+  --color-balance-pos: #2ECC71;
+  --color-balance-neg: #FFB4AB;
+  --color-balance-neu: #64748b;
+
+  --shadow-glow: 0 20px 60px -20px rgba(108, 92, 231, 0.45);
 }
 
 :root {
   color: #e2e8f0;
   background: #020617;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.font-display {
+  font-family: 'Geist Variable', Geist, Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
@@ -21,7 +30,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top, rgba(79, 108, 247, 0.25), transparent 35%),
+    radial-gradient(circle at top, rgba(108, 92, 231, 0.25), transparent 35%),
     linear-gradient(180deg, #020617 0%, #0f172a 100%);
 }
 
@@ -30,30 +39,30 @@ body {
 }
 
 .glass-panel {
-  background: rgba(15, 23, 42, 0.72);
+  background: rgba(30, 30, 38, 0.8);
   backdrop-filter: blur(24px);
-  border: 1px solid rgba(148, 163, 184, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .dp__theme_dark {
   --dp-background-color: rgba(15, 23, 42, 0.97);
   --dp-text-color: #e2e8f0;
   --dp-hover-color: rgba(255, 255, 255, 0.08);
-  --dp-primary-color: #4f6cf7;
+  --dp-primary-color: #6c5ce7;
   --dp-primary-text-color: #020617;
   --dp-secondary-color: rgba(148, 163, 184, 0.12);
   --dp-border-color: rgba(255, 255, 255, 0.1);
   --dp-menu-border-color: rgba(148, 163, 184, 0.18);
   --dp-border-color-hover: rgba(255, 255, 255, 0.2);
-  --dp-border-color-focus: rgba(79, 108, 247, 0.4);
+  --dp-border-color-focus: rgba(108, 92, 231, 0.4);
   --dp-disabled-color: rgba(148, 163, 184, 0.3);
   --dp-disabled-color-text: #64748b;
   --dp-scroll-bar-background: #0f172a;
   --dp-scroll-bar-color: rgba(148, 163, 184, 0.3);
   --dp-icon-color: #94a3b8;
-  --dp-highlight-color: rgba(79, 108, 247, 0.15);
-  --dp-range-between-dates-background-color: rgba(79, 108, 247, 0.1);
-  --dp-range-between-border-color: rgba(79, 108, 247, 0.1);
+  --dp-highlight-color: rgba(108, 92, 231, 0.15);
+  --dp-range-between-dates-background-color: rgba(108, 92, 231, 0.1);
+  --dp-range-between-border-color: rgba(108, 92, 231, 0.1);
   --dp-tooltip-color: #1e293b;
   --dp-input-background-color: rgba(255, 255, 255, 0.05);
   --dp-input-padding: 0.5rem 1rem;
@@ -72,7 +81,7 @@ body {
 
 .dp__input:focus,
 .dp__input_focus {
-  border-color: rgba(79, 108, 247, 0.4);
+  border-color: rgba(108, 92, 231, 0.4);
   background: rgba(255, 255, 255, 0.1);
 }
 

@@ -1,4 +1,4 @@
-import { Between } from 'typeorm';
+import { Between, In } from 'typeorm';
 
 import { AppDataSource } from '../db/data-source';
 import { Expense } from '../entities/Expense';
@@ -8,8 +8,10 @@ import { User } from '../entities/User';
 import { csvEscapeField, formatMemberNet, rfc5987Filename, sanitizeLatin1Filename, type CsvExportHeaders, type CsvExportStream } from './csvExport';
 import {
   aggregateBalance,
+  aggregateNetForUser,
   computeAllocatedAmounts,
   validateSplits,
+  type AggregateBalanceInput,
   type ParsedSplit,
 } from './expenseSplitMath';
 import { buildSettlementSplit, validateSettlementInput } from './settlementRules';
@@ -46,6 +48,7 @@ type SerializedGroup = {
   imageUrl: string | null;
   memberCount: number;
   members: { id: string; displayName: string; email: string }[];
+  netForCurrentUser: number;
 };
 
 type SerializedBalanceEntry = {
@@ -67,7 +70,7 @@ export class GroupService {
   private userRepository = AppDataSource.getRepository(User);
   private splitRepository = AppDataSource.getRepository(ExpenseSplit);
 
-  private serializeGroup(group: Group): SerializedGroup {
+  private serializeGroup(group: Group, netForCurrentUser = 0): SerializedGroup {
     return {
       id: group.id,
       name: group.name,
@@ -78,6 +81,7 @@ export class GroupService {
         displayName: member.displayName,
         email: member.email,
       })),
+      netForCurrentUser,
     };
   }
 
@@ -191,7 +195,42 @@ export class GroupService {
       .orderBy('group.created_at', 'ASC')
       .getMany();
 
-    return groups.map((group) => this.serializeGroup(group));
+    if (groups.length === 0) {
+      return [];
+    }
+
+    const groupIds = groups.map((group) => group.id);
+
+    const expenses = await this.expenseRepository.find({
+      where: { group: { id: In(groupIds) } },
+      relations: { group: true, paidBy: true, splits: { user: true } },
+      order: { date: 'DESC', createdAt: 'DESC' },
+    });
+
+    const expensesByGroup = new Map<string, AggregateBalanceInput[]>();
+    for (const expense of expenses) {
+      const groupId = expense.group.id;
+      const entry: AggregateBalanceInput = {
+        paidByUserId: expense.paidBy.id,
+        splits: (expense.splits ?? []).map((split) => ({
+          userId: split.user.id,
+          computedAmount: Number(split.computedAmount),
+        })),
+      };
+      const list = expensesByGroup.get(groupId);
+      if (list) {
+        list.push(entry);
+      } else {
+        expensesByGroup.set(groupId, [entry]);
+      }
+    }
+
+    return groups.map((group) =>
+      this.serializeGroup(
+        group,
+        aggregateNetForUser(expensesByGroup.get(group.id) ?? [], userId),
+      ),
+    );
   }
 
   async getGroupByIdForUser(groupId: string, userId: string) {
@@ -702,7 +741,7 @@ export class GroupService {
         for (let skip = 0; ; skip += CSV_PAGE_SIZE) {
           const page = await expenseRepository.find({
             where: { group: { id: groupId }, date: Between(startStr, endStr) },
-            relations: { paidBy: true, splits: { user: true } },
+      relations: { group: true, paidBy: true, splits: { user: true } },
             order: { date: 'ASC', createdAt: 'ASC' },
             take: CSV_PAGE_SIZE,
             skip,

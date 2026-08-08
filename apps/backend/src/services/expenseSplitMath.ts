@@ -235,3 +235,38 @@ export const aggregateBalance = (
     perUser,
   };
 };
+
+/**
+ * Lightweight scalar-only variant of `aggregateBalance`. Computes the same
+ * net total for `currentUserId` using the exact same payer/split logic, but
+ * skips the `perUser` Map construction entirely — only the scalar net is
+ * needed for the group list endpoint, so this avoids the overhead of
+ * building and filtering a per-user map per group.
+ *
+ * `netForCurrentUser > 0` means others owe the current user (receivable);
+ * `< 0` means the current user owes others (payable).
+ */
+export const aggregateNetForUser = (
+  expenses: AggregateBalanceInput[],
+  currentUserId: string,
+): number => {
+  let netCents = 0;
+
+  for (const expense of expenses) {
+    for (const split of expense.splits) {
+      if (split.userId === expense.paidByUserId) {
+        continue;
+      }
+
+      const cents = toCents(split.computedAmount);
+
+      if (expense.paidByUserId === currentUserId) {
+        netCents += cents;
+      } else if (split.userId === currentUserId) {
+        netCents -= cents;
+      }
+    }
+  }
+
+  return netCents / 100;
+};

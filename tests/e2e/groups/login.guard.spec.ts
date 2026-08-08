@@ -19,6 +19,6 @@ test('UI login with demo user works', async ({ page }) => {
   await page.waitForURL(/\/groups$/);
   await expect(page).toHaveURL(/\/groups$/);
 
-  // GroupsView renders the page title via router meta.title 'Groups' (router/index.ts:32).
-  await expect(page.getByRole('heading', { name: 'Groups' })).toBeVisible();
+  // GroupsView sets the page title to "Do Schèi" (GroupsView.vue:72-74).
+  await expect(page.getByRole('heading', { name: 'Do Schèi' })).toBeVisible();
 });
