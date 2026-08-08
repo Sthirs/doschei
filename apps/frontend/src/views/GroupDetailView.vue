@@ -742,6 +742,7 @@ onBeforeUnmount(() => {
   </Teleport>
 
   <main class="flex flex-col flex-1 min-h-0 text-[#E5E0ED]">
+    <div class="mx-auto w-full max-w-5xl flex flex-col flex-1 min-h-0">
     <!-- Loading -->
     <div
       v-if="isLoading"
@@ -1694,6 +1695,7 @@ onBeforeUnmount(() => {
       >
         {{ errorMessage }}
       </p>
+    </div>
     </div>
   </main>
 </template>
