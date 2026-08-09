@@ -49,8 +49,9 @@ function openSheet(): void {
 }
 
 function apply(): void {
-  emit('update:modelValue', draft.value);
+  const value = draft.value; // capture before closing
   isOpen.value = false;
+  emit('update:modelValue', value);
   emit('close');
 }
 
@@ -61,17 +62,34 @@ function cancel(): void {
 </script>
 
 <template>
-  <div data-test-id="dtp" class="flex flex-col gap-1.5 cursor-pointer" @click="openSheet">
-    <span class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]">Date</span>
-    <div class="rounded-xl px-4 py-3 bg-[#201F27] border border-[rgba(71,69,84,0.3)]">
+  <div
+    data-test-id="dtp"
+    class="flex flex-col gap-1.5 cursor-pointer"
+    @click="openSheet"
+  >
+    <span
+      class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
+      >Date</span
+    >
+    <div
+      class="rounded-xl px-4 py-3 bg-[#201F27] border border-[rgba(71,69,84,0.3)]"
+    >
       <span class="text-sm text-[#E5E0ED]">{{ formatDate(modelValue) }}</span>
     </div>
   </div>
 
   <Teleport to="body">
-    <div v-if="isOpen" role="dialog" aria-label="Select date" class="fixed inset-0 z-50">
+    <div
+      v-if="isOpen"
+      role="dialog"
+      aria-label="Select date"
+      class="fixed inset-0 z-50"
+    >
       <!-- Scrim -->
-      <div class="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-[2px]" @click="cancel"></div>
+      <div
+        class="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-[2px]"
+        @click="cancel"
+      ></div>
       <!-- Card -->
       <div
         class="absolute bottom-0 inset-x-0 max-w-[390px] mx-auto bg-[#1C1B23] rounded-t-[24px] border-t border-[rgba(255,255,255,0.1)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
@@ -85,10 +103,13 @@ function cancel(): void {
           class="flex justify-between items-center px-5 pt-2 pb-4 border-b border-[rgba(255,255,255,0.05)]"
         >
           <div class="flex flex-col">
-            <span class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C6BFFF]"
+            <span
+              class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C6BFFF]"
               >SELECT DATE</span
             >
-            <span class="text-2xl font-bold text-[#E5E0ED]" style="font-family: Inter">{{ formatDate(draft) }}</span>
+            <span class="text-2xl font-bold text-[#E5E0ED]">{{
+              formatDate(draft)
+            }}</span>
           </div>
           <button class="px-2 py-1" @click="cancel">
             <svg
@@ -117,20 +138,23 @@ function cancel(): void {
             :masks="{ title: 'MMMM YYYY' }"
             :select-attribute="selectAttribute"
             trim-weeks
+            borderless
           />
         </div>
         <!-- Footer Actions -->
-        <div class="flex justify-end gap-2 px-5 py-4 border-t border-[rgba(255,255,255,0.05)]">
+        <div
+          class="flex justify-end gap-2 px-5 py-4 border-t border-[rgba(255,255,255,0.05)]"
+        >
           <button
+            type="button"
             class="rounded-full px-6 py-3 text-[12px] font-medium tracking-[0.05em] text-[#C8C4D7]"
-            style="font-family: Geist"
             @click="cancel"
           >
             Cancel
           </button>
           <button
+            type="button"
             class="rounded-full px-6 py-3 text-[12px] font-medium tracking-[0.05em] text-[#F0EBFF] bg-[#6554E7]"
-            style="font-family: Geist; box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2)"
             @click="apply"
           >
             Apply
@@ -177,7 +201,8 @@ function cancel(): void {
 :deep(.vc-highlight) {
   background: #6554e7 !important;
   border-radius: 9999px !important;
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.2) !important;
+  width: calc(100% - 2px);
+  height: calc(100% - 2px);
 }
 
 /* Nav arrows */
