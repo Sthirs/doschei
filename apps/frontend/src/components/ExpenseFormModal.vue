@@ -22,13 +22,6 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const datePickerFormats = {
-  input: 'yyyy-MM-dd',
-};
-const datePickerTimeConfig = {
-  enableTimePicker: false,
-};
-
 const padDatePart = (value: number) => String(value).padStart(2, '0');
 
 const todayDateValue = () => {

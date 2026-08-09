@@ -91,4 +91,79 @@ describe('DateTimePicker', () => {
   it('renders without throwing when modelValue is empty', () => {
     expect(() => mountPicker({ modelValue: '' })).not.toThrow();
   });
+
+  it('Cancel discards an in-flight draft change (no update:modelValue emitted)', async () => {
+    const wrapper = mountPicker({ modelValue: '2024-01-15' });
+
+    await wrapper.find('[data-test-id="dtp"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    // Simulate the user picking a day in the calendar — v-calendar day cells
+    // update the wrapper's internal draft ref via v-model.
+    const dayCells = wrapper.findAll('.vc-day-content');
+    if (dayCells.length > 0) {
+      await dayCells[0].trigger('click');
+      await wrapper.vm.$nextTick();
+    }
+
+    const buttons = wrapper.findAll('button');
+    const cancel = buttons.find((b) => b.text().trim() === 'Cancel');
+    expect(cancel).toBeTruthy();
+    await cancel!.trigger('click');
+
+    // Cancel must NOT emit update:modelValue — any in-flight draft is discarded.
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(wrapper.emitted('close')).toBeTruthy();
+  });
+
+  it('shows a pre-set modelValue and Apply re-emits it without navigation', async () => {
+    const wrapper = mountPicker({ modelValue: '2024-06-15' });
+
+    // 2024-06-15 is a Saturday → "Sat, Jun 15"
+    const html = wrapper.html();
+    expect(html).toContain('Sat, Jun 15');
+
+    await wrapper.find('[data-test-id="dtp"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    const buttons = wrapper.findAll('button');
+    const apply = buttons.find((b) => b.text().trim() === 'Apply');
+    expect(apply).toBeTruthy();
+    await apply!.trigger('click');
+
+    const emitted = wrapper.emitted('update:modelValue');
+    expect(emitted).toBeTruthy();
+    expect(emitted).toEqual([['2024-06-15']]);
+  });
+
+  it('renders the action row with Cancel before Apply', async () => {
+    const wrapper = mountPicker({ modelValue: '2024-01-15' });
+
+    await wrapper.find('[data-test-id="dtp"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    // The footer action row uses `flex justify-end gap-2 …`.
+    const actionRow = wrapper.find('.flex.justify-end.gap-2');
+    expect(actionRow.exists()).toBe(true);
+
+    const rowButtons = actionRow.findAll('button');
+    expect(rowButtons).toHaveLength(2);
+    expect(rowButtons[0].text().trim()).toBe('Cancel');
+    expect(rowButtons[1].text().trim()).toBe('Apply');
+  });
+
+  it('scrim click emits close but NOT update:modelValue', async () => {
+    const wrapper = mountPicker({ modelValue: '2024-01-15' });
+
+    await wrapper.find('[data-test-id="dtp"]').trigger('click');
+    await wrapper.vm.$nextTick();
+
+    // The scrim is the first direct child div of the dialog.
+    const scrim = wrapper.find('[role="dialog"] > div');
+    expect(scrim.exists()).toBe(true);
+    await scrim.trigger('click');
+
+    expect(wrapper.emitted('close')).toBeTruthy();
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+  });
 });

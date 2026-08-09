@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { VueDatePicker } from '@vuepic/vue-datepicker';
 
 import { api } from '@/lib/api';
 import { formatEur } from '@/lib/format';
@@ -284,7 +283,6 @@ onBeforeUnmount(() => {
 // the duplicated split state.
 void [
   useExpenseSplit,
-  VueDatePicker,
   DEFAULT_CATEGORY_KEY,
   splitModeFromExistingSplits,
   CategoryPicker,

@@ -139,12 +139,59 @@ export class GroupDetailPage {
   }
 
   async setDate(yyyyMmDd: string) {
-    // @vuepic/vue-datepicker exposes `data-test-id="dp-input"` on the input element
-    const dateInput = this.page.locator('[data-test-id="dp-input"]');
-    await dateInput.click();
-    await dateInput.clear();
-    await dateInput.fill(yyyyMmDd);
-    await dateInput.press('Enter'); // auto-apply commits
+    // DateTimePicker.vue:64 — trigger has data-test-id="dtp"; clicking opens
+    // the bottom sheet (DateTimePicker.vue:70 — role="dialog",
+    // aria-label="Select date"). The sheet embeds a v-calendar DatePicker
+    // (DateTimePicker.vue:108-118, masks.title="MMMM YYYY") so the month title
+    // renders as e.g. "August 2026". Nav arrows are .vc-arrow.vc-prev /
+    // .vc-arrow.vc-next (v-calendar v3.1.2 — index.js:6328,6374); day cells
+    // are .vc-day-content (role="button"), with out-of-month days flagged via
+    // is-not-in-month on their .vc-day parent (index.js:6801).
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(yyyyMmDd);
+    if (!match) throw new Error(`setDate: invalid format "${yyyyMmDd}"`);
+    const targetYear = parseInt(match[1], 10);
+    const targetMonth = parseInt(match[2], 10); // 1-12
+    const targetDay = parseInt(match[3], 10);
+
+    const monthNames = ['January','February','March','April','May','June',
+        'July','August','September','October','November','December'];
+    // Convert a "MMMM YYYY" title to a comparable month index (year*12+month).
+    const titleToIndex = (title: string): number => {
+      const m = /^(\w+)\s+(\d{4})$/.exec(title.trim());
+      if (!m) return Number.NaN;
+      return parseInt(m[2], 10) * 12 + monthNames.indexOf(m[1]);
+    };
+    const targetTitle = `${monthNames[targetMonth - 1]} ${targetYear}`;
+    const targetIndex = titleToIndex(targetTitle);
+
+    // Open the bottom sheet.
+    await this.page.locator('[data-test-id="dtp"]').click();
+    const dialog = this.page.getByRole('dialog', { name: 'Select date' });
+    await expect(dialog).toBeVisible();
+
+    // Navigate to the target month (cap at 40 steps — covers ~3 years).
+    for (let i = 0; i < 40; i++) {
+      const currentTitle = (await dialog.locator('.vc-title').textContent()) ?? '';
+      if (currentTitle.trim() === targetTitle) break;
+      if (titleToIndex(currentTitle) > targetIndex) {
+        await dialog.locator('.vc-arrow.vc-prev').click();
+      } else {
+        await dialog.locator('.vc-arrow.vc-next').click();
+      }
+      await this.page.waitForTimeout(50);
+    }
+
+    // Click the target day — scope to in-month cells so adjacent-month days
+    // with the same number are not matched.
+    await dialog
+        .locator('.vc-day:not(.is-not-in-month) .vc-day-content')
+        .filter({ hasText: new RegExp(`^${targetDay}$`) })
+        .first()
+        .click();
+
+    // Commit and wait for the sheet to close.
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    await expect(dialog).not.toBeVisible({ timeout: 5000 });
   }
 
   async saveExpense() {
