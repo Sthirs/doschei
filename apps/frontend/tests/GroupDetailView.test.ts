@@ -123,7 +123,7 @@ const mountGroupDetailView = () =>
     global: {
       stubs: {
         Teleport: true,
-        VueDatePicker: true,
+        DateTimePicker: true,
         UserPicker: true,
         CategoryPicker: true,
       },

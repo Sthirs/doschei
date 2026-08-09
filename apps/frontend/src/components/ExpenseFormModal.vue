@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, toRef } from 'vue';
-import { VueDatePicker } from '@vuepic/vue-datepicker';
+import DateTimePicker from './DateTimePicker.vue';
 
 import { api } from '@/lib/api';
 import { formatEur } from '@/lib/format';
@@ -306,27 +306,7 @@ void getCategory;
           </div>
 
           <!-- Date -->
-          <label class="flex flex-col gap-1.5">
-            <span
-              class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
-              style="color: #C8C4D7"
-              >Date</span
-            >
-            <div
-              class="rounded-xl px-4 py-3"
-              style="background: #201F27; border: 1px solid rgba(71,69,84,0.3)"
-            >
-              <VueDatePicker
-                v-model="date"
-                auto-apply
-                model-type="yyyy-MM-dd"
-                :formats="datePickerFormats"
-                :time-config="datePickerTimeConfig"
-                dark
-                :clearable="false"
-              />
-            </div>
-          </label>
+          <DateTimePicker v-model="date" />
 
           <!-- Split between -->
           <div class="flex flex-col gap-2">

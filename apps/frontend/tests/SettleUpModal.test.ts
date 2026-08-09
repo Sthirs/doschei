@@ -98,7 +98,7 @@ describe('SettleUpModal', () => {
       global: {
         stubs: {
           Teleport: true,
-          VueDatePicker: true,
+          DateTimePicker: true,
           UserPicker: true,
         },
       },
@@ -123,7 +123,7 @@ describe('SettleUpModal', () => {
       global: {
         stubs: {
           Teleport: true,
-          VueDatePicker: true,
+          DateTimePicker: true,
           UserPicker: true,
         },
       },
@@ -150,7 +150,7 @@ describe('SettleUpModal', () => {
       global: {
         stubs: {
           Teleport: true,
-          VueDatePicker: true,
+          DateTimePicker: true,
           UserPicker: true,
         },
       },
@@ -187,7 +187,7 @@ describe('SettleUpModal', () => {
       global: {
         stubs: {
           Teleport: true,
-          VueDatePicker: true,
+          DateTimePicker: true,
           UserPicker: true,
         },
       },
@@ -218,7 +218,7 @@ describe('SettleUpModal', () => {
       global: {
         stubs: {
           Teleport: true,
-          VueDatePicker: true,
+          DateTimePicker: true,
           UserPicker: true,
         },
       },
@@ -253,7 +253,7 @@ describe('SettleUpModal', () => {
       global: {
         stubs: {
           Teleport: true,
-          VueDatePicker: true,
+          DateTimePicker: true,
           UserPicker: true,
         },
       },
@@ -278,7 +278,7 @@ describe('SettleUpModal', () => {
       global: {
         stubs: {
           Teleport: true,
-          VueDatePicker: true,
+          DateTimePicker: true,
           UserPicker: true,
         },
       },
@@ -315,7 +315,7 @@ describe('SettleUpModal', () => {
       global: {
         stubs: {
           Teleport: true,
-          VueDatePicker: true,
+          DateTimePicker: true,
           UserPicker: true,
         },
       },

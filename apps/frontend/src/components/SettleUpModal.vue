@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue';
-import { VueDatePicker } from '@vuepic/vue-datepicker';
-import '@vuepic/vue-datepicker/dist/main.css';
 
 import { api } from '@/lib/api';
 import { computeSettleUpDefaults, settlementAmountFor } from '@/lib/settleUp';
 import UserPicker from '@/components/UserPicker.vue';
+import DateTimePicker from './DateTimePicker.vue';
 import type { Expense, GroupMember, BalanceSummary } from '@/types/group';
 
 const props = defineProps<{
@@ -196,25 +195,7 @@ const deleteSettlement = async () => {
             </label>
           </div>
 
-          <label class="flex flex-col gap-1.5">
-            <span
-              class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
-              >Date</span
-            >
-            <div
-              class="bg-[#201F27] rounded-xl border border-[rgba(71,69,84,0.3)] px-4 py-3"
-            >
-              <VueDatePicker
-                v-model="date"
-                auto-apply
-                model-type="yyyy-MM-dd"
-                :formats="datePickerFormats"
-                :time-config="datePickerTimeConfig"
-                dark
-                :clearable="false"
-              />
-            </div>
-          </label>
+          <DateTimePicker v-model="date" />
 
           <label class="flex flex-col gap-1.5">
             <span
