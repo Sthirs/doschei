@@ -201,8 +201,8 @@ function cancel(): void {
 :deep(.vc-highlight) {
   background: #6554e7 !important;
   border-radius: 9999px !important;
-  width: calc(100% - 2px);
-  height: calc(100% - 2px);
+  width: 100%;
+  height: 100%;
 }
 
 /* Nav arrows */
