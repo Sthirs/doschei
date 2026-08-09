@@ -102,13 +102,13 @@ export const CATEGORY_BY_KEY: Map<string, CategoryDefinition> = new Map(
 );
 
 const FAMILY_ORDER: CategoryFamily[] = [
-  'entertainment',
   'food-and-drink',
+  'transportation',
   'home',
   'life',
-  'transportation',
-  'uncategorized',
   'utilities',
+  'entertainment',
+  'uncategorized',
 ];
 
 export const CATEGORIES_GROUPED: Array<{
