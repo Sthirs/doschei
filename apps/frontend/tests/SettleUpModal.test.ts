@@ -261,7 +261,7 @@ describe('SettleUpModal', () => {
 
     await waitForModalReady(wrapper);
 
-    expect(wrapper.html()).toContain('Edit settlement');
+    expect(wrapper.html()).toContain('Record a Payment');
     expect((findAmountInput(wrapper).element as HTMLInputElement).value).toBe('12.34');
   });
 
@@ -323,18 +323,18 @@ describe('SettleUpModal', () => {
 
     await waitForModalReady(wrapper);
 
-    // First Delete button: the rose-bordered one that opens the confirm panel.
+    // First Delete button: the one that opens the confirm panel.
     const allButtons = wrapper.findAll('button');
-    const openConfirm = allButtons.find((b) => b.text().trim() === 'Delete');
+    const openConfirm = allButtons.find((b) => b.text().trim() === 'Delete this payment');
     expect(openConfirm).toBeDefined();
     await openConfirm!.trigger('click');
     await wrapper.vm.$nextTick();
 
-    // After confirm opens, the second Delete is the confirm-panel one
-    // (bg-rose-500). The Cancel button has different styling.
+    // After confirm opens, the second Delete is the confirm-panel one.
+    // The Cancel button has different styling.
     const confirmButtons = wrapper.findAll('button');
     const confirmDelete = confirmButtons.find(
-      (b) => b.text().trim() === 'Confirm',
+      (b) => b.text().trim() === 'Delete',
     );
     expect(confirmDelete).toBeDefined();
     await confirmDelete!.trigger('click');

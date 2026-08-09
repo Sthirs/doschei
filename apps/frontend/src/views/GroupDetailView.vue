@@ -10,7 +10,6 @@ import { splitModeFromExistingSplits } from '@/lib/splitMath';
 import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 import CategoryPicker from '@/components/CategoryPicker.vue';
-import UserPicker from '@/components/UserPicker.vue';
 import SettleUpModal from '@/components/SettleUpModal.vue';
 
 import type { GroupDetail, Expense, ExpenseSplit } from '@/types/group';
@@ -109,35 +108,12 @@ const expenseNetForUser = (expense: Expense): number => {
   return userSplit ? -Number(userSplit.computedAmount) : 0;
 };
 
-const categoryColorClass = (categoryKey: string): string => {
-  const map: Record<string, string> = {
-    'dining-out':
-      'bg-[rgba(255,177,66,0.2)] text-[#FFB142] border border-[rgba(255,177,66,0.3)]',
-    groceries:
-      'bg-[rgba(46,204,113,0.2)] text-[#2ECC71] border border-[rgba(46,204,113,0.3)]',
-    'bus-train':
-      'bg-[rgba(112,111,211,0.1)] text-[#706FD3] border border-[rgba(112,111,211,0.2)]',
-    car: 'bg-[rgba(112,111,211,0.1)] text-[#706FD3] border border-[rgba(112,111,211,0.2)]',
-    hotel:
-      'bg-[rgba(112,111,211,0.1)] text-[#706FD3] border border-[rgba(112,111,211,0.2)]',
-    taxi: 'bg-[rgba(255,177,66,0.2)] text-[#FFB142] border border-[rgba(255,177,66,0.3)]',
-    'entertainment-other':
-      'bg-[rgba(255,180,171,0.1)] text-[#FFB4AB] border border-[rgba(255,180,171,0.2)]',
-    games:
-      'bg-[rgba(255,180,171,0.1)] text-[#FFB4AB] border border-[rgba(255,180,171,0.2)]',
-    movies:
-      'bg-[rgba(112,111,211,0.1)] text-[#706FD3] border border-[rgba(112,111,211,0.2)]',
-    music:
-      'bg-[rgba(112,111,211,0.1)] text-[#706FD3] border border-[rgba(112,111,211,0.2)]',
-    general:
-      'bg-[rgba(200,196,215,0.1)] text-[#C8C4D7] border border-[rgba(200,196,215,0.2)]',
-    other:
-      'bg-[rgba(200,196,215,0.1)] text-[#C8C4D7] border border-[rgba(200,196,215,0.2)]',
+const categoryIconStyle = (categoryKey: string) => {
+  const cat = getCategory(categoryKey);
+  return {
+    backgroundColor: `${cat.color}33`,
+    border: `1px solid ${cat.color}4D`,
   };
-  return (
-    map[categoryKey] ??
-    'bg-[rgba(200,196,215,0.1)] text-[#C8C4D7] border border-[rgba(200,196,215,0.2)]'
-  );
 };
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -319,8 +295,6 @@ const buildSplitPayload = (
     computedAmount: typeof fValues[userId] === 'number' ? fValues[userId] : 0,
   }));
 };
-
-const getInitial = (name: string) => name.charAt(0).toUpperCase();
 
 const toggleSplitUser = (userId: string) => {
   const idx = selectedSplitUserIds.value.indexOf(userId);
@@ -954,11 +928,11 @@ onBeforeUnmount(() => {
 
                   <!-- Category icon -->
                   <div
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg"
-                    :class="
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    :style="
                       expense.kind === 'SETTLEMENT'
-                        ? 'bg-[#6554E7]/20 text-[#6554E7] border border-[#6554E7]/30'
-                        : categoryColorClass(expense.category)
+                        ? { backgroundColor: 'rgba(101,84,231,0.2)', border: '1px solid rgba(101,84,231,0.3)' }
+                        : categoryIconStyle(expense.category)
                     "
                     :title="
                       expense.kind === 'SETTLEMENT'
@@ -969,11 +943,16 @@ onBeforeUnmount(() => {
                     <span
                       v-if="expense.kind === 'SETTLEMENT'"
                       aria-hidden="true"
+                      class="text-lg"
                       >🤝</span
                     >
-                    <span v-else aria-hidden="true">{{
-                      getCategory(expense.category).icon
-                    }}</span>
+                    <img
+                      v-else
+                      :src="getCategory(expense.category).iconPath"
+                      :alt="getCategory(expense.category).label"
+                      class="h-5 w-5"
+                      aria-hidden="true"
+                    />
                   </div>
 
                   <!-- Title + paid-by -->
@@ -1048,7 +1027,7 @@ onBeforeUnmount(() => {
         ></div>
         <button
           type="button"
-          class="w-full mb-4 rounded-xl bg-[#6554E7] py-4 text-[18px] font-normal text-[#F0EBFF] transition hover:bg-[#5a44cf] active:scale-[0.98] shadow-[0px_4px_6px_-4px_rgba(101,84,231,0.2),0px_10px_15px_-3px_rgba(101,84,231,0.2)]"
+          class="w-full mb-4 rounded-xl bg-[#6554E7] py-4 text-[18px] font-normal text-[#F0EBFF] transition hover:bg-[#5a44cf] active:scale-[0.98]"
           style="line-height: 27px"
           @click="openAddExpenseModal"
         >
@@ -1169,276 +1148,107 @@ onBeforeUnmount(() => {
 
       <div
         v-if="showAddExpenseModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+        @click.self="closeAddExpenseModal"
       >
-        <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl">
-          <h3 class="mb-4 text-lg font-medium text-slate-100">
-            Add New Expense
+        <div
+          class="w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-white/[0.08] p-6 max-h-[90vh] overflow-y-auto"
+          style="background: #1E1E26"
+        >
+          <h3 class="text-center text-xl font-semibold mb-6" style="color: #E5E0ED">
+            Add Expense
           </h3>
           <form class="flex flex-col gap-4" @submit.prevent="addExpense">
-            <div class="flex flex-col gap-1.5">
-              <span class="text-sm text-slate-300">Description</span>
-              <div class="flex items-center gap-2">
-                <CategoryPicker v-model="expenseCategory" />
-                <input
-                  v-model="expenseDescription"
-                  type="text"
-                  placeholder="E.g., Dinner, Taxi..."
-                  class="min-w-0 flex-1 rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
-                />
-              </div>
+            <!-- Amount -->
+            <div
+              class="rounded-xl py-6 text-center"
+              style="background: #201F27; border: 1px solid rgba(71,69,84,0.3)"
+            >
+              <label class="flex flex-col items-center gap-1">
+                <span
+                  class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
+                  style="color: #C8C4D7"
+                  >Amount</span
+                >
+                <div class="flex items-center justify-center gap-1">
+                  <span class="text-2xl font-semibold" style="color: #C8C4D7"
+                    >&euro;</span
+                  >
+                  <input
+                    v-model="expenseAmount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0.00"
+                    class="w-32 bg-transparent text-center text-2xl font-semibold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    style="color: #E5E0ED"
+                  />
+                </div>
+              </label>
             </div>
 
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm text-slate-300">Amount</span>
+            <!-- Description + Category -->
+            <div class="flex gap-2">
+              <CategoryPicker v-model="expenseCategory" />
               <input
-                v-model="expenseAmount"
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="0.00"
-                class="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                v-model="expenseDescription"
+                type="text"
+                placeholder="Description"
+                class="flex-1 rounded-xl px-4 py-3 text-sm outline-none"
+                style="background: #201F27; border: 1px solid rgba(71,69,84,0.3); color: #E5E0ED"
               />
-            </label>
+            </div>
 
-            <label class="flex flex-col gap-1.5">
-              <span class="text-sm text-slate-300">Paid by</span>
-              <UserPicker
-                v-model="expensePaidByUserId"
-                :members="selectableMembers"
-              />
-            </label>
-
-            <!-- Split between -->
-            <div class="flex flex-col gap-3">
-              <span class="text-sm text-slate-300">Split between</span>
-              <div class="flex flex-col gap-1.5">
-                <label
+            <!-- Paid by -->
+            <div class="flex flex-col gap-2">
+              <span
+                class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
+                style="color: #C8C4D7"
+                >Paid by</span
+              >
+              <div class="flex flex-wrap gap-2">
+                <button
                   v-for="member in selectableMembers"
                   :key="member.id"
-                  class="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-white/5"
+                  type="button"
+                  class="flex items-center gap-2 rounded-xl px-3 py-2 transition"
+                  :class="
+                    expensePaidByUserId === member.id
+                      ? 'bg-[#6554E7]/20 ring-1 ring-[#6554E7]'
+                      : 'hover:bg-[#2A2932]'
+                  "
+                  :style="
+                    expensePaidByUserId !== member.id
+                      ? 'background: #201F27'
+                      : ''
+                  "
+                  @click="expensePaidByUserId = member.id"
                 >
-                  <input
-                    type="checkbox"
-                    :checked="selectedSplitUserIds.includes(member.id)"
-                    class="h-4 w-4 rounded border-white/20 bg-white/5 text-brand-500 focus:ring-brand-500/40"
-                    @change="toggleSplitUser(member.id)"
-                  />
                   <span
-                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/20 text-xs font-semibold text-brand-500"
+                    class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
+                    style="color: #C6BFFF"
+                    >{{ member.displayName.charAt(0).toUpperCase() }}</span
                   >
-                    {{ getInitial(member.displayName) }}
-                  </span>
-                  <span class="text-sm text-slate-200">{{
+                  <span class="text-sm" style="color: #E5E0ED">{{
                     member.displayName
                   }}</span>
-                </label>
-              </div>
-
-              <!-- Split mode selector -->
-              <div
-                class="flex rounded-md border border-white/10 bg-white/5 p-0.5"
-              >
-                <button
-                  type="button"
-                  :class="[
-                    'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
-                    splitMode === 'EQUAL'
-                      ? 'bg-brand-500 text-slate-950'
-                      : 'text-slate-300 hover:text-slate-100',
-                  ]"
-                  @click="splitMode = 'EQUAL'"
-                >
-                  Equal
-                </button>
-                <button
-                  type="button"
-                  :class="[
-                    'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
-                    splitMode === 'PERCENT'
-                      ? 'bg-brand-500 text-slate-950'
-                      : 'text-slate-300 hover:text-slate-100',
-                  ]"
-                  @click="splitMode = 'PERCENT'"
-                >
-                  Percentage
-                </button>
-                <button
-                  type="button"
-                  :class="[
-                    'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
-                    splitMode === 'FIXED'
-                      ? 'bg-brand-500 text-slate-950'
-                      : 'text-slate-300 hover:text-slate-100',
-                  ]"
-                  @click="splitMode = 'FIXED'"
-                >
-                  Fixed amount
                 </button>
               </div>
-
-              <!-- Equal mode hint -->
-              <p
-                v-if="
-                  splitMode === 'EQUAL' &&
-                  selectedSplitUserIds.length > 0 &&
-                  expenseAmount &&
-                  Number(expenseAmount) > 0
-                "
-                class="text-xs text-slate-400"
-              >
-                Each person pays &euro;{{ equalSplitPerPerson.toFixed(2) }}
-              </p>
-
-              <!-- Percentage mode inputs -->
-              <div v-if="splitMode === 'PERCENT'" class="flex flex-col gap-1.5">
-                <div
-                  v-for="userId in selectedSplitUserIds"
-                  :key="userId"
-                  class="flex items-center gap-2"
-                >
-                  <span class="min-w-0 flex-1 truncate text-sm text-slate-200">
-                    {{
-                      selectableMembers.find((m) => m.id === userId)
-                        ?.displayName
-                    }}
-                  </span>
-                  <input
-                    v-model.number="percentValues[userId]"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    placeholder="0"
-                    class="w-24 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
-                  />
-                  <span class="text-xs text-slate-400">%</span>
-                </div>
-              </div>
-
-              <!-- Fixed amount mode inputs -->
-              <div v-if="splitMode === 'FIXED'" class="flex flex-col gap-1.5">
-                <div
-                  v-for="userId in selectedSplitUserIds"
-                  :key="userId"
-                  class="flex items-center gap-2"
-                >
-                  <span class="min-w-0 flex-1 truncate text-sm text-slate-200">
-                    {{
-                      selectableMembers.find((m) => m.id === userId)
-                        ?.displayName
-                    }}
-                  </span>
-                  <input
-                    v-model.number="fixedValues[userId]"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    class="w-24 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
-                  />
-                  <span class="text-xs text-slate-400">&euro;</span>
-                </div>
-              </div>
-
-              <!-- Split validation error -->
-              <p v-if="createSplitErrorMessage" class="text-xs text-rose-300">
-                {{ createSplitErrorMessage }}
-              </p>
             </div>
 
+            <!-- Date -->
             <label class="flex flex-col gap-1.5">
-              <span class="text-sm text-slate-300">Date</span>
-              <VueDatePicker
-                v-model="expenseDate"
-                auto-apply
-                model-type="yyyy-MM-dd"
-                :formats="datePickerFormats"
-                :time-config="datePickerTimeConfig"
-                dark
-                :clearable="false"
-              />
-            </label>
-
-            <p
-              v-if="expenseErrorMessage"
-              class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
-            >
-              {{ expenseErrorMessage }}
-            </p>
-
-            <div class="mt-2 flex justify-end gap-3">
-              <button
-                type="button"
-                class="rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
-                :disabled="isSubmittingExpense"
-                @click="closeAddExpenseModal"
+              <span
+                class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
+                style="color: #C8C4D7"
+                >Date</span
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400 disabled:opacity-60"
-                :disabled="isSubmittingExpense || !isCreateSplitValid"
+              <div
+                class="rounded-xl px-4 py-3"
+                style="background: #201F27; border: 1px solid rgba(71,69,84,0.3)"
               >
-                {{ isSubmittingExpense ? 'Saving...' : 'Save' }}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <div
-        v-if="showExpenseModal && selectedExpense"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
-      >
-        <div class="glass-panel w-full max-w-md rounded-md p-6 shadow-xl">
-          <div v-if="!showDeleteConfirm">
-            <div class="mb-4 flex items-center justify-between">
-              <h3 class="text-lg font-medium text-slate-100">
-                Expense Details
-              </h3>
-              <button
-                type="button"
-                class="text-slate-400 hover:text-slate-200"
-                @click="closeExpenseModal"
-              >
-                <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
-                  <path
-                    d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <form class="flex flex-col gap-4" @submit.prevent="saveEdit">
-              <div class="flex flex-col gap-1.5">
-                <span class="text-sm text-slate-300">Description</span>
-                <div class="flex items-center gap-2">
-                  <CategoryPicker v-model="editCategory" />
-                  <input
-                    v-model="editDescription"
-                    type="text"
-                    class="min-w-0 flex-1 rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
-                  />
-                </div>
-              </div>
-
-              <label class="flex flex-col gap-1.5">
-                <span class="text-sm text-slate-300">Amount</span>
-                <input
-                  v-model="editAmount"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  class="w-full rounded-md border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
-                />
-              </label>
-
-              <label class="flex flex-col gap-1.5">
-                <span class="text-sm text-slate-300">Date</span>
                 <VueDatePicker
-                  v-model="editDate"
+                  v-model="expenseDate"
                   auto-apply
                   model-type="yyyy-MM-dd"
                   :formats="datePickerFormats"
@@ -1446,95 +1256,427 @@ onBeforeUnmount(() => {
                   dark
                   :clearable="false"
                 />
+              </div>
+            </label>
+
+            <!-- Split between -->
+            <div class="flex flex-col gap-2">
+              <span
+                class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
+                style="color: #C8C4D7"
+                >Split with</span
+              >
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="member in selectableMembers"
+                  :key="member.id"
+                  type="button"
+                  class="flex items-center gap-2 rounded-xl px-3 py-2 transition"
+                  :class="
+                    selectedSplitUserIds.includes(member.id)
+                      ? 'bg-[#6554E7]/20 ring-1 ring-[#6554E7]'
+                      : 'hover:bg-[#2A2932]'
+                  "
+                  :style="
+                    !selectedSplitUserIds.includes(member.id)
+                      ? 'background: #201F27'
+                      : ''
+                  "
+                  @click="toggleSplitUser(member.id)"
+                >
+                  <span
+                    class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
+                    style="color: #C6BFFF"
+                    >{{ member.displayName.charAt(0).toUpperCase() }}</span
+                  >
+                  <span class="text-sm" style="color: #E5E0ED">{{
+                    member.displayName
+                  }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Split mode tabs -->
+            <div v-if="selectedSplitUserIds.length > 0" class="flex flex-col gap-3">
+              <div
+                class="flex rounded-xl p-1"
+                style="background: #201F27; border: 1px solid rgba(255,255,255,0.08)"
+              >
+                <button
+                  type="button"
+                  class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                  :class="
+                    splitMode === 'EQUAL'
+                      ? 'bg-[#6554E7] text-white'
+                      : 'hover:text-[#E5E0ED]'
+                  "
+                  :style="
+                    splitMode !== 'EQUAL' ? 'color: #C8C4D7' : ''
+                  "
+                  @click="splitMode = 'EQUAL'"
+                >
+                  Equally
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                  :class="
+                    splitMode === 'PERCENT'
+                      ? 'bg-[#6554E7] text-white'
+                      : 'hover:text-[#E5E0ED]'
+                  "
+                  :style="
+                    splitMode !== 'PERCENT' ? 'color: #C8C4D7' : ''
+                  "
+                  @click="splitMode = 'PERCENT'"
+                >
+                  Percentage
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                  :class="
+                    splitMode === 'FIXED'
+                      ? 'bg-[#6554E7] text-white'
+                      : 'hover:text-[#E5E0ED]'
+                  "
+                  :style="
+                    splitMode !== 'FIXED' ? 'color: #C8C4D7' : ''
+                  "
+                  @click="splitMode = 'FIXED'"
+                >
+                  Fixed
+                </button>
+              </div>
+
+              <!-- Equal hint -->
+              <p
+                v-if="
+                  splitMode === 'EQUAL' &&
+                  expenseAmount &&
+                  Number(expenseAmount) > 0
+                "
+                class="text-sm text-right"
+                style="color: #C8C4D7"
+              >
+                Each pays {{ formatEur(equalSplitPerPerson) }}
+              </p>
+
+              <!-- Percentage rows -->
+              <div v-if="splitMode === 'PERCENT'" class="flex flex-col gap-2">
+                <div
+                  v-for="userId in selectedSplitUserIds"
+                  :key="userId"
+                  class="flex items-center gap-2"
+                >
+                  <span
+                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
+                    style="color: #C6BFFF"
+                    >{{
+                      selectableMembers.find((m) => m.id === userId)
+                        ?.displayName.charAt(0)
+                        .toUpperCase()
+                    }}</span
+                  >
+                  <span
+                    class="flex-1 truncate text-sm"
+                    style="color: #E5E0ED"
+                    >{{
+                      selectableMembers.find((m) => m.id === userId)
+                        ?.displayName
+                    }}</span
+                  >
+                  <input
+                    v-model.number="percentValues[userId]"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    placeholder="0"
+                    class="w-20 rounded-lg px-3 py-2 text-sm text-right outline-none"
+                    style="background: #201F27; border: 1px solid rgba(71,69,84,0.3); color: #E5E0ED"
+                  />
+                  <span class="w-4 text-sm" style="color: #C8C4D7">%</span>
+                </div>
+                <p class="text-sm text-right" style="color: #C8C4D7">
+                  Total: {{ Number(percentSum).toFixed(1) }}%
+                </p>
+              </div>
+
+              <!-- Fixed rows -->
+              <div v-if="splitMode === 'FIXED'" class="flex flex-col gap-2">
+                <div
+                  v-for="userId in selectedSplitUserIds"
+                  :key="userId"
+                  class="flex items-center gap-2"
+                >
+                  <span
+                    class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
+                    style="color: #C6BFFF"
+                    >{{
+                      selectableMembers.find((m) => m.id === userId)
+                        ?.displayName.charAt(0)
+                        .toUpperCase()
+                    }}</span
+                  >
+                  <span
+                    class="flex-1 truncate text-sm"
+                    style="color: #E5E0ED"
+                    >{{
+                      selectableMembers.find((m) => m.id === userId)
+                        ?.displayName
+                    }}</span
+                  >
+                  <input
+                    v-model.number="fixedValues[userId]"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    class="w-24 rounded-lg px-3 py-2 text-sm text-right outline-none"
+                    style="background: #201F27; border: 1px solid rgba(71,69,84,0.3); color: #E5E0ED"
+                  />
+                  <span class="w-4 text-sm" style="color: #C8C4D7"
+                    >&euro;</span
+                  >
+                </div>
+                <p class="text-sm text-right" style="color: #C8C4D7">
+                  Total: {{ formatEur(Number(fixedSum)) }}
+                </p>
+              </div>
+
+              <p
+                v-if="createSplitErrorMessage"
+                class="text-sm"
+                style="color: #FFB4AB"
+              >
+                {{ createSplitErrorMessage }}
+              </p>
+            </div>
+
+            <!-- Error -->
+            <p
+              v-if="expenseErrorMessage"
+              class="rounded-xl px-4 py-3 text-sm"
+              style="color: #FFB4AB; background: rgba(255,180,171,0.1); border: 1px solid rgba(255,180,171,0.2)"
+            >
+              {{ expenseErrorMessage }}
+            </p>
+
+            <!-- Save -->
+            <button
+              type="submit"
+              class="w-full rounded-xl py-4 text-base font-semibold transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-60"
+              style="background: #6554E7; color: #F0EBFF;"
+              :disabled="isSubmittingExpense || !isCreateSplitValid"
+            >
+              {{ isSubmittingExpense ? 'Saving...' : 'Save' }}
+            </button>
+            <button
+              type="button"
+              class="w-full py-2 text-center text-sm transition hover:text-[#E5E0ED]"
+              style="color: #C8C4D7"
+              @click="closeAddExpenseModal"
+            >
+              Cancel
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div
+        v-if="showExpenseModal && selectedExpense"
+        class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+        @click.self="closeExpenseModal"
+      >
+        <div
+          class="w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-white/[0.08] p-6 max-h-[90vh] overflow-y-auto"
+          style="background: #1E1E26"
+        >
+          <div v-if="!showDeleteConfirm">
+            <h3
+              class="text-center text-xl font-semibold mb-6"
+              style="color: #E5E0ED"
+            >
+              Edit Expense
+            </h3>
+
+            <form class="flex flex-col gap-4" @submit.prevent="saveEdit">
+              <!-- Amount -->
+              <div
+                class="rounded-xl py-6 text-center"
+                style="background: #201F27; border: 1px solid rgba(71,69,84,0.3)"
+              >
+                <label class="flex flex-col items-center gap-1">
+                  <span
+                    class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
+                    style="color: #C8C4D7"
+                    >Amount</span
+                  >
+                  <div class="flex items-center justify-center gap-1">
+                    <span
+                      class="text-2xl font-semibold"
+                      style="color: #C8C4D7"
+                      >&euro;</span
+                    >
+                    <input
+                      v-model="editAmount"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      placeholder="0.00"
+                      class="w-32 bg-transparent text-center text-2xl font-semibold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      style="color: #E5E0ED"
+                    />
+                  </div>
+                </label>
+              </div>
+
+              <!-- Description + Category -->
+              <div class="flex gap-2">
+                <CategoryPicker v-model="editCategory" />
+                <input
+                  v-model="editDescription"
+                  type="text"
+                  placeholder="Description"
+                  class="flex-1 rounded-xl px-4 py-3 text-sm outline-none"
+                  style="background: #201F27; border: 1px solid rgba(71,69,84,0.3); color: #E5E0ED"
+                />
+              </div>
+
+              <!-- Date -->
+              <label class="flex flex-col gap-1.5">
+                <span
+                  class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
+                  style="color: #C8C4D7"
+                  >Date</span
+                >
+                <div
+                  class="rounded-xl px-4 py-3"
+                  style="background: #201F27; border: 1px solid rgba(71,69,84,0.3)"
+                >
+                  <VueDatePicker
+                    v-model="editDate"
+                    auto-apply
+                    model-type="yyyy-MM-dd"
+                    :formats="datePickerFormats"
+                    :time-config="datePickerTimeConfig"
+                    dark
+                    :clearable="false"
+                  />
+                </div>
               </label>
 
               <!-- Edit split between -->
-              <div class="flex flex-col gap-3">
-                <span class="text-sm text-slate-300">Split between</span>
-                <div class="flex flex-col gap-1.5">
-                  <label
+              <div class="flex flex-col gap-2">
+                <span
+                  class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
+                  style="color: #C8C4D7"
+                  >Split with</span
+                >
+                <div class="flex flex-wrap gap-2">
+                  <button
                     v-for="member in selectableMembers"
                     :key="member.id"
-                    class="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 transition hover:bg-white/5"
+                    type="button"
+                    class="flex items-center gap-2 rounded-xl px-3 py-2 transition"
+                    :class="
+                      editSelectedSplitUserIds.includes(member.id)
+                        ? 'bg-[#6554E7]/20 ring-1 ring-[#6554E7]'
+                        : 'hover:bg-[#2A2932]'
+                    "
+                    :style="
+                      !editSelectedSplitUserIds.includes(member.id)
+                        ? 'background: #201F27'
+                        : ''
+                    "
+                    @click="toggleEditSplitUser(member.id)"
                   >
-                    <input
-                      type="checkbox"
-                      :checked="editSelectedSplitUserIds.includes(member.id)"
-                      class="h-4 w-4 rounded border-white/20 bg-white/5 text-brand-500 focus:ring-brand-500/40"
-                      @change="toggleEditSplitUser(member.id)"
-                    />
                     <span
-                      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-500/20 text-xs font-semibold text-brand-500"
+                      class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
+                      style="color: #C6BFFF"
+                      >{{ member.displayName.charAt(0).toUpperCase() }}</span
                     >
-                      {{ getInitial(member.displayName) }}
-                    </span>
-                    <span class="text-sm text-slate-200">{{
+                    <span class="text-sm" style="color: #E5E0ED">{{
                       member.displayName
                     }}</span>
-                  </label>
+                  </button>
                 </div>
+              </div>
 
-                <!-- Edit split mode selector -->
+              <!-- Edit split mode tabs -->
+              <div
+                v-if="editSelectedSplitUserIds.length > 0"
+                class="flex flex-col gap-3"
+              >
                 <div
-                  class="flex rounded-md border border-white/10 bg-white/5 p-0.5"
+                  class="flex rounded-xl p-1"
+                  style="background: #201F27; border: 1px solid rgba(255,255,255,0.08)"
                 >
                   <button
                     type="button"
-                    :class="[
-                      'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                    class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                    :class="
                       editSplitMode === 'EQUAL'
-                        ? 'bg-brand-500 text-slate-950'
-                        : 'text-slate-300 hover:text-slate-100',
-                    ]"
+                        ? 'bg-[#6554E7] text-white'
+                        : 'hover:text-[#E5E0ED]'
+                    "
+                    :style="
+                      editSplitMode !== 'EQUAL' ? 'color: #C8C4D7' : ''
+                    "
                     @click="editSplitMode = 'EQUAL'"
                   >
-                    Equal
+                    Equally
                   </button>
                   <button
                     type="button"
-                    :class="[
-                      'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                    class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                    :class="
                       editSplitMode === 'PERCENT'
-                        ? 'bg-brand-500 text-slate-950'
-                        : 'text-slate-300 hover:text-slate-100',
-                    ]"
+                        ? 'bg-[#6554E7] text-white'
+                        : 'hover:text-[#E5E0ED]'
+                    "
+                    :style="
+                      editSplitMode !== 'PERCENT' ? 'color: #C8C4D7' : ''
+                    "
                     @click="editSplitMode = 'PERCENT'"
                   >
                     Percentage
                   </button>
                   <button
                     type="button"
-                    :class="[
-                      'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition',
+                    class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                    :class="
                       editSplitMode === 'FIXED'
-                        ? 'bg-brand-500 text-slate-950'
-                        : 'text-slate-300 hover:text-slate-100',
-                    ]"
+                        ? 'bg-[#6554E7] text-white'
+                        : 'hover:text-[#E5E0ED]'
+                    "
+                    :style="
+                      editSplitMode !== 'FIXED' ? 'color: #C8C4D7' : ''
+                    "
                     @click="editSplitMode = 'FIXED'"
                   >
-                    Fixed amount
+                    Fixed
                   </button>
                 </div>
 
-                <!-- Edit Equal mode hint -->
+                <!-- Edit Equal hint -->
                 <p
                   v-if="
                     editSplitMode === 'EQUAL' &&
-                    editSelectedSplitUserIds.length > 0 &&
                     editAmount &&
                     Number(editAmount) > 0
                   "
-                  class="text-xs text-slate-400"
+                  class="text-sm text-right"
+                  style="color: #C8C4D7"
                 >
-                  Each person pays &euro;{{
-                    editEqualSplitPerPerson.toFixed(2)
-                  }}
+                  Each pays {{ formatEur(editEqualSplitPerPerson) }}
                 </p>
 
-                <!-- Edit Percentage mode inputs -->
+                <!-- Edit Percentage rows -->
                 <div
                   v-if="editSplitMode === 'PERCENT'"
-                  class="flex flex-col gap-1.5"
+                  class="flex flex-col gap-2"
                 >
                   <div
                     v-for="userId in editSelectedSplitUserIds"
@@ -1542,30 +1684,43 @@ onBeforeUnmount(() => {
                     class="flex items-center gap-2"
                   >
                     <span
-                      class="min-w-0 flex-1 truncate text-sm text-slate-200"
+                      class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
+                      style="color: #C6BFFF"
+                      >{{
+                        selectableMembers.find((m) => m.id === userId)
+                          ?.displayName.charAt(0)
+                          .toUpperCase()
+                      }}</span
                     >
-                      {{
+                    <span
+                      class="flex-1 truncate text-sm"
+                      style="color: #E5E0ED"
+                      >{{
                         selectableMembers.find((m) => m.id === userId)
                           ?.displayName
-                      }}
-                    </span>
+                      }}</span
+                    >
                     <input
                       v-model.number="editPercentValues[userId]"
                       type="number"
-                      step="0.01"
+                      step="0.1"
                       min="0"
                       max="100"
                       placeholder="0"
-                      class="w-24 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                      class="w-20 rounded-lg px-3 py-2 text-sm text-right outline-none"
+                      style="background: #201F27; border: 1px solid rgba(71,69,84,0.3); color: #E5E0ED"
                     />
-                    <span class="text-xs text-slate-400">%</span>
+                    <span class="w-4 text-sm" style="color: #C8C4D7">%</span>
                   </div>
+                  <p class="text-sm text-right" style="color: #C8C4D7">
+                    Total: {{ Number(editPercentSum).toFixed(1) }}%
+                  </p>
                 </div>
 
-                <!-- Edit Fixed amount mode inputs -->
+                <!-- Edit Fixed rows -->
                 <div
                   v-if="editSplitMode === 'FIXED'"
-                  class="flex flex-col gap-1.5"
+                  class="flex flex-col gap-2"
                 >
                   <div
                     v-for="userId in editSelectedSplitUserIds"
@@ -1573,97 +1728,124 @@ onBeforeUnmount(() => {
                     class="flex items-center gap-2"
                   >
                     <span
-                      class="min-w-0 flex-1 truncate text-sm text-slate-200"
+                      class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
+                      style="color: #C6BFFF"
+                      >{{
+                        selectableMembers.find((m) => m.id === userId)
+                          ?.displayName.charAt(0)
+                          .toUpperCase()
+                      }}</span
                     >
-                      {{
+                    <span
+                      class="flex-1 truncate text-sm"
+                      style="color: #E5E0ED"
+                      >{{
                         selectableMembers.find((m) => m.id === userId)
                           ?.displayName
-                      }}
-                    </span>
+                      }}</span
+                    >
                     <input
                       v-model.number="editFixedValues[userId]"
                       type="number"
                       step="0.01"
                       min="0"
                       placeholder="0.00"
-                      class="w-24 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-400 focus:border-brand-500/40 focus:bg-white/10"
+                      class="w-24 rounded-lg px-3 py-2 text-sm text-right outline-none"
+                      style="background: #201F27; border: 1px solid rgba(71,69,84,0.3); color: #E5E0ED"
                     />
-                    <span class="text-xs text-slate-400">&euro;</span>
+                    <span class="w-4 text-sm" style="color: #C8C4D7"
+                      >&euro;</span
+                    >
                   </div>
+                  <p class="text-sm text-right" style="color: #C8C4D7">
+                    Total: {{ formatEur(Number(editFixedSum)) }}
+                  </p>
                 </div>
 
-                <!-- Edit split validation error -->
-                <p v-if="editSplitErrorMessage" class="text-xs text-rose-300">
+                <p
+                  v-if="editSplitErrorMessage"
+                  class="text-sm"
+                  style="color: #FFB4AB"
+                >
                   {{ editSplitErrorMessage }}
                 </p>
               </div>
 
+              <!-- Error -->
               <p
                 v-if="editErrorMessage"
-                class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
+                class="rounded-xl px-4 py-3 text-sm"
+                style="color: #FFB4AB; background: rgba(255,180,171,0.1); border: 1px solid rgba(255,180,171,0.2)"
               >
                 {{ editErrorMessage }}
               </p>
 
-              <div class="mt-2 flex justify-end gap-3">
-                <button
-                  type="button"
-                  class="rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
-                  :disabled="isSubmittingEdit"
-                  @click="cancelEditMode"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  class="rounded-md bg-brand-500 px-4 py-2 text-sm font-medium text-slate-950 transition hover:bg-brand-400 disabled:opacity-60"
-                  :disabled="isSubmittingEdit || !isEditSplitValid"
-                >
-                  {{ isSubmittingEdit ? 'Saving...' : 'Save' }}
-                </button>
-                <button
-                  type="button"
-                  class="rounded-md border border-rose-500/50 text-rose-400 px-4 py-2 text-sm font-medium transition hover:bg-rose-500/10"
-                  @click="startDelete"
-                >
-                  Delete
-                </button>
-              </div>
+              <!-- Save -->
+              <button
+                type="submit"
+                class="w-full rounded-xl py-4 text-base font-semibold transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-60"
+                style="background: #6554E7; color: #F0EBFF;"
+                :disabled="isSubmittingEdit || !isEditSplitValid"
+              >
+                {{ isSubmittingEdit ? 'Saving...' : 'Save' }}
+              </button>
+              <button
+                type="button"
+                class="w-full py-2 text-center text-sm font-medium transition hover:bg-[#2A2932]"
+                style="color: #FFB4AB; border: 1px solid rgba(255,180,171,0.3); border-radius: 0.75rem"
+                @click="startDelete"
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                class="w-full py-2 text-center text-sm transition hover:text-[#E5E0ED]"
+                style="color: #C8C4D7"
+                @click="cancelEditMode"
+              >
+                Cancel
+              </button>
             </form>
           </div>
 
           <div v-else>
-            <h3 class="mb-4 text-lg font-medium text-slate-100">
+            <h3
+              class="text-center text-xl font-semibold mb-4"
+              style="color: #E5E0ED"
+            >
               Are you sure?
             </h3>
-            <p class="mb-6 text-sm text-slate-300">
+            <p class="mb-6 text-sm text-center" style="color: #C8C4D7">
               Do you really want to delete this expense? This action cannot be
               undone.
             </p>
 
             <p
               v-if="editErrorMessage"
-              class="mb-4 rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
+              class="mb-4 rounded-xl px-4 py-3 text-sm"
+              style="color: #FFB4AB; background: rgba(255,180,171,0.1); border: 1px solid rgba(255,180,171,0.2)"
             >
               {{ editErrorMessage }}
             </p>
 
-            <div class="flex justify-end gap-3">
+            <div class="flex flex-col gap-3">
               <button
                 type="button"
-                class="rounded-md border border-white/10 px-4 py-2 text-sm font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/5 disabled:opacity-60"
+                class="w-full rounded-xl py-4 text-base font-semibold transition hover:bg-[#e0392f] disabled:opacity-60"
+                style="background: #FF5252; color: #fff"
+                :disabled="isSubmittingDelete"
+                @click="confirmDelete"
+              >
+                {{ isSubmittingDelete ? 'Deleting...' : 'Confirm Delete' }}
+              </button>
+              <button
+                type="button"
+                class="w-full py-2 text-center text-sm transition hover:text-[#E5E0ED]"
+                style="color: #C8C4D7"
                 :disabled="isSubmittingDelete"
                 @click="cancelDelete"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
-                class="rounded-md bg-rose-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-600 disabled:opacity-60"
-                :disabled="isSubmittingDelete"
-                @click="confirmDelete"
-              >
-                {{ isSubmittingDelete ? 'Deleting...' : 'Confirm' }}
               </button>
             </div>
           </div>

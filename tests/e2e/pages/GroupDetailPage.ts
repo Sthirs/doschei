@@ -3,16 +3,17 @@ import { promises as fs } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 export class GroupDetailPage {
-  // Add Expense buttons (GroupDetailView.vue:565 desk, :572 mobile — two aria variants)
+  // Add Expense trigger — the sticky bottom button reads "+ Add expense"
+  // (GroupDetailView.vue:1028-1035); name matching is case-insensitive substring.
   private addExpenseButton = this.page.getByRole('button', { name: 'Add Expense' })
       .or(this.page.getByRole('button', { name: 'Add expense' })).first();
 
   private categoryPicker = this.page.getByRole('button', { name: /^Category:/ });
-  // Both modals' description input — create has placeholder="E.g., Dinner, Taxi...",
-  // edit has none, so locate by role instead.
-  private descriptionInput = this.page.getByRole('textbox');
+  // Description input in both the Add Expense and Edit Expense modals — both now
+  // share placeholder="Description" (the datepicker input and the settle-up
+  // "Note (optional)" input have different placeholders, so no ambiguity).
+  private descriptionInput = this.page.getByPlaceholder('Description');
   private amountInput = this.page.getByLabel('Amount');
-  private paidByPicker = this.page.getByRole('button', { name: 'Select who paid' });
   private saveExpenseButton = this.page.getByRole('button', { name: 'Save', exact: true });
   private deleteExpenseButton = this.page.getByRole('button', { name: 'Delete' });
   private confirmDeleteButton = this.page.getByRole('button', { name: 'Confirm' });
@@ -23,13 +24,14 @@ export class GroupDetailPage {
   private settleUpDialog = this.page.getByRole('dialog', { name: 'Settle up' });
   // GroupDetailView.vue:644-648 — the "Settle up" trigger button.
   private settleUpButton = this.page.getByRole('button', { name: 'Settle up' });
-  // SettleUpModal.vue:213-219 — submit button. `exact: true` because the form also
-  // renders "Saving..." while the request is in flight.
-  private settleUpSaveButton = this.settleUpDialog.getByRole('button', { name: 'Save', exact: true });
+  // SettleUpModal.vue:181-184 — submit button now reads "+ Record Payment"
+  // ("Saving..." while the request is in flight).
+  private settleUpSaveButton = this.settleUpDialog.getByRole('button', { name: 'Record Payment' });
   // SettleUpModal.vue:196-203 — only visible in edit mode.
   private settleUpDeleteButton = this.settleUpDialog.getByRole('button', { name: 'Delete' });
-  // SettleUpModal.vue:249-256 — only visible after Delete is clicked (showDeleteConfirm).
-  private settleUpConfirmDeleteButton = this.settleUpDialog.getByRole('button', { name: 'Confirm' });
+  // SettleUpModal.vue:200 — the confirm panel's destructive button now reads
+  // "Delete" (the "Delete this payment" trigger is hidden in the confirm state).
+  private settleUpConfirmDeleteButton = this.settleUpDialog.getByRole('button', { name: 'Delete', exact: true });
 
   // Export controls (GroupDetailView.vue — "Export" button next to "Settle up"
   // opens a modal with native Month/Year <select>s and an "Export Expenses"
@@ -71,19 +73,40 @@ export class GroupDetailPage {
   }
 
   async setPaidBy(displayName: string) {
-    await this.paidByPicker.click();
-    // UserPicker.vue:111-142 — popover aria-label="Select who paid"
-    await this.page.getByRole('dialog', { name: 'Select who paid' })
-        .getByRole('button', { name: displayName }).click();
+    // Figma redesign: the Add Expense modal replaced UserPicker with inline
+    // member chips under a "Paid by" label. Scope to that section so the chips
+    // in the "Split with" section are not matched.
+    await this.page
+        .getByText('Paid by', { exact: true })
+        .locator('..')
+        .getByRole('button', { name: displayName })
+        .click();
+  }
+
+  private splitMemberButton(displayName: string) {
+    // Figma redesign: split members are toggle chips under a "Split with" label
+    // (previously checkboxes). Scope to that section so the identical "Paid by"
+    // chips are not matched.
+    return this.page
+        .getByText('Split with', { exact: true })
+        .locator('..')
+        .getByRole('button', { name: displayName });
   }
 
   async selectSplitMember(displayName: string) {
-    // GroupDetailView.vue:680-697 — checkboxes are inside <label> with member displayName
-    await this.page.getByLabel(displayName, { exact: false }).check();
+    const chip = this.splitMemberButton(displayName);
+    const cls = (await chip.getAttribute('class')) ?? '';
+    if (!cls.includes('ring-[#6554E7]')) {
+      await chip.click();
+    }
   }
 
   async deselectSplitMember(displayName: string) {
-    await this.page.getByLabel(displayName, { exact: false }).uncheck();
+    const chip = this.splitMemberButton(displayName);
+    const cls = (await chip.getAttribute('class')) ?? '';
+    if (cls.includes('ring-[#6554E7]')) {
+      await chip.click();
+    }
   }
 
   async setEqualSplit() {
@@ -104,7 +127,7 @@ export class GroupDetailPage {
   }
 
   async setFixedSplit(values: Record<string, number>) {
-    await this.page.getByRole('button', { name: 'Fixed amount' }).click();
+    await this.page.getByRole('button', { name: 'Fixed', exact: true }).click();
     for (const [displayName, value] of Object.entries(values)) {
       // Same shape as percent row, "€" suffix.
       const row = this.page
