@@ -72,9 +72,43 @@ function cancel(): void {
       >Date</span
     >
     <div
-      class="rounded-xl px-4 py-3 bg-[#201F27] border border-[rgba(71,69,84,0.3)]"
+      class="rounded-xl px-4 py-3 bg-[#201F27] border border-[rgba(71,69,84,0.3)] flex items-center justify-between gap-3"
     >
-      <span class="text-sm text-[#E5E0ED]">{{ formatDate(modelValue) }}</span>
+      <span class="flex items-center gap-3 min-w-0">
+        <svg
+          viewBox="0 0 16 17"
+          class="h-4 w-4 shrink-0 fill-current text-[#C8C4D7]"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M4 1.5v2M12 1.5v2M1.5 6.5h13M3 3.5h10A1.5 1.5 0 0 1 14.5 5v9A1.5 1.5 0 0 1 13 15.5H3A1.5 1.5 0 0 1 1.5 14V5A1.5 1.5 0 0 1 3 3.5z"
+            stroke="#C8C4D7"
+            stroke-width="1.2"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span class="text-sm text-[#E5E0ED] truncate">{{
+          formatDate(modelValue)
+        }}</span>
+      </span>
+      <svg
+        viewBox="0 0 12 8"
+        class="h-3 w-3 shrink-0 fill-current text-[#C8C4D7]"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M1 1l5 5 5-5"
+          stroke="#C8C4D7"
+          stroke-width="1.5"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
     </div>
   </div>
 

@@ -39,6 +39,22 @@ describe('DateTimePicker', () => {
     expect(html).toContain('Date');
   });
 
+  it('renders a calendar icon and a chevron-down icon in the trigger', () => {
+    const wrapper = mountPicker({ modelValue: '2024-10-15' });
+
+    const trigger = wrapper.find('[data-test-id="dtp"]');
+    expect(trigger.exists()).toBe(true);
+
+    const svgs = trigger.findAll('svg');
+    // Calendar icon + chevron-down icon (the sheet close-X is outside the trigger).
+    expect(svgs).toHaveLength(2);
+    for (const svg of svgs) {
+      expect(svg.classes().join(' ')).toContain('text-[#C8C4D7]');
+    }
+
+    expect(trigger.html()).toContain('Oct 15');
+  });
+
   it('Apply emits update:modelValue with the draft value', async () => {
     const wrapper = mountPicker({ modelValue: '2024-01-15' });
 

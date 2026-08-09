@@ -42,25 +42,29 @@ test('DateTimePicker bottom-sheet: open, navigate, select+apply, cancel reverts,
   await groupsPage.expectGroupVisible(groupName);
 
   await groupsPage.openGroup(groupName);
-  const groupId = page.url().split('/').pop();
-  expect(groupId).toBeTruthy();
+  const groupId = await groupDetailPage.getGroupId();
 
   // Invite Alice so she's available as a "Paid by" option and split member.
   await page.goto('/groups/' + groupId + '/settings');
   await groupSettingsPage.inviteByEmail('alice@doschei.local');
   await groupSettingsPage.expectMemberVisible('Alice Rossi');
 
-  // Navigate back to the group detail page and open the Add Expense modal.
-  await page.goto('/groups/' + groupId);
-  await groupDetailPage.openAddExpense();
+  // Navigate to the routed Add-Expense page (ADR-0012).
+  await groupDetailPage.gotoAddExpense(groupId);
 
   // --- happy-A: Open ---
-  // DateTimePicker.vue:64 — trigger has data-test-id="dtp".
+  // DateTimePicker.vue:64-113 — the trigger has data-test-id="dtp" and
+  // contains exactly two SVGs: a calendar glyph (line 78-92) and a
+  // chevron-down (line 97-111). Assert the icon count up-front so any
+  // accidental re-ordering or removal of an icon is caught here, not at
+  // the Apply step.
   const trigger = page.locator('[data-test-id="dtp"]');
   await expect(trigger).toBeVisible();
+  const svgIcons = trigger.locator('svg');
+  await expect(svgIcons).toHaveCount(2);
   await trigger.click();
 
-  // DateTimePicker.vue:70 — dialog role="dialog" aria-label="Select date".
+  // DateTimePicker.vue:115-120 — dialog role="dialog" aria-label="Select date".
   const dialog = page.getByRole('dialog', { name: 'Select date' });
   await expect(dialog).toBeVisible();
 

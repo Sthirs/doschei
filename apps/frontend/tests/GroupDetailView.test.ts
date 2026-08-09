@@ -104,9 +104,13 @@ vi.mock('vue-router', () => ({
   }),
 }));
 
-// Mock the router module's currentPageTitle
+// Mock the router module's currentPageTitle and sharedGroup
+const mocks = vi.hoisted(() => ({
+  sharedGroup: { value: null as any },
+}));
 vi.mock('@/router', () => ({
   currentPageTitle: ref('Test Group'),
+  sharedGroup: mocks.sharedGroup,
 }));
 
 // Mock auth store
@@ -370,5 +374,107 @@ describe('GroupDetailView', () => {
 
     const bottomButton = wrapper.findAll('button').find((b) => b.text().includes('+ Add expense'));
     expect(bottomButton).toBeTruthy();
+  });
+
+  it('navigates to expense-new when the bottom "+ Add expense" button is clicked', async () => {
+    const wrapper = mountGroupDetailView();
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    const addButton = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('+ Add expense'))!;
+    await addButton.trigger('click');
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'expense-new',
+        params: { id: 'group-1' },
+        state: expect.objectContaining({
+          groupName: 'Test Group',
+        }),
+      }),
+    );
+  });
+
+  it('navigates to settleup-new when the toolbar "Settle Up" button is clicked', async () => {
+    const wrapper = mountGroupDetailView();
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    const settleUpButton = wrapper
+      .findAll('button')
+      .find((b) => b.text().trim() === 'Settle Up')!;
+    await settleUpButton.trigger('click');
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'settleup-new',
+        params: { id: 'group-1' },
+        state: expect.objectContaining({
+          groupName: 'Test Group',
+        }),
+      }),
+    );
+  });
+
+  it('navigates to expense-edit when an EXPENSE row is clicked', async () => {
+    const wrapper = mountGroupDetailView();
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    const dinnerRow = wrapper
+      .findAll('.expense-row-card')
+      .find((row) => row.text().includes('Dinner'))!;
+    await dinnerRow.trigger('click');
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'expense-edit',
+        params: { id: 'group-1', expenseId: 'expense-1' },
+        state: expect.objectContaining({
+          groupName: 'Test Group',
+        }),
+      }),
+    );
+  });
+
+  it('navigates to settleup-edit when a SETTLEMENT row is clicked', async () => {
+    const wrapper = mountGroupDetailView();
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    const settlementRow = wrapper
+      .findAll('.expense-row-card')
+      .find((row) => row.text().includes('Alice paid Bob'))!;
+    await settlementRow.trigger('click');
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'settleup-edit',
+        params: { id: 'group-1', sid: 'settlement-1' },
+        state: expect.objectContaining({
+          groupName: 'Test Group',
+        }),
+      }),
+    );
+  });
+
+  it('navigates to the groups list when the back arrow is clicked', async () => {
+    const wrapper = mountGroupDetailView();
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    const backButton = wrapper
+      .findAll('button')
+      .find((b) => b.attributes('aria-label') === 'Back to groups')!;
+    await backButton.trigger('click');
+
+    expect(mockRouterPush).toHaveBeenCalledWith({ name: 'groups' });
   });
 });

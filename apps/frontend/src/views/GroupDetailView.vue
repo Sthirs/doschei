@@ -4,14 +4,9 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
 import { formatEur } from '@/lib/format';
-import { DEFAULT_CATEGORY_KEY, getCategory } from '@/lib/categories';
-import { splitModeFromExistingSplits } from '@/lib/splitMath';
-import { currentPageTitle } from '@/router';
+import { getCategory } from '@/lib/categories';
+import { currentPageTitle, sharedGroup } from '@/router';
 import { useAuthStore } from '@/stores/auth';
-import CategoryPicker from '@/components/CategoryPicker.vue';
-import SettleUpModal from '@/components/SettleUpModal.vue';
-import { useExpenseSplit } from '@/composables/useExpenseSplit';
-import ExpenseFormModal from '@/components/ExpenseFormModal.vue';
 
 import type { GroupDetail, Expense } from '@/types/group';
 
@@ -23,14 +18,6 @@ const group = ref<GroupDetail | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
 const showBreakdown = ref(false);
-
-const showAddExpenseModal = ref(false);
-const showExpenseModal = ref(false);
-const selectedExpense = ref<Expense | null>(null);
-
-// Settle-up state
-const showSettleUpModal = ref(false);
-const editingSettlement = ref<Expense | null>(null);
 
 const groupId = computed(() => route.params.id as string);
 
@@ -46,16 +33,9 @@ const isExporting = ref(false);
 const exportErrorMessage = ref('');
 const showExportModal = ref(false);
 
-const padDatePart = (value: number) => String(value).padStart(2, '0');
-
 const fromDateValue = (value: string) => {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day);
-};
-
-const todayDateValue = () => {
-  const today = new Date();
-  return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`;
 };
 
 const getExpenseDateValue = (expense: Expense) => {
@@ -88,24 +68,6 @@ const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 const monthName = (m: number) =>
   new Date(2000, m - 1, 1).toLocaleDateString('en-US', { month: 'long' });
 
-const selectableMembers = computed(() => {
-  const members = group.value?.members ?? [];
-  return [...members].sort((a, b) =>
-    a.displayName.localeCompare(b.displayName),
-  );
-});
-
-const defaultPaidByUserId = () => {
-  const currentUserId = authStore.user?.id;
-  if (
-    currentUserId &&
-    group.value?.members.some((member) => member.id === currentUserId)
-  ) {
-    return currentUserId;
-  }
-  return selectableMembers.value[0]?.id ?? '';
-};
-
 const loadGroup = async () => {
   isLoading.value = true;
   errorMessage.value = '';
@@ -123,55 +85,25 @@ const loadGroup = async () => {
   }
 };
 
-const openAddExpenseModal = () => {
-  showAddExpenseModal.value = true;
-};
-
-const closeAddExpenseModal = () => {
-  showAddExpenseModal.value = false;
-};
-
-const openExpenseModal = (expense: Expense) => {
-  selectedExpense.value = expense;
-  showExpenseModal.value = true;
-};
-
-const closeExpenseModal = () => {
-  showExpenseModal.value = false;
-  selectedExpense.value = null;
-};
-
-const onExpenseSaved = () => {
-  showAddExpenseModal.value = false;
-  showExpenseModal.value = false;
-  selectedExpense.value = null;
-  loadGroup();
-};
-
-const openSettleUpModal = (mode: 'create' | 'edit', settlement?: Expense) => {
-  editingSettlement.value = settlement ?? null;
-  showSettleUpModal.value = true;
-};
-
-const onSettlementSaved = () => {
-  showSettleUpModal.value = false;
-  editingSettlement.value = null;
-  loadGroup();
-};
-
-const onSettlementDeleted = () => {
-  showSettleUpModal.value = false;
-  editingSettlement.value = null;
-  loadGroup();
-};
-
-const closeSettleUpModal = () => {
-  showSettleUpModal.value = false;
-  editingSettlement.value = null;
-};
-
 const goBack = () => {
   router.push({ name: 'groups' });
+};
+
+const navigateToExpenseNew = () => {
+  sharedGroup.value = group.value;
+  router.push({ name: 'expense-new', params: { id: groupId.value }, state: { groupName: group.value?.name } });
+};
+const navigateToExpenseEdit = (expenseId: string) => {
+  sharedGroup.value = group.value;
+  router.push({ name: 'expense-edit', params: { id: groupId.value, expenseId }, state: { groupName: group.value?.name } });
+};
+const navigateToSettleUpNew = () => {
+  sharedGroup.value = group.value;
+  router.push({ name: 'settleup-new', params: { id: groupId.value }, state: { groupName: group.value?.name } });
+};
+const navigateToSettleUpEdit = (sid: string) => {
+  sharedGroup.value = group.value;
+  router.push({ name: 'settleup-edit', params: { id: groupId.value, sid }, state: { groupName: group.value?.name } });
 };
 
 const formatDateShort = (dateStr: string) => {
@@ -274,21 +206,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   currentPageTitle.value = null;
 });
-
-// The split composable and the helpers below were previously used by the inline
-// Add/Edit expense modals. Those modals are now delegated to ExpenseFormModal,
-// which consumes useExpenseSplit internally. The imports/helpers are retained
-// here so the view's delegation contract stays explicit; they are referenced
-// once below to satisfy the no-unused-vars lint gate without re-introducing
-// the duplicated split state.
-void [
-  useExpenseSplit,
-  DEFAULT_CATEGORY_KEY,
-  splitModeFromExistingSplits,
-  CategoryPicker,
-  todayDateValue,
-  defaultPaidByUserId,
-];
 </script>
 
 <template>
@@ -498,19 +415,19 @@ void [
 
           <!-- Action row -->
           <div class="flex gap-2">
-            <button
-              type="button"
-              class="rounded-xl bg-[#6554E7] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-white transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-40"
-              :disabled="group.members.length < 2"
-              :title="
-                group.members.length < 2
-                  ? 'Invite someone to this group first'
-                  : 'Record a payment between members'
-              "
-              @click="openSettleUpModal('create')"
-            >
-              Settle Up
-            </button>
+          <button
+            type="button"
+            class="rounded-xl bg-[#6554E7] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-white transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-40"
+            :disabled="group.members.length < 2"
+            :title="
+              group.members.length < 2
+                ? 'Invite someone to this group first'
+                : 'Record a payment between members'
+            "
+            @click="navigateToSettleUpNew()"
+          >
+            Settle Up
+          </button>
             <button
               type="button"
               class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]"
@@ -545,8 +462,8 @@ void [
                   class="expense-row-card cursor-pointer transition hover:bg-white/5"
                   @click="
                     expense.kind === 'SETTLEMENT'
-                      ? openSettleUpModal('edit', expense)
-                      : openExpenseModal(expense)
+                      ? navigateToSettleUpEdit(expense.id)
+                      : navigateToExpenseEdit(expense.id)
                   "
                 >
                   <div class="flex items-center gap-3 sm:gap-4">
@@ -677,7 +594,7 @@ void [
             type="button"
             class="w-full mb-4 rounded-xl bg-[#6554E7] py-4 text-[18px] font-normal text-[#F0EBFF] transition hover:bg-[#5a44cf] active:scale-[0.98]"
             style="line-height: 27px"
-            @click="openAddExpenseModal"
+            @click="navigateToExpenseNew()"
           >
             + Add expense
           </button>
@@ -797,41 +714,6 @@ void [
             </button>
           </div>
         </div>
-
-        <!-- Add Expense Modal -->
-        <ExpenseFormModal
-          v-if="showAddExpenseModal"
-          mode="create"
-          :group-id="groupId"
-          :members="selectableMembers"
-          @saved="onExpenseSaved"
-          @close="closeAddExpenseModal"
-        />
-
-        <!-- Edit Expense Modal -->
-        <ExpenseFormModal
-          v-if="showExpenseModal && selectedExpense"
-          mode="edit"
-          :group-id="groupId"
-          :members="selectableMembers"
-          :expense="selectedExpense"
-          @saved="onExpenseSaved"
-          @close="closeExpenseModal"
-        />
-
-        <!-- Settle-up modal -->
-        <SettleUpModal
-          v-if="showSettleUpModal && group.balance"
-          :mode="editingSettlement ? 'edit' : 'create'"
-          :group-id="groupId"
-          :members="selectableMembers"
-          :balance="group.balance"
-          :current-user-id="authStore.user?.id ?? ''"
-          :settlement="editingSettlement ?? undefined"
-          @saved="onSettlementSaved"
-          @deleted="onSettlementDeleted"
-          @close="closeSettleUpModal"
-        />
       </template>
 
       <!-- Error -->
