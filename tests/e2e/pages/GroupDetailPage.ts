@@ -170,15 +170,17 @@ export class GroupDetailPage {
     await expect(dialog).toBeVisible();
 
     // Navigate to the target month (cap at 40 steps — covers ~3 years).
+    const title = dialog.locator('.vc-header .vc-title').first();
     for (let i = 0; i < 40; i++) {
-      const currentTitle = (await dialog.locator('.vc-header .vc-title').first().textContent()) ?? '';
+      const currentTitle = (await title.textContent()) ?? '';
       if (currentTitle.trim() === targetTitle) break;
-      if (titleToIndex(currentTitle) > targetIndex) {
-        await dialog.locator('.vc-arrow.vc-prev').click();
-      } else {
-        await dialog.locator('.vc-arrow.vc-next').click();
-      }
-      await this.page.waitForTimeout(50);
+      const arrow = titleToIndex(currentTitle) > targetIndex
+          ? '.vc-arrow.vc-prev'
+          : '.vc-arrow.vc-next';
+      await dialog.locator(arrow).click();
+      // Wait for the title to actually change before re-reading, so we never
+      // act on a stale month (the 100ms/title-lag race from datetime-picker.spec).
+      await expect(title).not.toHaveText(currentTitle.trim(), { timeout: 3000 });
     }
 
     // Click the target day — scope to in-month cells so adjacent-month days

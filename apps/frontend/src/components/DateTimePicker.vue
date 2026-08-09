@@ -126,16 +126,18 @@ function cancel(): void {
             </svg>
           </button>
         </div>
-        <!-- v-calendar DatePicker (INLINE, no popover slot) -->
+        <!-- v-calendar DatePicker (INLINE, no popover slot). The `.string`
+             v-model modifier is REQUIRED: v-calendar 3.1.2 derives the emitted
+             value type only from modelModifiers (model-config is ignored), and
+             without it the day-click emits a Date object instead of a string. -->
         <div class="px-5 py-2">
           <DatePicker
-            v-model="draft"
+            v-model.string="draft"
             mode="date"
             is-dark
             :color="'#6554E7'"
-            :model-config="{ type: 'string', mask: 'YYYY-MM-DD' }"
             :first-day-of-week="1"
-            :masks="{ title: 'MMMM YYYY' }"
+            :masks="{ title: 'MMMM YYYY', modelValue: 'YYYY-MM-DD' }"
             :select-attribute="selectAttribute"
             trim-weeks
             borderless

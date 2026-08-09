@@ -87,13 +87,14 @@ test('DateTimePicker bottom-sheet: open, navigate, select+apply, cancel reverts,
 
   // Click next month — .vc-arrow.vc-next (v-calendar index.js:6374).
   await dialog.locator('.vc-arrow.vc-next').click();
-  await page.waitForTimeout(100);
+  // Wait for the title text to actually change (not just 100ms arbitrary delay).
+  await expect(titleEl).not.toHaveText(originalTitle.trim(), { timeout: 3000 });
   const nextTitle = (await titleEl.textContent()) ?? '';
   expect(titleToIndex(nextTitle)).toBe(titleToIndex(originalTitle) + 1);
 
   // Click previous month — .vc-arrow.vc-prev (v-calendar index.js:6328).
   await dialog.locator('.vc-arrow.vc-prev').click();
-  await page.waitForTimeout(100);
+  await expect(titleEl).toHaveText(originalTitle.trim(), { timeout: 3000 });
   const backTitle = (await titleEl.textContent()) ?? '';
   expect(backTitle.trim()).toBe(originalTitle.trim());
 
@@ -132,7 +133,7 @@ test('DateTimePicker bottom-sheet: open, navigate, select+apply, cancel reverts,
 
   // Navigate to a different month.
   await dialog.locator('.vc-arrow.vc-next').click();
-  await page.waitForTimeout(100);
+  await expect(titleEl).not.toHaveText(originalTitle.trim(), { timeout: 3000 });
   const differentTitle = (await titleEl.textContent()) ?? '';
   expect(differentTitle.trim()).not.toBe(originalTitle.trim());
 
