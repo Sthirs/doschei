@@ -61,9 +61,11 @@ function cancel(): void {
 </script>
 
 <template>
-  <div data-test-id="dtp" class="cursor-pointer" @click="openSheet">
-    <span class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C6BFFF]">SELECT DATE</span>
-    <span class="text-2xl font-bold text-[#E5E0ED]" style="font-family: Inter">{{ formatDate(modelValue) }}</span>
+  <div data-test-id="dtp" class="flex flex-col gap-1.5 cursor-pointer" @click="openSheet">
+    <span class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]">Date</span>
+    <div class="rounded-xl px-4 py-3 bg-[#201F27] border border-[rgba(71,69,84,0.3)]">
+      <span class="text-sm text-[#E5E0ED]">{{ formatDate(modelValue) }}</span>
+    </div>
   </div>
 
   <Teleport to="body">

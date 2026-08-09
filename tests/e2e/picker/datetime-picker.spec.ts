@@ -81,7 +81,7 @@ test('DateTimePicker bottom-sheet: open, navigate, select+apply, cancel reverts,
 
   // --- happy-B: Navigate ---
   // .vc-title renders "MMMM YYYY" (DateTimePicker.vue:115 masks.title).
-  const titleEl = dialog.locator('.vc-title');
+  const titleEl = dialog.locator('.vc-header .vc-title').first();
   const originalTitle = (await titleEl.textContent()) ?? '';
   expect(originalTitle.trim()).toMatch(/^\w+ \d{4}$/);
 

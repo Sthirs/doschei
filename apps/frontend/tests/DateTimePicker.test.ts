@@ -36,7 +36,7 @@ describe('DateTimePicker', () => {
     const html = wrapper.html();
     // 2024-01-15 is a Monday → "Mon, Jan 15"
     expect(html).toContain('Mon, Jan 15');
-    expect(html).toContain('SELECT DATE');
+    expect(html).toContain('Date');
   });
 
   it('Apply emits update:modelValue with the draft value', async () => {

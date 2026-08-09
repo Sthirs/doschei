@@ -171,7 +171,7 @@ export class GroupDetailPage {
 
     // Navigate to the target month (cap at 40 steps — covers ~3 years).
     for (let i = 0; i < 40; i++) {
-      const currentTitle = (await dialog.locator('.vc-title').textContent()) ?? '';
+      const currentTitle = (await dialog.locator('.vc-header .vc-title').first().textContent()) ?? '';
       if (currentTitle.trim() === targetTitle) break;
       if (titleToIndex(currentTitle) > targetIndex) {
         await dialog.locator('.vc-arrow.vc-prev').click();
