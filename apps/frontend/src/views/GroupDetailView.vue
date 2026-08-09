@@ -934,7 +934,7 @@ onBeforeUnmount(() => {
                 <div class="flex items-center gap-3 sm:gap-4">
                   <!-- Date badge -->
                   <div
-                    class="flex w-10 h-10 shrink-0 flex-col items-center justify-center text-center"
+                    class="flex w-8 h-10 shrink-0 flex-col items-center justify-center text-center"
                   >
                     <span
                       class="text-[18px] font-normal text-[#E5E0ED]"
