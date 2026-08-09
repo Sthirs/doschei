@@ -1211,7 +1211,7 @@ onBeforeUnmount(() => {
                   v-for="member in selectableMembers"
                   :key="member.id"
                   type="button"
-                  class="flex items-center gap-2 rounded-xl px-3 py-2 transition"
+                  class="flex flex-col items-center gap-2 rounded-xl px-3 py-2 transition"
                   :class="
                     expensePaidByUserId === member.id
                       ? 'bg-[#6554E7]/20 ring-1 ring-[#6554E7]'
@@ -1229,7 +1229,7 @@ onBeforeUnmount(() => {
                     style="color: #C6BFFF"
                     >{{ member.displayName.charAt(0).toUpperCase() }}</span
                   >
-                  <span class="text-sm" style="color: #E5E0ED">{{
+                  <span class="text-xs" style="color: #E5E0ED">{{
                     member.displayName
                   }}</span>
                 </button>
@@ -1271,7 +1271,7 @@ onBeforeUnmount(() => {
                   v-for="member in selectableMembers"
                   :key="member.id"
                   type="button"
-                  class="flex items-center gap-2 rounded-xl px-3 py-2 transition"
+                  class="flex flex-col items-center gap-2 rounded-xl px-3 py-2 transition"
                   :class="
                     selectedSplitUserIds.includes(member.id)
                       ? 'bg-[#6554E7]/20 ring-1 ring-[#6554E7]'
@@ -1289,7 +1289,7 @@ onBeforeUnmount(() => {
                     style="color: #C6BFFF"
                     >{{ member.displayName.charAt(0).toUpperCase() }}</span
                   >
-                  <span class="text-sm" style="color: #E5E0ED">{{
+                  <span class="text-xs" style="color: #E5E0ED">{{
                     member.displayName
                   }}</span>
                 </button>
@@ -1304,10 +1304,10 @@ onBeforeUnmount(() => {
               >
                 <button
                   type="button"
-                  class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                  class="flex-1 rounded-lg py-2 text-xs font-medium transition"
                   :class="
                     splitMode === 'EQUAL'
-                      ? 'bg-[#6554E7] text-white'
+                      ? 'bg-[#35343D] text-white'
                       : 'hover:text-[#E5E0ED]'
                   "
                   :style="
@@ -1319,10 +1319,10 @@ onBeforeUnmount(() => {
                 </button>
                 <button
                   type="button"
-                  class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                  class="flex-1 rounded-lg py-2 text-xs font-medium transition"
                   :class="
                     splitMode === 'PERCENT'
-                      ? 'bg-[#6554E7] text-white'
+                      ? 'bg-[#35343D] text-white'
                       : 'hover:text-[#E5E0ED]'
                   "
                   :style="
@@ -1334,10 +1334,10 @@ onBeforeUnmount(() => {
                 </button>
                 <button
                   type="button"
-                  class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                  class="flex-1 rounded-lg py-2 text-xs font-medium transition"
                   :class="
                     splitMode === 'FIXED'
-                      ? 'bg-[#6554E7] text-white'
+                      ? 'bg-[#35343D] text-white'
                       : 'hover:text-[#E5E0ED]'
                   "
                   :style="
@@ -1579,7 +1579,7 @@ onBeforeUnmount(() => {
                     v-for="member in selectableMembers"
                     :key="member.id"
                     type="button"
-                    class="flex items-center gap-2 rounded-xl px-3 py-2 transition"
+                    class="flex flex-col items-center gap-2 rounded-xl px-3 py-2 transition"
                     :class="
                       editSelectedSplitUserIds.includes(member.id)
                         ? 'bg-[#6554E7]/20 ring-1 ring-[#6554E7]'
@@ -1597,7 +1597,7 @@ onBeforeUnmount(() => {
                       style="color: #C6BFFF"
                       >{{ member.displayName.charAt(0).toUpperCase() }}</span
                     >
-                    <span class="text-sm" style="color: #E5E0ED">{{
+                    <span class="text-xs" style="color: #E5E0ED">{{
                       member.displayName
                     }}</span>
                   </button>
@@ -1615,10 +1615,10 @@ onBeforeUnmount(() => {
                 >
                   <button
                     type="button"
-                    class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                    class="flex-1 rounded-lg py-2 text-xs font-medium transition"
                     :class="
                       editSplitMode === 'EQUAL'
-                        ? 'bg-[#6554E7] text-white'
+                        ? 'bg-[#35343D] text-white'
                         : 'hover:text-[#E5E0ED]'
                     "
                     :style="
@@ -1630,10 +1630,10 @@ onBeforeUnmount(() => {
                   </button>
                   <button
                     type="button"
-                    class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                    class="flex-1 rounded-lg py-2 text-xs font-medium transition"
                     :class="
                       editSplitMode === 'PERCENT'
-                        ? 'bg-[#6554E7] text-white'
+                        ? 'bg-[#35343D] text-white'
                         : 'hover:text-[#E5E0ED]'
                     "
                     :style="
@@ -1645,10 +1645,10 @@ onBeforeUnmount(() => {
                   </button>
                   <button
                     type="button"
-                    class="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                    class="flex-1 rounded-lg py-2 text-xs font-medium transition"
                     :class="
                       editSplitMode === 'FIXED'
-                        ? 'bg-[#6554E7] text-white'
+                        ? 'bg-[#35343D] text-white'
                         : 'hover:text-[#E5E0ED]'
                     "
                     :style="
