@@ -77,7 +77,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="relative">
+  <div class="relative flex items-center">
     <button
       ref="triggerRef"
       type="button"

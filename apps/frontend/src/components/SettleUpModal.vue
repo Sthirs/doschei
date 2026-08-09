@@ -244,7 +244,7 @@ const deleteSettlement = async () => {
 
           <button
             type="submit"
-            class="w-full rounded-xl bg-[#6554E7] py-4 text-base font-semibold text-[#F0EBFF] transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-60 shadow-[0px_4px_6px_-4px_rgba(101,84,231,0.2),0px_10px_15px_-3px_rgba(101,84,231,0.2)]"
+            class="w-full rounded-xl bg-[#6554E7] py-4 text-base font-semibold text-[#F0EBFF] transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="!isValid || submitting"
           >
             <span v-if="submitting">Saving...</span>
