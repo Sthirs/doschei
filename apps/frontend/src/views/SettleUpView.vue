@@ -21,6 +21,19 @@ const sid = computed(() => (route.params as Record<string, string>).sid);
 
 const group = ref<GroupDetail | null>(null);
 const notFound = ref(false);
+const loadError = ref(false);
+
+// --- Group fetch (deep-link fallback) ---
+const loadGroup = async () => {
+  try {
+    const { data } = await api.get<{ group: GroupDetail }>(
+      `/groups/${groupId.value}`,
+    );
+    group.value = data.group;
+  } catch {
+    loadError.value = true;
+  }
+};
 
 const payerId = ref('');
 const payeeId = ref('');
@@ -64,7 +77,7 @@ const initialise = () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   // Title set synchronously so the topbar shows the right label even before
   // the group state is applied.
   currentPageTitle.value = mode.value === 'edit' ? 'Edit Payment' : 'Settle Up';
@@ -74,9 +87,11 @@ onMounted(() => {
   if (passedGroup?.id === groupId.value) {
     group.value = passedGroup;
     initialise();
-  } else {
-    router.replace({ name: 'group-detail', params: { id: groupId.value } });
+    return;
   }
+
+  await loadGroup();
+  if (group.value) initialise();
 });
 
 onBeforeUnmount(() => {
@@ -199,10 +214,24 @@ const deleteSettlement = async () => {
 
   <!-- Loading state -->
   <main
-    v-if="!group && !notFound"
+    v-if="!group && !notFound && !loadError"
     class="flex-1 overflow-y-auto px-4 py-6 text-[#E5E0ED]"
   >
     <div class="mx-auto w-full max-w-md">Loading...</div>
+  </main>
+
+  <!-- Group-load failure -->
+  <main
+    v-else-if="loadError"
+    class="flex-1 overflow-y-auto px-4 py-6 text-[#E5E0ED]"
+  >
+    <div class="mx-auto w-full max-w-md">
+      <p
+        class="rounded-xl px-4 py-3 text-sm text-rose-200 bg-rose-500/10 border border-rose-500/20"
+      >
+        Group not found.
+      </p>
+    </div>
   </main>
 
   <!-- Not-found state -->

@@ -34,6 +34,19 @@ const expenseId = computed(
 
 const group = ref<GroupDetail | null>(null);
 const notFound = ref(false);
+const loadError = ref(false);
+
+// --- Group fetch (deep-link fallback) ---
+const loadGroup = async () => {
+  try {
+    const { data } = await api.get<{ group: GroupDetail }>(
+      `/groups/${groupId.value}`,
+    );
+    group.value = data.group;
+  } catch {
+    loadError.value = true;
+  }
+};
 
 // --- Date helpers ---
 const padDatePart = (value: number) => String(value).padStart(2, '0');
@@ -244,7 +257,7 @@ const confirmDelete = async () => {
 };
 
 // --- Lifecycle ---
-onMounted(() => {
+onMounted(async () => {
   // Set the topbar title synchronously so AppTopbar renders the right label on
   // first paint.
   currentPageTitle.value = pageTitle.value;
@@ -254,9 +267,11 @@ onMounted(() => {
   if (passedGroup?.id === groupId.value) {
     group.value = passedGroup;
     initialise();
-  } else {
-    router.replace({ name: 'group-detail', params: { id: groupId.value } });
+    return;
   }
+
+  await loadGroup();
+  if (group.value) initialise();
 });
 
 onBeforeUnmount(() => {
@@ -284,8 +299,23 @@ onBeforeUnmount(() => {
   </Teleport>
 
   <!-- Loading state -->
-  <main v-if="!group && !notFound" class="flex-1 overflow-y-auto px-4 py-6">
+  <main
+    v-if="!group && !notFound && !loadError"
+    class="flex-1 overflow-y-auto px-4 py-6"
+  >
     <p class="text-[#C8C4D7] text-center">Loading...</p>
+  </main>
+
+  <!-- Group-load failure -->
+  <main
+    v-else-if="loadError"
+    class="flex-1 overflow-y-auto px-4 py-6"
+  >
+    <p
+      class="rounded-xl px-4 py-3 text-sm text-rose-200 bg-rose-500/10 border border-rose-500/20"
+    >
+      Group not found.
+    </p>
   </main>
 
   <!-- Not-found state -->
