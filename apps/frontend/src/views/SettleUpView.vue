@@ -220,7 +220,7 @@ const deleteSettlement = async () => {
   </main>
 
   <!-- Form -->
-  <main v-else class="flex flex-col flex-1 overflow-hidden">
+  <main v-else-if="group" class="flex flex-col flex-1 overflow-hidden">
     <div class="flex-1 overflow-y-auto px-4 py-6">
       <div class="mx-auto w-full max-w-md flex flex-col gap-4">
         <!-- Record-a-Payment banner (create mode only) -->

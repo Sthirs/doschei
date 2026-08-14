@@ -19,7 +19,7 @@ import CategoryPicker from '@/components/CategoryPicker.vue';
 import DateTimePicker from '@/components/DateTimePicker.vue';
 import { formatEur } from '@/lib/format';
 import { DEFAULT_CATEGORY_KEY } from '@/lib/categories';
-import type { Expense, GroupDetail, GroupMember } from '@/types/group';
+import type { Expense, GroupDetail } from '@/types/group';
 
 const route = useRoute();
 const router = useRouter();
@@ -63,7 +63,7 @@ const showDeleteConfirm = ref(false);
 // `members` and (in edit mode) the existing splits. We store its return in a
 // `reactive` proxy and assign the properties after the fetch, so the template
 // can use `split.selectedSplitUserIds` etc. with full reactivity.
-const membersRef = toRef<GroupMember[]>(() => group.value?.members ?? []);
+const membersRef = toRef(() => group.value?.members ?? []);
 const split = reactive<UseExpenseSplitReturn>(
   {} as unknown as UseExpenseSplitReturn,
 );
@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
   </main>
 
   <!-- Form -->
-  <main v-else class="flex flex-col flex-1 overflow-hidden">
+  <main v-else-if="group" class="flex flex-col flex-1 overflow-hidden">
     <div class="flex-1 overflow-y-auto px-4 py-6">
       <div class="mx-auto w-full max-w-md flex flex-col gap-4">
         <template v-if="!showDeleteConfirm">
