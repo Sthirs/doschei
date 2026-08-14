@@ -70,7 +70,10 @@ test('settle-up lifecycle: create → edit amount → delete', async ({ authenti
 
   // --- Look up the settlement id from the API so we can target the edit
   //     route directly (no need to click the row + scrape the URL). ---
-  const groupResponse = await page.request.get(`/api/groups/${groupId}`);
+  const token = await page.evaluate(() => localStorage.getItem('doschei.auth.token'));
+  const groupResponse = await page.request.get(`/api/groups/${groupId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   expect(groupResponse.status()).toBe(200);
   const groupJson = (await groupResponse.json()) as {
     group: { expenses: Array<{ id: string; kind: string }> };

@@ -340,11 +340,13 @@ onBeforeUnmount(() => {
             <!-- Amount (Figma-aligned) -->
             <div class="flex flex-col gap-2">
               <label
+                for="expense-amount"
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
                 >Amount</label
               >
               <div class="relative">
                 <input
+                  id="expense-amount"
                   v-model="amount"
                   type="number"
                   step="0.01"
