@@ -80,6 +80,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Every user in a group can view the group's expenses and balances, and can edit any expense regardless of who created it.
 - Activities are tracked.
 - Group expenses can be exported as a CSV file.
+- Users can view and edit their account profile. Users can change their display name; the name is editable even when it was originally provided by an OAuth provider. The user's email address cannot be changed. The profile picture is shown as the first letter of the display name (initials avatar); uploading or changing a profile picture is not supported.
 
 ## Product Decisions
 
@@ -93,6 +94,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - CSV export must include both regular expenses and settle-up entries that are currently visible in the group ledger.
 - Deleting an expense removes it from active balances immediately; any activity entry generated for the deletion remains part of the activity history.
 - The canonical financial source of truth is the ledger of expenses and settlement entries; balances are always derived from that ledger.
+- The display name is the single editable profile field; the email address is immutable after account creation and is never accepted by the profile-update API.
 
 ## Balance Rules
 
