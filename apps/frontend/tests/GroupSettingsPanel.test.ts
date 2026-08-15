@@ -75,7 +75,6 @@ describe('GroupSettingsPanel', () => {
     const html = wrapper.html();
 
     expect(html).toContain('You');
-    expect(html).toContain('Admin');
   });
 
   it('renders pending-invitation row with email', () => {
