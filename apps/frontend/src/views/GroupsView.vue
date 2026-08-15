@@ -88,7 +88,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="flex flex-col flex-1 min-h-0">
+  <main class="flex flex-col flex-1 min-h-0 mx-auto w-full max-w-5xl">
     <!-- Loading state -->
     <div
       v-if="isLoading"

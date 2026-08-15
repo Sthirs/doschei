@@ -13,11 +13,17 @@ const email = authStore.user?.email ?? '';
 const isSaving = ref(false);
 const errorMessage = ref('');
 
-const userInitial = computed(() => name.value.trim().charAt(0).toUpperCase() || 'U');
-const isDirty = computed(
-  () => name.value.trim() !== (authStore.user?.displayName ?? '') && name.value.trim().length > 0,
+const userInitial = computed(
+  () => name.value.trim().charAt(0).toUpperCase() || 'U',
 );
-const canSave = computed(() => isDirty.value && !isSaving.value && name.value.trim().length <= 100);
+const isDirty = computed(
+  () =>
+    name.value.trim() !== (authStore.user?.displayName ?? '') &&
+    name.value.trim().length > 0,
+);
+const canSave = computed(
+  () => isDirty.value && !isSaving.value && name.value.trim().length <= 100,
+);
 
 const goBack = () => {
   router.push('/groups');
@@ -52,7 +58,7 @@ onBeforeUnmount(() => {
 
 <template>
   <main
-    class="flex flex-1 min-h-0 flex-col gap-8 overflow-y-auto bg-[#13121B] px-5 pt-8 pb-8"
+    class="flex flex-1 min-h-0 flex-col gap-8 overflow-y-auto bg-[#13121B] px-5 pt-8 pb-8 mx-auto w-full max-w-5xl"
   >
     <!-- Topbar: back arrow -->
     <Teleport to="#topbar-leading">

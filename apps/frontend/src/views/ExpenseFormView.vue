@@ -307,10 +307,7 @@ onBeforeUnmount(() => {
   </main>
 
   <!-- Group-load failure -->
-  <main
-    v-else-if="loadError"
-    class="flex-1 overflow-y-auto px-4 py-6"
-  >
+  <main v-else-if="loadError" class="flex-1 overflow-y-auto px-4 py-6">
     <p
       class="rounded-xl px-4 py-3 text-sm text-rose-200 bg-rose-500/10 border border-rose-500/20"
     >
@@ -328,9 +325,12 @@ onBeforeUnmount(() => {
   </main>
 
   <!-- Form -->
-  <main v-else-if="group" class="flex flex-col flex-1 overflow-hidden">
+  <main
+    v-else-if="group"
+    class="mx-auto w-full max-w-5xl flex flex-col flex-1 overflow-hidden"
+  >
     <div class="flex-1 overflow-y-auto px-4 py-6">
-      <div class="mx-auto w-full max-w-md flex flex-col gap-4">
+      <div class="flex flex-col gap-4">
         <template v-if="!showDeleteConfirm">
           <form
             id="expense-form"
@@ -693,7 +693,7 @@ onBeforeUnmount(() => {
       <div
         class="absolute inset-x-0 bottom-full h-4 bg-gradient-to-t from-[#13121B] pointer-events-none"
       ></div>
-      <div class="mx-auto w-full max-w-md flex flex-col gap-2 pb-4">
+      <div class="flex flex-col gap-2 pb-4">
         <button
           type="submit"
           form="expense-form"
