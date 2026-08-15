@@ -57,4 +57,15 @@ export class AuthService {
   async findById(userId: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { id: userId } });
   }
+
+  async updateName(userId: string, displayName: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new Error('User not found.');
+    }
+
+    user.displayName = displayName;
+    return this.userRepository.save(user);
+  }
 }

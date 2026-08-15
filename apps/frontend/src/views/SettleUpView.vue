@@ -249,9 +249,12 @@ const deleteSettlement = async () => {
   </main>
 
   <!-- Form -->
-  <main v-else-if="group" class="flex flex-col flex-1 overflow-hidden">
+  <main
+    v-else-if="group"
+    class="mx-auto w-full max-w-5xl flex flex-col flex-1 overflow-hidden"
+  >
     <div class="flex-1 overflow-y-auto px-4 py-6">
-      <div class="mx-auto w-full max-w-md flex flex-col gap-4">
+      <div class="flex flex-col gap-4">
         <!-- Record-a-Payment banner (create mode only) -->
         <div
           v-if="mode === 'create'"
@@ -387,7 +390,7 @@ const deleteSettlement = async () => {
       <div
         class="absolute inset-x-0 bottom-full h-4 bg-gradient-to-t from-[#13121B] pointer-events-none"
       ></div>
-      <div class="mx-auto w-full max-w-md flex flex-col gap-2 pb-4">
+      <div class="flex flex-col gap-2 pb-4">
         <button
           type="submit"
           form="settleup-form"

@@ -57,5 +57,16 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem(TOKEN_KEY, token);
       await this.fetchCurrentUser();
     },
+    async updateProfileName(displayName: string) {
+      this.isLoading = true;
+
+      try {
+        const { data } = await api.patch<{ user: AuthUser }>('/auth/me', { displayName });
+        this.user = data.user;
+        return data.user;
+      } finally {
+        this.isLoading = false;
+      }
+    },
   },
 });
