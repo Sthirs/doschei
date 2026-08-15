@@ -1,6 +1,6 @@
 # ADR-0014: Group invitation system — email-keyed pending invitation with accept/decline lifecycle
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-08-15
 - **Deciders:** Sthirs
 
