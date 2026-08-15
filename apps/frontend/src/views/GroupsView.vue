@@ -11,7 +11,11 @@ import {
   groupInitials,
 } from '@/lib/format';
 import { currentPageTitle } from '@/router';
-import type { Group, GroupsListResponse, InvitationListItem } from '@/types/group';
+import type {
+  Group,
+  GroupsListResponse,
+  InvitationListItem,
+} from '@/types/group';
 
 const router = useRouter();
 const groups = ref<Group[]>([]);
@@ -44,7 +48,9 @@ const decliningInvitationId = ref<string | null>(null);
 const acceptInvitation = async (invitation: InvitationListItem) => {
   acceptingInvitationId.value = invitation.id;
   try {
-    await api.post(`/groups/${invitation.groupId}/invitations/${invitation.id}/accept`);
+    await api.post(
+      `/groups/${invitation.groupId}/invitations/${invitation.id}/accept`,
+    );
     await loadGroups();
   } catch {
     /* keep current state; user can retry */
@@ -56,7 +62,9 @@ const acceptInvitation = async (invitation: InvitationListItem) => {
 const declineInvitation = async (invitation: InvitationListItem) => {
   decliningInvitationId.value = invitation.id;
   try {
-    await api.post(`/groups/${invitation.groupId}/invitations/${invitation.id}/decline`);
+    await api.post(
+      `/groups/${invitation.groupId}/invitations/${invitation.id}/decline`,
+    );
     await loadGroups();
   } catch {
     /* keep current state; user can retry */
@@ -149,11 +157,11 @@ onUnmounted(() => {
         >
           Invitations
         </h2>
-        <ul class="flex flex-col gap-3">
+        <ul class="flex flex-col gap-3 border-b-1 pb-4 border-[#fff]/5">
           <li
             v-for="invitation in invitations"
             :key="invitation.id"
-            class="bg-[#1E1E26] border border-white/[0.08] rounded-xl"
+            class="bg-[#1f2b32bf] border border-white/[0.08] rounded-xl"
           >
             <div class="flex items-center gap-4 px-4 py-4">
               <!-- Thumbnail: always gradient for invitations -->
@@ -164,37 +172,45 @@ onUnmounted(() => {
                 {{ groupInitials(invitation.groupName) }}
               </div>
 
-              <!-- Middle: name + inviter -->
-              <div class="flex-1 min-w-0">
-                <h3
-                  class="text-[20px] font-semibold tracking-[-0.025em] text-[#E5E0ED] truncate"
-                  style="line-height: 28px"
-                >
-                  {{ invitation.groupName }}
-                </h3>
-                <p class="mt-0.5 text-sm text-[#C8C4D7] truncate">
-                  Invited by {{ invitation.inviterName }}
-                </p>
-              </div>
+              <div class="flex flex-col gap-4 w-full">
+                <!-- Middle: name + inviter -->
+                <div class="flex-1 min-w-0">
+                  <h3
+                    class="text-[20px] font-semibold tracking-[-0.025em] text-[#E5E0ED] truncate"
+                    style="line-height: 28px"
+                  >
+                    {{ invitation.groupName }}
+                  </h3>
+                  <p class="mt-0.5 text-sm text-[#C8C4D7] truncate">
+                    Invited by {{ invitation.inviterName }}
+                  </p>
+                </div>
 
-              <!-- Actions -->
-              <div class="flex shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  class="rounded-lg bg-[#6554E7] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#5a44cf] disabled:opacity-60"
-                  :disabled="acceptingInvitationId === invitation.id || decliningInvitationId === invitation.id"
-                  @click="acceptInvitation(invitation)"
-                >
-                  Accept
-                </button>
-                <button
-                  type="button"
-                  class="rounded-lg border border-[#FFB4AB] px-3 py-1.5 text-sm font-medium text-[#FFB4AB] transition hover:bg-[#FFB4AB]/10 disabled:opacity-60"
-                  :disabled="acceptingInvitationId === invitation.id || decliningInvitationId === invitation.id"
-                  @click="declineInvitation(invitation)"
-                >
-                  Decline
-                </button>
+                <!-- Actions -->
+                <div class="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    class="w-full rounded-lg bg-[#6554E7] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#5a44cf] disabled:opacity-60"
+                    :disabled="
+                      acceptingInvitationId === invitation.id ||
+                      decliningInvitationId === invitation.id
+                    "
+                    @click="acceptInvitation(invitation)"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    class="w-full rounded-lg border border-[#FFB4AB] px-3 py-1.5 text-sm font-medium text-[#FFB4AB] transition hover:bg-[#FFB4AB]/10 disabled:opacity-60"
+                    :disabled="
+                      acceptingInvitationId === invitation.id ||
+                      decliningInvitationId === invitation.id
+                    "
+                    @click="declineInvitation(invitation)"
+                  >
+                    Decline
+                  </button>
+                </div>
               </div>
             </div>
           </li>

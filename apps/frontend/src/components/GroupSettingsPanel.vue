@@ -193,7 +193,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
           <div
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-sm font-semibold text-white"
           >
-            {{ isCurrentUser(member.id) ? 'ME' : initialsOf(member.displayName) }}
+            {{ initialsOf(member.displayName) }}
           </div>
           <!-- Name + email -->
           <div class="min-w-0 flex-1">
@@ -201,7 +201,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
               {{ isCurrentUser(member.id) ? 'You' : member.displayName }}
             </p>
             <p class="truncate text-xs text-[#C8C4D7]">
-              {{ isCurrentUser(member.id) ? 'Admin' : member.email }}
+              {{ member.email }}
             </p>
           </div>
           <!-- Remove button: only when >1 members AND not current user -->
