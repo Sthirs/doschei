@@ -83,8 +83,8 @@ onBeforeUnmount(() => {
 
       <h2
         data-testid="account-name-heading"
-        class="text-center font-bold text-[#E4E1ED] tracking-[-0.025em]"
-        style="font-size: 48px; line-height: 56px"
+        class="text-center font-bold text-[#E4E1ED] tracking-[-0.025em] text-[48px]"
+        style="line-height: 56px"
       >
         {{ name.trim() || '—' }}
       </h2>
