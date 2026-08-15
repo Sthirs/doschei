@@ -1,5 +1,7 @@
 // T6 of 7 — full expense lifecycle: create → edit every field → delete.
 // Uses the authenticatedPage fixture (no UI login). One test, one group.
+// The expense form is now a routed page at /groups/:id/expenses/new (create)
+// and /groups/:id/expenses/:eid/edit (edit) — see ADR-0012.
 import { test, expect } from '../fixtures/auth';
 import { GroupsPage, GroupSettingsPage, GroupDetailPage } from '../pages';
 
@@ -15,17 +17,16 @@ test('expense lifecycle: create → edit every field → delete', async ({ authe
   await groupsPage.expectGroupVisible(groupName);
 
   await groupsPage.openGroup(groupName);
-  const groupId = page.url().split('/').pop();
-  expect(groupId).toBeTruthy();
+  const groupId = await groupDetailPage.getGroupId();
 
   // Invite Alice so she's available as a "Paid by" option and split member.
   await page.goto('/groups/' + groupId + '/settings');
   await groupSettingsPage.inviteByEmail('alice@doschei.local');
   await groupSettingsPage.expectMemberVisible('Alice Rossi');
 
-  // Navigate back to the group detail page and open the Add Expense modal.
-  await page.goto('/groups/' + groupId);
-  await groupDetailPage.openAddExpense();
+  // Navigate to the routed Add-Expense page.
+  await groupDetailPage.gotoAddExpense(groupId);
+  await expect(page).toHaveURL(new RegExp(`/groups/${groupId}/expenses/new$`));
 
   // --- CREATE step ---
   // 5. Category: 'Dining Out' (label of dining-out — categories.ts:36). Distinct from default general.
@@ -42,6 +43,8 @@ test('expense lifecycle: create → edit every field → delete', async ({ authe
   await groupDetailPage.setDate('2024-01-15');
   // 11. Save.
   await groupDetailPage.saveExpense();
+  // ExpenseFormView.vue:142-148 — submit navigates back to /groups/:id.
+  await expect(page).toHaveURL(new RegExp(`/groups/${groupId}$`));
   // 12. Assert the list row.
   await groupDetailPage.expectExpenseRowVisible({
     description: 'Dinner at Venice',
@@ -49,9 +52,26 @@ test('expense lifecycle: create → edit every field → delete', async ({ authe
     paidByName: 'Alice Rossi',
   });
 
+  // --- Look up the expense id from the API so we can target the edit
+  //     route directly (no need to click the row + scrape the URL). ---
+  const token = await page.evaluate(() => localStorage.getItem('doschei.auth.token'));
+  const groupResponse = await page.request.get(`/api/groups/${groupId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(groupResponse.status()).toBe(200);
+  const groupJson = (await groupResponse.json()) as {
+    group: { expenses: Array<{ id: string; description: string }> };
+  };
+  const dinnerExpense = groupJson.group.expenses.find(
+    (e) => e.description === 'Dinner at Venice',
+  );
+  expect(dinnerExpense, 'expected the "Dinner at Venice" expense on the group').toBeDefined();
+  const expenseId = dinnerExpense!.id;
+
   // --- EDIT step ---
-  // 13. Open the expense.
-  await groupDetailPage.openExpense('Dinner at Venice');
+  // 13. Navigate to the edit page.
+  await groupDetailPage.gotoEditExpense(groupId, expenseId);
+  await expect(page).toHaveURL(new RegExp(`/groups/${groupId}/expenses/${expenseId}/edit$`));
   // 14. Edit category: 'Groceries' (label of groceries — categories.ts:37).
   await groupDetailPage.setCategory('Groceries');
   // 15. Edit description.
@@ -64,6 +84,7 @@ test('expense lifecycle: create → edit every field → delete', async ({ authe
   await groupDetailPage.setDate('2024-02-20');
   // 19. Save.
   await groupDetailPage.saveExpense();
+  await expect(page).toHaveURL(new RegExp(`/groups/${groupId}$`));
   // 20. Assert the list row now shows the edited values. Paid-by is intentionally
   // not editable (the edit form and PATCH endpoint omit paidByUserId), so it
   // stays 'Alice Rossi' from the create step.
@@ -74,10 +95,11 @@ test('expense lifecycle: create → edit every field → delete', async ({ authe
   });
 
   // --- DELETE step ---
-  // 22. Open the expense.
-  await groupDetailPage.openExpense('Groceries for trip');
-  // 23. Delete: clicks Delete → confirm → waits for modal close.
+  // 22. Navigate to the edit page.
+  await groupDetailPage.gotoEditExpense(groupId, expenseId);
+  // 23. Delete: clicks Delete → confirm → waits for navigation.
   await groupDetailPage.deleteCurrentExpense();
+  await expect(page).toHaveURL(new RegExp(`/groups/${groupId}$`));
   // 24. Assert no expenses remain.
   await groupDetailPage.expectNoExpenses();
 });

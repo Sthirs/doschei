@@ -10,6 +10,7 @@ export type Group = {
   imageUrl: string | null;
   memberCount: number;
   members: GroupMember[];
+  netForCurrentUser: number;
 };
 
 export type ShareType = 'PERCENT' | 'FIXED' | 'EQUAL';

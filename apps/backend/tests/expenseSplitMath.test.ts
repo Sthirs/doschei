@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   aggregateBalance,
+  aggregateNetForUser,
   computeAllocatedAmounts,
   validateSplits,
   type ParsedSplit,
@@ -492,6 +493,87 @@ describe('aggregateBalance', () => {
 
     expect(result.netForCurrentUser).toBe(0);
     expect(result.perUser.size).toBe(0);
+  });
+});
+
+describe('aggregateNetForUser', () => {
+  it('payer-positive: currentUser paid, others split → positive net', () => {
+    const net = aggregateNetForUser(
+      [
+        {
+          paidByUserId: 'alice',
+          splits: [
+            { userId: 'bob', computedAmount: 15 },
+            { userId: 'alice', computedAmount: 15 },
+          ],
+        },
+      ],
+      'alice',
+    );
+
+    expect(net).toBe(15);
+  });
+
+  it('participant-negative: another user paid, currentUser is a split participant → negative net', () => {
+    const net = aggregateNetForUser(
+      [
+        {
+          paidByUserId: 'bob',
+          splits: [
+            { userId: 'alice', computedAmount: 15 },
+            { userId: 'bob', computedAmount: 15 },
+          ],
+        },
+      ],
+      'alice',
+    );
+
+    expect(net).toBe(-15);
+  });
+
+  it('not-involved-zero: currentUser neither payer nor split participant → zero net', () => {
+    const net = aggregateNetForUser(
+      [
+        {
+          paidByUserId: 'alice',
+          splits: [{ userId: 'bob', computedAmount: 20 }],
+        },
+      ],
+      'carol',
+    );
+
+    expect(net).toBe(0);
+  });
+
+  it('matches aggregateBalance netForCurrentUser for a multi-expense scenario', () => {
+    const expenses = [
+      { paidByUserId: 'alice', splits: [{ userId: 'bob', computedAmount: 10 }, { userId: 'carol', computedAmount: 5 }] },
+      { paidByUserId: 'bob', splits: [{ userId: 'alice', computedAmount: 4 }, { userId: 'carol', computedAmount: 2 }] },
+      { paidByUserId: 'carol', splits: [{ userId: 'alice', computedAmount: 3 }, { userId: 'bob', computedAmount: 1 }] },
+    ];
+
+    const scalar = aggregateNetForUser(expenses, 'alice');
+    const full = aggregateBalance(expenses, 'alice');
+
+    expect(scalar).toBe(full.netForCurrentUser);
+  });
+
+  it('returns 0 for an empty expense list', () => {
+    expect(aggregateNetForUser([], 'alice')).toBe(0);
+  });
+
+  it('self-split is a no-op', () => {
+    const net = aggregateNetForUser(
+      [
+        {
+          paidByUserId: 'alice',
+          splits: [{ userId: 'alice', computedAmount: 10 }],
+        },
+      ],
+      'alice',
+    );
+
+    expect(net).toBe(0);
   });
 });
 

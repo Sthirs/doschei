@@ -50,6 +50,6 @@ test.describe('Dex OAuth login', () => {
     // 6. Assert we landed on /groups and are authenticated.
     //    Matches the assertion style used in tests/e2e/groups/login.guard.spec.ts.
     await expect(page).toHaveURL(/\/groups$/);
-    await expect(page.getByRole('heading', { name: 'Groups' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Do Schèi' })).toBeVisible();
   });
 });

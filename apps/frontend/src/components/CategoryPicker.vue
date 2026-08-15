@@ -77,19 +77,28 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="relative">
+  <div class="relative flex items-center">
     <button
       ref="triggerRef"
       type="button"
       :class="[
-        'flex shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 transition hover:border-brand-500/40 hover:bg-brand-500/10',
+        'flex shrink-0 items-center justify-center rounded-full transition',
         sizeClasses,
       ]"
+      :style="{
+        backgroundColor: `${current.color}33`,
+        border: `1px solid ${current.color}4D`,
+      }"
       :title="current.label"
       :aria-label="`Category: ${current.label}`"
       @click.stop="open"
     >
-      <span aria-hidden="true">{{ current.icon }}</span>
+      <img
+        :src="current.iconPath"
+        :alt="current.label"
+        class="h-4 w-4"
+        aria-hidden="true"
+      />
     </button>
 
     <!-- Desktop popover (hidden on mobile) -->
@@ -97,15 +106,15 @@ onBeforeUnmount(() => {
       v-if="isOpen"
       ref="panelRef"
       tabindex="-1"
-      class="absolute left-0 top-full z-50 mt-2 hidden w-72 flex-col overflow-hidden rounded-md sm:flex"
+      class="absolute left-0 top-full z-50 mt-2 hidden w-72 flex-col overflow-hidden rounded-xl sm:flex"
       role="dialog"
       aria-modal="true"
       aria-label="Select category"
       @keydown="onKeydown"
     >
-      <div class="glass-panel max-h-80 overflow-y-auto rounded-md shadow-xl">
+      <div class="bg-[#1E1E26] max-h-80 overflow-y-auto rounded-xl shadow-xl">
         <div v-for="group in CATEGORIES_GROUPED" :key="group.family" class="py-1">
-          <p class="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+          <p class="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">
             {{ group.label }}
           </p>
           <button
@@ -115,17 +124,31 @@ onBeforeUnmount(() => {
             :class="[
               'flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition',
               cat.key === modelValue
-                ? 'bg-brand-500/10 text-brand-500'
-                : 'text-slate-200 hover:bg-white/5',
+                ? 'bg-white/5'
+                : 'text-[#E5E0ED] hover:bg-white/5',
             ]"
             @click="select(cat.key)"
           >
-            <span class="text-base" aria-hidden="true">{{ cat.icon }}</span>
+            <span
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+              :style="{
+                backgroundColor: `${cat.color}33`,
+                border: `1px solid ${cat.color}4D`,
+              }"
+            >
+              <img
+                :src="cat.iconPath"
+                :alt="cat.label"
+                class="h-4 w-4"
+                aria-hidden="true"
+              />
+            </span>
             <span class="flex-1">{{ cat.label }}</span>
             <svg
               v-if="cat.key === modelValue"
               viewBox="0 0 20 20"
               class="h-4 w-4 fill-current"
+              :style="{ color: cat.color }"
             >
               <path
                 fill-rule="evenodd"
@@ -147,17 +170,17 @@ onBeforeUnmount(() => {
         @keydown="onKeydown"
       >
         <div
-          class="glass-panel max-h-[85vh] overflow-y-auto rounded-t-xl"
+          class="bg-[#1E1E26] max-h-[85vh] overflow-y-auto rounded-t-xl"
           role="dialog"
           aria-modal="true"
           aria-label="Select category"
           @click.stop
         >
-          <div class="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-slate-900/95 px-4 py-3 backdrop-blur">
-            <h3 class="text-sm font-medium text-slate-100">Select Category</h3>
+          <div class="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#1E1E26] px-4 py-3">
+            <h3 class="text-sm font-medium text-[#E5E0ED]">Select Category</h3>
             <button
               type="button"
-              class="rounded-md p-1 text-slate-400 hover:text-slate-200"
+              class="rounded-md p-1 text-[#C8C4D7] hover:text-[#E5E0ED]"
               aria-label="Close"
               @click="close"
             >
@@ -169,7 +192,7 @@ onBeforeUnmount(() => {
 
           <div class="px-2 py-2">
             <div v-for="group in CATEGORIES_GROUPED" :key="group.family" class="py-1">
-              <p class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <p class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">
                 {{ group.label }}
               </p>
               <button
@@ -179,17 +202,31 @@ onBeforeUnmount(() => {
                 :class="[
                   'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition',
                   cat.key === modelValue
-                    ? 'bg-brand-500/10 text-brand-500'
-                    : 'text-slate-200 hover:bg-white/5',
+                    ? 'bg-white/5'
+                    : 'text-[#E5E0ED] hover:bg-white/5',
                 ]"
                 @click="select(cat.key)"
               >
-                <span class="text-lg" aria-hidden="true">{{ cat.icon }}</span>
+                <span
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                  :style="{
+                    backgroundColor: `${cat.color}33`,
+                    border: `1px solid ${cat.color}4D`,
+                  }"
+                >
+                  <img
+                    :src="cat.iconPath"
+                    :alt="cat.label"
+                    class="h-4 w-4"
+                    aria-hidden="true"
+                  />
+                </span>
                 <span class="flex-1">{{ cat.label }}</span>
                 <svg
                   v-if="cat.key === modelValue"
                   viewBox="0 0 20 20"
                   class="h-4 w-4 fill-current"
+                  :style="{ color: cat.color }"
                 >
                   <path
                     fill-rule="evenodd"

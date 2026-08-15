@@ -9,8 +9,15 @@ const GroupsView = () => import('@/views/GroupsView.vue');
 const GroupDetailView = () => import('@/views/GroupDetailView.vue');
 const AccountView = () => import('@/views/AccountView.vue');
 const GroupSettingsView = () => import('@/views/GroupSettingsView.vue');
+const ExpenseFormView = () => import('@/views/ExpenseFormView.vue');
+const SettleUpView = () => import('@/views/SettleUpView.vue');
 
 export const currentPageTitle = ref<string | null>(null);
+
+// Carry a group payload across navigation to expense/settle-up views so the
+// target page does not need to re-fetch GET /groups/:id.
+import type { GroupDetail } from '@/types/group';
+export const sharedGroup = ref<GroupDetail | null>(null);
 
 
 export const router = createRouter({
@@ -49,6 +56,30 @@ export const router = createRouter({
       name: 'group-settings',
       component: GroupSettingsView,
       meta: { requiresAuth: true, title: 'Group Settings' },
+    },
+    {
+      path: '/groups/:id/expenses/new',
+      name: 'expense-new',
+      component: ExpenseFormView,
+      meta: { requiresAuth: true, title: 'Add Expense' },
+    },
+    {
+      path: '/groups/:id/expenses/:expenseId/edit',
+      name: 'expense-edit',
+      component: ExpenseFormView,
+      meta: { requiresAuth: true, title: 'Edit Expense' },
+    },
+    {
+      path: '/groups/:id/settle-up',
+      name: 'settleup-new',
+      component: SettleUpView,
+      meta: { requiresAuth: true, title: 'Settle Up' },
+    },
+    {
+      path: '/groups/:id/settlements/:sid/edit',
+      name: 'settleup-edit',
+      component: SettleUpView,
+      meta: { requiresAuth: true, title: 'Edit Payment' },
     },
     {
       path: '/account',
