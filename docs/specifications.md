@@ -7,7 +7,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - The application is multilingual and supports English and Italian.
 - Users can create an account and sign in to the application.
 - Users can sign in with any OIDC provider (for example Google).
-- Users can create groups and invite other users to join via email.
+- Users can create groups and invite other users to join via email. A group member can invite any user by email (whether or not that user has registered yet). The invitation is keyed by the email address and is visible to the invitee as a pending invitation card in their groups list. The invitee's display name and id are NOT shared with the inviter or the group until the invitee accepts. The invitee can accept or decline. On accept the invitee becomes a member and their display name appears in the group. The inviter can cancel an unaccepted invitation. The pending-invitations section of the groups list is hidden entirely when the user has no pending invitations.
 - A group can have multiple users, and each user can belong to multiple groups.
 - A group has a name and an image that can be updated by its members.
 - A group contains a list of expenses shared among its members.
@@ -206,14 +206,9 @@ The CI pipeline includes the following steps:
   The frontend, however, only ships a login form
   (`apps/frontend/src/views/LoginView.vue`); there is **no registration UI**.
 
-- **§Features line 10 — "invite other users to join via email": NOT IMPLEMENTED.**
-  `apps/backend/src/services/groupService.ts` (`addMemberByEmail`) only looks up
-  an **already-registered** user by email and throws `"No user found with that
-  email."` otherwise. There is **no invitation token, no invitation entity, and
-  no email-sending infrastructure** anywhere in the repo
-  (no `nodemailer`, `smtp`, `sendgrid`, `mailgun`, `resend`, etc., in either
-  `package.json` or source). The "invite via email" feature is effectively a
-  stub that adds an existing user by email.
+- **§Features line 10 — "invite other users to join via email": IMPLEMENTED.**
+  The email-keyed invitation system with accept/decline/cancel lifecycle is implemented
+  (`apps/backend/src/entities/Invitation.ts`, `apps/backend/src/services/invitationService.ts`).
 
 - **§Features line 12 — "name and image that can be updated by its members": PARTIALLY IMPLEMENTED (NAME ONLY).**
   The `Group` entity has an `imageUrl` column
