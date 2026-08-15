@@ -52,7 +52,7 @@ onBeforeUnmount(() => {
 
 <template>
   <main
-    class="flex min-h-screen flex-col gap-8 bg-[#13121B] px-5 pt-8 pb-8"
+    class="flex flex-1 min-h-0 flex-col gap-8 overflow-y-auto bg-[#13121B] px-5 pt-8 pb-8"
   >
     <!-- Topbar: back arrow -->
     <Teleport to="#topbar-leading">
