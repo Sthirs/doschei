@@ -147,21 +147,40 @@ const inMemoryIdentities: InMemoryIdentity[] = [];
 const userRepo = makeRepo<InMemoryUser>(inMemoryUsers);
 const identityRepo = makeRepo<InMemoryIdentity>(inMemoryIdentities);
 
-vi.mock('../../src/db/data-source', () => ({
-  AppDataSource: {
-    transaction: vi.fn(async (cb: (manager: unknown) => Promise<unknown>) =>
-      cb({ getRepository: (entity: { name: string }) => {
+vi.mock('../../src/db/data-source', () => {
+  const invitationRepo = {
+    createQueryBuilder: () => ({
+      update: () => ({
+        set: () => ({
+          where: () => ({
+            andWhere: () => ({
+              andWhere: () => ({
+                execute: async () => ({ affected: 0 }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    }),
+  };
+  return {
+    AppDataSource: {
+      transaction: vi.fn(async (cb: (manager: unknown) => Promise<unknown>) =>
+        cb({ getRepository: (entity: { name: string }) => {
+          if (entity.name === 'UserIdentity') return identityRepo;
+          if (entity.name === 'Invitation') return invitationRepo;
+          return userRepo;
+        } }),
+      ),
+      getRepository: (entity: { name: string }) => {
         if (entity.name === 'UserIdentity') return identityRepo;
+        if (entity.name === 'Invitation') return invitationRepo;
         return userRepo;
-      } }),
-    ),
-    getRepository: (entity: { name: string }) => {
-      if (entity.name === 'UserIdentity') return identityRepo;
-      return userRepo;
+      },
     },
-  },
-  initializeDatabase: vi.fn(async () => undefined),
-}));
+    initializeDatabase: vi.fn(async () => undefined),
+  };
+});
 
 // Imports go AFTER the mocks so the service receives the stubbed env,
 // providerRegistry, and AppDataSource.

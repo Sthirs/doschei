@@ -139,6 +139,21 @@ vi.mock('../../src/db/data-source', () => {
 
   const userRepo = makeRepo(inMemoryUsers);
   const identityRepo = makeRepo(inMemoryIdentities);
+  const invitationRepo = {
+    createQueryBuilder: () => ({
+      update: () => ({
+        set: () => ({
+          where: () => ({
+            andWhere: () => ({
+              andWhere: () => ({
+                execute: async () => ({ affected: 0 }),
+              }),
+            }),
+          }),
+        }),
+      }),
+    }),
+  };
 
   return {
     AppDataSource: {
@@ -152,6 +167,9 @@ vi.mock('../../src/db/data-source', () => {
         if (entity.name === 'UserIdentity') {
           return identityRepo;
         }
+        if (entity.name === 'Invitation') {
+          return invitationRepo;
+        }
         return userRepo;
       },
       transaction: vi.fn(
@@ -160,6 +178,9 @@ vi.mock('../../src/db/data-source', () => {
             getRepository: (entity: { name?: string }) => {
               if (entity.name === 'UserIdentity') {
                 return identityRepo;
+              }
+              if (entity.name === 'Invitation') {
+                return invitationRepo;
               }
               return userRepo;
             },
