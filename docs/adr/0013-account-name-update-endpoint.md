@@ -1,6 +1,6 @@
 # ADR-0013: Account name update endpoint — PATCH /api/auth/me (displayName only)
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-08-15
 - **Deciders:** Sthirs
 
