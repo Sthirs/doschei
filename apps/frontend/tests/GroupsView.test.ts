@@ -3,14 +3,15 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 import GroupsView from '@/views/GroupsView.vue';
-import type { Group } from '@/types/group';
+import type { Group, InvitationListItem } from '@/types/group';
 
 // Mock the api module
 const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
 vi.mock('@/lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
-    post: vi.fn().mockResolvedValue({ data: {} }),
+    post: (...args: unknown[]) => mockApiPost(...args),
   },
 }));
 
@@ -58,11 +59,25 @@ const mountComponent = async (groups: Group[] = []) => {
   return wrapper;
 };
 
+const mountWithInvitations = async (
+  invitations: { id: string; groupId: string; groupName: string; inviterName: string; createdAt: string }[],
+  groups: Group[] = [],
+) => {
+  mockApiGet.mockResolvedValue({ data: { groups, invitations } });
+  const wrapper = mount(GroupsView);
+  await vi.dynamicImportSettled();
+  await wrapper.vm.$nextTick();
+  return wrapper;
+};
+
 describe('GroupsView', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
     mockCurrentPageTitle.value = null;
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockApiPost.mockResolvedValue({ data: {} });
   });
 
   it('renders "You are owed" chip with € for positive net', async () => {
@@ -150,5 +165,39 @@ describe('GroupsView', () => {
   it('sets currentPageTitle to "Do Schèi" on mount', async () => {
     await mountComponent([makeGroup()]);
     expect(mockCurrentPageTitle.value).toBe('Do Schèi');
+  });
+
+  it('(F1) surfaces accept/decline errors inline on the matching invitation card', async () => {
+    const invitation: InvitationListItem = {
+      id: 'inv-1',
+      groupId: 'group-A',
+      groupName: 'Venice Trip',
+      inviterName: 'Bob',
+      createdAt: '2026-01-01T00:00:00Z',
+    };
+    const wrapper = await mountWithInvitations([invitation]);
+    const html = wrapper.html();
+    expect(html).toContain('Venice Trip');
+    expect(html).toContain('Invited by Bob');
+
+    mockApiPost.mockRejectedValueOnce(new Error('network'));
+
+    const buttons = wrapper.findAll('button');
+    const acceptButton = buttons.find((b) => b.text().trim() === 'Accept');
+    expect(acceptButton).toBeDefined();
+    await acceptButton!.trigger('click');
+    await wrapper.vm.$nextTick();
+    await vi.dynamicImportSettled();
+
+    expect(wrapper.html()).toContain('Could not accept the invitation');
+
+    mockApiPost.mockRejectedValueOnce(new Error('network'));
+    const declineButton = wrapper.findAll('button').find((b) => b.text().trim() === 'Decline');
+    expect(declineButton).toBeDefined();
+    await declineButton!.trigger('click');
+    await wrapper.vm.$nextTick();
+    await vi.dynamicImportSettled();
+
+    expect(wrapper.html()).toContain('Could not decline the invitation');
   });
 });

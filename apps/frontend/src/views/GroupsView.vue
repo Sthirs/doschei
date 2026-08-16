@@ -44,8 +44,12 @@ const loadGroups = async () => {
 
 const acceptingInvitationId = ref<string | null>(null);
 const decliningInvitationId = ref<string | null>(null);
+const invitationErrorMessage = ref('');
+const failingInvitationId = ref<string | null>(null);
 
 const acceptInvitation = async (invitation: InvitationListItem) => {
+  invitationErrorMessage.value = '';
+  failingInvitationId.value = null;
   acceptingInvitationId.value = invitation.id;
   try {
     await api.post(
@@ -53,13 +57,16 @@ const acceptInvitation = async (invitation: InvitationListItem) => {
     );
     await loadGroups();
   } catch {
-    /* keep current state; user can retry */
+    invitationErrorMessage.value = 'Could not accept the invitation. Please try again.';
+    failingInvitationId.value = invitation.id;
   } finally {
     acceptingInvitationId.value = null;
   }
 };
 
 const declineInvitation = async (invitation: InvitationListItem) => {
+  invitationErrorMessage.value = '';
+  failingInvitationId.value = null;
   decliningInvitationId.value = invitation.id;
   try {
     await api.post(
@@ -67,7 +74,8 @@ const declineInvitation = async (invitation: InvitationListItem) => {
     );
     await loadGroups();
   } catch {
-    /* keep current state; user can retry */
+    invitationErrorMessage.value = 'Could not decline the invitation. Please try again.';
+    failingInvitationId.value = invitation.id;
   } finally {
     decliningInvitationId.value = null;
   }
@@ -185,6 +193,13 @@ onUnmounted(() => {
                     Invited by {{ invitation.inviterName }}
                   </p>
                 </div>
+
+                <p
+                  v-if="failingInvitationId === invitation.id && invitationErrorMessage"
+                  class="text-xs text-rose-200 bg-rose-500/10 rounded-md px-3 py-1.5"
+                >
+                  {{ invitationErrorMessage }}
+                </p>
 
                 <!-- Actions -->
                 <div class="flex shrink-0 items-center gap-2">
