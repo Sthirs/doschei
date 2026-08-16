@@ -218,6 +218,7 @@ export class OAuthService {
       const displayName = info.displayName ?? emailLocalPart(email) ?? 'User';
       user = userRepo.create({ email, displayName, passwordHash: null });
       user = await userRepo.save(user);
+      // ADR-0014 §42: any new user-creation path MUST also call invitationService.attachPendingInvitationsForEmail(newUser) at this point.
       await invitationService.attachPendingInvitationsForEmail(user, manager);
       const identity = identityRepo.create({
         userId: user.id,

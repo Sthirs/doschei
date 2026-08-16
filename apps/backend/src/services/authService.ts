@@ -38,6 +38,7 @@ export class AuthService {
 
     const savedUser = await this.userRepository.save(user);
 
+    // ADR-0014 §42: any new user-creation path MUST also call invitationService.attachPendingInvitationsForEmail(newUser) at this point.
     await invitationService.attachPendingInvitationsForEmail(savedUser);
 
     return savedUser;
