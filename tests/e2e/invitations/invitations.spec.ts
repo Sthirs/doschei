@@ -49,7 +49,18 @@ test('happy path: invite registered user → name hidden on settings until accep
   await pageA.goto('/groups/' + groupId + '/settings');
 
   // A invites B by email.
+  // Capture the POST /members API response to assert the privacy invariant:
+  // no inviteeId is exposed (ADR-0014), even when the invitee is a registered user.
+  const inviteResponsePromise = pageA.waitForResponse(
+    (res) => res.url().includes(`/api/groups/${groupId}/members`) && res.request().method() === 'POST',
+  );
   await settingsPageA.inviteByEmail(accountB.email);
+  const inviteResponse = await inviteResponsePromise;
+  expect(inviteResponse.status()).toBe(201);
+  const inviteJson = (await inviteResponse.json()) as {
+    invitation: { inviteeEmail: string; status: string };
+  };
+  expect(inviteJson.invitation).not.toHaveProperty('inviteeId');
 
   // Invariant: B's email is visible in PENDING INVITATIONS, but B's displayName
   // is NOT visible anywhere on A's settings page (name-hidden until accept).
