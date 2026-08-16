@@ -134,6 +134,66 @@ describe('Group Invitations', () => {
     });
   });
 
+  describe('email format validation', () => {
+    const malformedEmailCases: Array<{ description: string; email: string }> = [
+      { description: 'missing local part and domain', email: 'foo' },
+      { description: 'missing domain', email: 'foo@' },
+      { description: 'missing TLD dot', email: 'foo@bar' },
+      { description: 'multiple @ characters', email: 'a@b@c' },
+      { description: 'embedded space is invalid format', email: 'foo bar@x.com' },
+      { description: 'over 254 char length cap', email: `${'x'.repeat(256)}@x.com` },
+    ];
+
+    for (const { description, email } of malformedEmailCases) {
+      it(`returns 400 for malformed email (${description})`, async () => {
+        const owner = await registerUser(`inv-fmt-${description.replace(/\s+/g, '-')}-owner`);
+
+        const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${owner.body.token}` },
+          body: JSON.stringify({ name: uniqueValue(`inv-fmt-${description.replace(/\s+/g, '-')}-group`) }),
+        });
+        const groupId = groupRes.body.group.id;
+
+        const response = await createJsonRequest<{ message: string }>(
+          `/api/groups/${groupId}/members`,
+          {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${owner.body.token}` },
+            body: JSON.stringify({ email }),
+          },
+        );
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toMatch(/email is required/i);
+      });
+    }
+
+    it('returns 201 for whitespace-padded valid email (proves trim() runs before regex)', async () => {
+      const owner = await registerUser('inv-fmt-trim-owner');
+
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('inv-fmt-trim-group') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      const response = await createJsonRequest<{
+        invitation: { inviteeEmail: string; inviteeId: string | null; status: string };
+      }>(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.body.token}` },
+        body: JSON.stringify({ email: '  x@y.com  ' }),
+      });
+
+      expect(response.status).toBe(201);
+      expect(response.body.invitation.inviteeEmail).toBe('x@y.com');
+      expect(response.body.invitation.inviteeId).toBeNull();
+      expect(response.body.invitation.status).toBe('pending');
+    });
+  });
+
   describe('Deferred attach on register', () => {
     it('attaches pending invitations when a matching user registers', async () => {
       const owner = await registerUser('inv-deferred-owner');

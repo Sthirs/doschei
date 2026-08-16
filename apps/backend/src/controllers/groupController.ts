@@ -386,8 +386,8 @@ export const addMember = async (request: AuthenticatedRequest, response: Respons
   const groupId = request.params.id as string;
   const { email } = request.body as { email?: unknown };
 
-  if (typeof email !== 'string' || email.trim().length === 0) {
-    response.status(400).json({ message: 'Email is required.' });
+  if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || email.trim().length > 254) {
+    response.status(400).json({ message: 'A valid email is required.' });
     return;
   }
 
