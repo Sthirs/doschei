@@ -91,23 +91,28 @@ export class InvitationService {
   }
 
   async acceptInvitation(invitationId: string, userId: string): Promise<SerializedInvitation> {
-    const invitation = await this.invitationRepository.findOne({ where: { id: invitationId } });
-
-    if (!invitation) {
-      throw new Error('Invitation not found.');
-    }
-
-    if (invitation.inviteeId !== userId) {
-      throw new Error('You are not the invitee of this invitation.');
-    }
-
-    if (invitation.status !== 'pending') {
-      throw new Error('Invitation is no longer pending.');
-    }
-
-    await AppDataSource.transaction(async (manager) => {
-      const groupRepo = manager.getRepository(Group);
+    const invitation = await AppDataSource.transaction(async (manager) => {
       const invitationRepo = manager.getRepository(Invitation);
+
+      // TOCTOU fix: pessimistic_write lock prevents concurrent cancel/decline from racing with accept (see ADR-0014 Consequences).
+      const invitation = await invitationRepo.findOne({
+        where: { id: invitationId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!invitation) {
+        throw new Error('Invitation not found.');
+      }
+
+      if (invitation.inviteeId !== userId) {
+        throw new Error('You are not the invitee of this invitation.');
+      }
+
+      if (invitation.status !== 'pending') {
+        throw new Error('Invitation is no longer pending.');
+      }
+
+      const groupRepo = manager.getRepository(Group);
       const userRepo = manager.getRepository(User);
 
       const group = await groupRepo.findOne({
@@ -132,6 +137,8 @@ export class InvitationService {
 
       invitation.status = 'accepted';
       await invitationRepo.save(invitation);
+
+      return invitation;
     });
 
     return this.serializeInvitation(invitation);
