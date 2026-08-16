@@ -9,7 +9,6 @@ type SerializedInvitation = {
   id: string;
   groupId: string;
   inviteeEmail: string;
-  inviteeId: string | null;
   status: 'pending' | 'accepted' | 'declined';
   createdAt: string;
 };
@@ -218,7 +217,6 @@ export class InvitationService {
       id: invitation.id,
       groupId: invitation.groupId,
       inviteeEmail: invitation.inviteeEmail,
-      inviteeId: invitation.inviteeId,
       status: invitation.status,
       createdAt: invitation.createdAt.toISOString(),
     };

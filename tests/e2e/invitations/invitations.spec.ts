@@ -6,7 +6,8 @@
 //
 // API contract (already live):
 //   POST /api/groups/:id/members → 201 { invitation: { id, groupId, inviteeEmail,
-//        inviteeId: string|null, status, createdAt } } (email-only, NO displayName)
+//        status, createdAt } } (email-only — NO inviteeId, NO displayName — privacy
+//        invariant per ADR-0014)
 //   GET  /api/groups → { groups, invitations: [{ id, groupId, groupName,
 //        inviterName, createdAt }] }
 //   GET  /api/groups/:id → group with pendingInvitations: [{ id, email, createdAt }]
@@ -101,8 +102,8 @@ test('deferred attach: invite unregistered email → register → invitation app
   // A invites an unregistered email.
   const unregisteredEmail = `${uniqueValue('e2e-deferred')}@doschei.local`;
 
-  // Capture the POST /members API response to assert inviteeId is null
-  // (deferred attach — no registered user matches the email yet).
+  // Capture the POST /members API response to assert the privacy invariant:
+  // no inviteeId is exposed (deferred attach — no registered user matches yet).
   const inviteResponsePromise = pageA.waitForResponse(
     (res) => res.url().includes(`/api/groups/${groupId}/members`) && res.request().method() === 'POST',
   );
@@ -110,9 +111,9 @@ test('deferred attach: invite unregistered email → register → invitation app
   const inviteResponse = await inviteResponsePromise;
   expect(inviteResponse.status()).toBe(201);
   const inviteJson = (await inviteResponse.json()) as {
-    invitation: { inviteeId: string | null; inviteeEmail: string; status: string };
+    invitation: { inviteeEmail: string; status: string };
   };
-  expect(inviteJson.invitation.inviteeId).toBeNull();
+  expect(inviteJson.invitation).not.toHaveProperty('inviteeId');
   expect(inviteJson.invitation.inviteeEmail).toBe(unregisteredEmail);
   expect(inviteJson.invitation.status).toBe('pending');
 

@@ -18,7 +18,7 @@ describe('Group Members Endpoints', () => {
       const groupId = groupRes.body.group.id;
 
       const response = await createJsonRequest<{
-        invitation: { id: string; groupId: string; inviteeEmail: string; inviteeId: string; status: string; createdAt: string };
+        invitation: { id: string; groupId: string; inviteeEmail: string; status: string; createdAt: string };
       }>(`/api/groups/${groupId}/members`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${owner.body.token}` },
@@ -30,7 +30,6 @@ describe('Group Members Endpoints', () => {
         expect.objectContaining({
           groupId,
           inviteeEmail: newMember.body.user.email,
-          inviteeId: newMember.body.user.id,
           status: 'pending',
         }),
       );
@@ -60,7 +59,7 @@ describe('Group Members Endpoints', () => {
       expect(groupDetail.body.group.pendingInvitations[0]).not.toHaveProperty('userId');
     });
 
-    it('returns 201 for any email (inviteeId null when unregistered)', async () => {
+    it('returns 201 for any email (no inviteeId in response)', async () => {
       const owner = await registerUser('members-add-nouser');
 
       const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
@@ -71,7 +70,7 @@ describe('Group Members Endpoints', () => {
       const groupId = groupRes.body.group.id;
 
       const response = await createJsonRequest<{
-        invitation: { id: string; groupId: string; inviteeEmail: string; inviteeId: string | null; status: string; createdAt: string };
+        invitation: { id: string; groupId: string; inviteeEmail: string; status: string; createdAt: string };
       }>(`/api/groups/${groupId}/members`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${owner.body.token}` },
@@ -80,7 +79,7 @@ describe('Group Members Endpoints', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.invitation.inviteeEmail).toBe('nonexistent@example.com');
-      expect(response.body.invitation.inviteeId).toBeNull();
+      expect(response.body.invitation).not.toHaveProperty('inviteeId');
       expect(response.body.invitation.status).toBe('pending');
     });
 

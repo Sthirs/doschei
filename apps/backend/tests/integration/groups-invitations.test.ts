@@ -8,7 +8,7 @@ describe('Group Invitations', () => {
   });
 
   describe('POST /api/groups/:id/members (invitation creation)', () => {
-    it('creates a pending invitation for a registered user (201, inviteeId set)', async () => {
+    it('creates a pending invitation for a registered user (201, no inviteeId in response)', async () => {
       const owner = await registerUser('inv-create-owner');
       const invitee = await registerUser('inv-create-invitee');
 
@@ -20,7 +20,7 @@ describe('Group Invitations', () => {
       const groupId = groupRes.body.group.id;
 
       const response = await createJsonRequest<{
-        invitation: { id: string; groupId: string; inviteeEmail: string; inviteeId: string; status: string; createdAt: string };
+        invitation: { id: string; groupId: string; inviteeEmail: string; status: string; createdAt: string };
       }>(`/api/groups/${groupId}/members`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${owner.body.token}` },
@@ -30,12 +30,12 @@ describe('Group Invitations', () => {
       expect(response.status).toBe(201);
       expect(response.body.invitation.groupId).toBe(groupId);
       expect(response.body.invitation.inviteeEmail).toBe(invitee.body.user.email);
-      expect(response.body.invitation.inviteeId).toBe(invitee.body.user.id);
+      expect(response.body.invitation).not.toHaveProperty('inviteeId');
       expect(response.body.invitation.status).toBe('pending');
       expect(response.body.invitation).not.toHaveProperty('displayName');
     });
 
-    it('creates a pending invitation for an unknown email (201, inviteeId null)', async () => {
+    it('creates a pending invitation for an unknown email (201, no inviteeId for unknown email)', async () => {
       const owner = await registerUser('inv-unknown-owner');
       const unknownEmail = `${uniqueValue('inv-unknown')}-unknown@example.com`;
 
@@ -47,7 +47,7 @@ describe('Group Invitations', () => {
       const groupId = groupRes.body.group.id;
 
       const response = await createJsonRequest<{
-        invitation: { id: string; groupId: string; inviteeEmail: string; inviteeId: string | null; status: string; createdAt: string };
+        invitation: { id: string; groupId: string; inviteeEmail: string; status: string; createdAt: string };
       }>(`/api/groups/${groupId}/members`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${owner.body.token}` },
@@ -56,7 +56,7 @@ describe('Group Invitations', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.invitation.inviteeEmail).toBe(unknownEmail);
-      expect(response.body.invitation.inviteeId).toBeNull();
+      expect(response.body.invitation).not.toHaveProperty('inviteeId');
       expect(response.body.invitation.status).toBe('pending');
     });
 
@@ -132,6 +132,58 @@ describe('Group Invitations', () => {
       expect(response.status).toBe(404);
       expect(response.body.message).toMatch(/not found|not a member/i);
     });
+
+    it('(privacy) registered and unregistered invitees return identical response shape (no enumeration oracle)', async () => {
+      const owner = await registerUser('inv-priv-owner');
+      const invitee = await registerUser('inv-priv-invitee');
+      const unregisteredEmail = `${uniqueValue('inv-priv-unreg')}@example.com`;
+
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('inv-priv-group') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      const registeredResponse = await createJsonRequest<{
+        invitation: Record<string, unknown>;
+      }>(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.body.token}` },
+        body: JSON.stringify({ email: invitee.body.user.email }),
+      });
+
+      const unregisteredResponse = await createJsonRequest<{
+        invitation: Record<string, unknown>;
+      }>(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.body.token}` },
+        body: JSON.stringify({ email: unregisteredEmail }),
+      });
+
+      expect(registeredResponse.status).toBe(201);
+      expect(unregisteredResponse.status).toBe(201);
+
+      // No enumeration oracle: the response shape must be identical whether or
+      // not the invitee is a registered user.
+      expect(registeredResponse.body.invitation).not.toHaveProperty('inviteeId');
+      expect(unregisteredResponse.body.invitation).not.toHaveProperty('inviteeId');
+
+      expect(Object.keys(registeredResponse.body.invitation).sort()).toStrictEqual([
+        'createdAt',
+        'groupId',
+        'id',
+        'inviteeEmail',
+        'status',
+      ]);
+      expect(Object.keys(unregisteredResponse.body.invitation).sort()).toStrictEqual([
+        'createdAt',
+        'groupId',
+        'id',
+        'inviteeEmail',
+        'status',
+      ]);
+    });
   });
 
   describe('email format validation', () => {
@@ -180,7 +232,7 @@ describe('Group Invitations', () => {
       const groupId = groupRes.body.group.id;
 
       const response = await createJsonRequest<{
-        invitation: { inviteeEmail: string; inviteeId: string | null; status: string };
+        invitation: { inviteeEmail: string; status: string };
       }>(`/api/groups/${groupId}/members`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${owner.body.token}` },
@@ -189,7 +241,7 @@ describe('Group Invitations', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.invitation.inviteeEmail).toBe('x@y.com');
-      expect(response.body.invitation.inviteeId).toBeNull();
+      expect(response.body.invitation).not.toHaveProperty('inviteeId');
       expect(response.body.invitation.status).toBe('pending');
     });
   });
@@ -207,7 +259,7 @@ describe('Group Invitations', () => {
       const groupId = groupRes.body.group.id;
 
       const inviteRes = await createJsonRequest<{
-        invitation: { inviteeId: string | null };
+        invitation: Record<string, unknown>;
       }>(`/api/groups/${groupId}/members`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${owner.body.token}` },
@@ -215,7 +267,7 @@ describe('Group Invitations', () => {
       });
 
       expect(inviteRes.status).toBe(201);
-      expect(inviteRes.body.invitation.inviteeId).toBeNull();
+      expect(inviteRes.body.invitation).not.toHaveProperty('inviteeId');
 
       const newUserRes = await createJsonRequest<{ token: string; user: { id: string; email: string } }>(
         '/api/auth/register',
@@ -266,7 +318,7 @@ describe('Group Invitations', () => {
       const invitationId = inviteRes.body.invitation.id;
 
       const response = await createJsonRequest<{
-        invitation: { id: string; status: string; inviteeId: string };
+        invitation: { id: string; status: string };
       }>(`/api/groups/${groupId}/invitations/${invitationId}/accept`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${invitee.body.token}` },
