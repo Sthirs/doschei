@@ -5,7 +5,7 @@
 // on the date committed in happy-C), matching the single-test pattern from
 // expenses.spec.ts.
 import { test, expect } from '../fixtures/auth';
-import { GroupsPage, GroupSettingsPage, GroupDetailPage } from '../pages';
+import { GroupsPage, GroupSettingsPage, GroupDetailPage, acceptInvitationViaApi } from '../pages';
 
 const monthNames = ['January','February','March','April','May','June',
     'July','August','September','October','November','December'];
@@ -45,8 +45,12 @@ test('DateTimePicker bottom-sheet: open, navigate, select+apply, cancel reverts,
   const groupId = await groupDetailPage.getGroupId();
 
   // Invite Alice so she's available as a "Paid by" option and split member.
+  // Under the invitation system (ADR-0014) Alice is only invited until she accepts,
+  // so the accept step is performed via the API helper before she appears as a member.
   await page.goto('/groups/' + groupId + '/settings');
   await groupSettingsPage.inviteByEmail('alice@doschei.local');
+  await acceptInvitationViaApi(page, groupId, 'alice@doschei.local', 'password123');
+  await page.reload();
   await groupSettingsPage.expectMemberVisible('Alice Rossi');
 
   // Navigate to the routed Add-Expense page (ADR-0012).

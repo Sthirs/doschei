@@ -3,7 +3,7 @@
 // The settle-up form is now a routed page at /groups/:id/settle-up (create)
 // and /groups/:id/settlements/:sid/edit (edit) — see ADR-0012.
 import { test, expect } from '../fixtures/auth';
-import { GroupsPage, GroupSettingsPage, GroupDetailPage } from '../pages';
+import { GroupsPage, GroupSettingsPage, GroupDetailPage, acceptInvitationViaApi } from '../pages';
 
 test('settle-up lifecycle: create → edit amount → delete', async ({ authenticatedPage: page }) => {
   const groupsPage = new GroupsPage(page);
@@ -20,8 +20,12 @@ test('settle-up lifecycle: create → edit amount → delete', async ({ authenti
   const groupId = await groupDetailPage.getGroupId();
 
   // Invite Alice so the EQUAL split has two members and the "Who paid" picker has her.
+  // Under the invitation system (ADR-0014) Alice is only invited until she accepts,
+  // so the accept step is performed via the API helper before she appears as a member.
   await page.goto('/groups/' + groupId + '/settings');
   await groupSettingsPage.inviteByEmail('alice@doschei.local');
+  await acceptInvitationViaApi(page, groupId, 'alice@doschei.local', 'password123');
+  await page.reload();
   await groupSettingsPage.expectMemberVisible('Alice Rossi');
 
   // --- Add a €20.00 expense paid by Alice, split EQUAL across both members. ---

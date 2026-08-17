@@ -17,25 +17,49 @@ describe('Group Members Endpoints', () => {
       });
       const groupId = groupRes.body.group.id;
 
-      const response = await createJsonRequest<{ group: { id: string; memberCount: number; members: Array<{ id: string; email: string }> } }>(
-        `/api/groups/${groupId}/members`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${owner.body.token}` },
-          body: JSON.stringify({ email: newMember.body.user.email }),
-        },
-      );
+      const response = await createJsonRequest<{
+        invitation: { id: string; groupId: string; inviteeEmail: string; status: string; createdAt: string };
+      }>(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.body.token}` },
+        body: JSON.stringify({ email: newMember.body.user.email }),
+      });
 
-      expect(response.status).toBe(200);
-      expect(response.body.group.memberCount).toBe(2);
-      expect(response.body.group.members).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ email: newMember.body.user.email }),
-        ]),
+      expect(response.status).toBe(201);
+      expect(response.body.invitation).toEqual(
+        expect.objectContaining({
+          groupId,
+          inviteeEmail: newMember.body.user.email,
+          status: 'pending',
+        }),
       );
+      expect(response.body.invitation).not.toHaveProperty('displayName');
+      expect(response.body.invitation).not.toHaveProperty('group');
+
+      const groupDetail = await createJsonRequest<{
+        group: {
+          memberCount: number;
+          members: Array<{ id: string; email: string }>;
+          pendingInvitations: Array<{ id: string; email: string; createdAt: string }>;
+        };
+      }>(`/api/groups/${groupId}`, {
+        headers: { Authorization: `Bearer ${owner.body.token}` },
+      });
+
+      expect(groupDetail.body.group.memberCount).toBe(1);
+      expect(groupDetail.body.group.members).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ email: newMember.body.user.email })]),
+      );
+      expect(groupDetail.body.group.pendingInvitations).toHaveLength(1);
+      expect(groupDetail.body.group.pendingInvitations[0]).toEqual(
+        expect.objectContaining({ email: newMember.body.user.email }),
+      );
+      expect(groupDetail.body.group.pendingInvitations[0]).not.toHaveProperty('displayName');
+      expect(groupDetail.body.group.pendingInvitations[0]).not.toHaveProperty('inviteeId');
+      expect(groupDetail.body.group.pendingInvitations[0]).not.toHaveProperty('userId');
     });
 
-    it('returns 404 for non-existent email', async () => {
+    it('returns 201 for any email (no inviteeId in response)', async () => {
       const owner = await registerUser('members-add-nouser');
 
       const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
@@ -45,17 +69,18 @@ describe('Group Members Endpoints', () => {
       });
       const groupId = groupRes.body.group.id;
 
-      const response = await createJsonRequest<{ message: string }>(
-        `/api/groups/${groupId}/members`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${owner.body.token}` },
-          body: JSON.stringify({ email: 'nonexistent@example.com' }),
-        },
-      );
+      const response = await createJsonRequest<{
+        invitation: { id: string; groupId: string; inviteeEmail: string; status: string; createdAt: string };
+      }>(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${owner.body.token}` },
+        body: JSON.stringify({ email: 'nonexistent@example.com' }),
+      });
 
-      expect(response.status).toBe(404);
-      expect(response.body.message).toMatch(/no user found/i);
+      expect(response.status).toBe(201);
+      expect(response.body.invitation.inviteeEmail).toBe('nonexistent@example.com');
+      expect(response.body.invitation).not.toHaveProperty('inviteeId');
+      expect(response.body.invitation.status).toBe('pending');
     });
 
     it('returns 400 for already existing member', async () => {
@@ -69,11 +94,22 @@ describe('Group Members Endpoints', () => {
       });
       const groupId = groupRes.body.group.id;
 
-      await createJsonRequest(`/api/groups/${groupId}/members`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${owner.body.token}` },
-        body: JSON.stringify({ email: member.body.user.email }),
-      });
+      const inviteRes = await createJsonRequest<{ invitation: { id: string } }>(
+        `/api/groups/${groupId}/members`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${owner.body.token}` },
+          body: JSON.stringify({ email: member.body.user.email }),
+        },
+      );
+
+      await createJsonRequest(
+        `/api/groups/${groupId}/invitations/${inviteRes.body.invitation.id}/accept`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${member.body.token}` },
+        },
+      );
 
       const response = await createJsonRequest<{ message: string }>(
         `/api/groups/${groupId}/members`,
@@ -158,11 +194,22 @@ describe('Group Members Endpoints', () => {
       });
       const groupId = groupRes.body.group.id;
 
-      await createJsonRequest(`/api/groups/${groupId}/members`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${owner.body.token}` },
-        body: JSON.stringify({ email: member.body.user.email }),
-      });
+      const inviteRes = await createJsonRequest<{ invitation: { id: string } }>(
+        `/api/groups/${groupId}/members`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${owner.body.token}` },
+          body: JSON.stringify({ email: member.body.user.email }),
+        },
+      );
+
+      await createJsonRequest(
+        `/api/groups/${groupId}/invitations/${inviteRes.body.invitation.id}/accept`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${member.body.token}` },
+        },
+      );
 
       const response = await createJsonRequest(
         `/api/groups/${groupId}/members/${member.body.user.id}`,

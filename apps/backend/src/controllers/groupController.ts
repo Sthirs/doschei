@@ -3,6 +3,8 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import type { CsvExportStream } from '../services/csvExport';
 import { GroupService } from '../services/groupService';
+import { invitationService } from '../services/invitationService';
+import { isValidEmail } from '../utils/emailValidation';
 
 const groupService = new GroupService();
 
@@ -63,8 +65,9 @@ const isValidExpenseDate = (value: string) => {
 
 export const listGroups = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groups = await groupService.getGroupsForUser(request.auth!.userId);
+  const invitations = await invitationService.listPendingForInvitee(request.auth!.userId);
 
-  response.json({ groups });
+  response.json({ groups, invitations });
 };
 
 export const getGroup = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
@@ -384,21 +387,17 @@ export const addMember = async (request: AuthenticatedRequest, response: Respons
   const groupId = request.params.id as string;
   const { email } = request.body as { email?: unknown };
 
-  if (typeof email !== 'string' || email.trim().length === 0) {
-    response.status(400).json({ message: 'Email is required.' });
+  if (!isValidEmail(email)) {
+    response.status(400).json({ message: 'A valid email is required.' });
     return;
   }
 
   try {
-    const group = await groupService.addMemberByEmail(groupId, email.trim().toLowerCase(), request.auth!.userId);
+    const invitation = await groupService.addMemberByEmail(groupId, email.trim().toLowerCase(), request.auth!.userId);
 
-    response.status(200).json({ group });
+    response.status(201).json({ invitation });
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
-      response.status(404).json({ message: error.message });
-      return;
-    }
-    if (error instanceof Error && error.message.includes('No user found')) {
       response.status(404).json({ message: error.message });
       return;
     }
@@ -424,5 +423,65 @@ export const removeMember = async (request: AuthenticatedRequest, response: Resp
       return;
     }
     response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to remove member.' });
+  }
+};
+
+export const acceptInvitation = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+  const invitationId = request.params.invitationId as string;
+
+  try {
+    const invitation = await invitationService.acceptInvitation(invitationId, request.auth!.userId);
+
+    response.status(200).json({ invitation });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      response.status(404).json({ message: error.message });
+      return;
+    }
+    if (error instanceof Error && error.message.includes('not the invitee')) {
+      response.status(403).json({ message: error.message });
+      return;
+    }
+    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to accept invitation.' });
+  }
+};
+
+export const declineInvitation = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+  const invitationId = request.params.invitationId as string;
+
+  try {
+    const invitation = await invitationService.declineInvitation(invitationId, request.auth!.userId);
+
+    response.status(200).json({ invitation });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      response.status(404).json({ message: error.message });
+      return;
+    }
+    if (error instanceof Error && error.message.includes('not the invitee')) {
+      response.status(403).json({ message: error.message });
+      return;
+    }
+    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to decline invitation.' });
+  }
+};
+
+export const cancelInvitation = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+  const invitationId = request.params.invitationId as string;
+
+  try {
+    await invitationService.cancelInvitation(invitationId, request.auth!.userId);
+
+    response.status(204).send();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      response.status(404).json({ message: error.message });
+      return;
+    }
+    if (error instanceof Error && error.message.includes('not the inviter')) {
+      response.status(403).json({ message: error.message });
+      return;
+    }
+    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to cancel invitation.' });
   }
 };

@@ -4,6 +4,12 @@ export type GroupMember = {
   email: string;
 };
 
+export type PendingInvitation = {
+  id: string;
+  email: string;
+  createdAt: string;
+};
+
 export type Group = {
   id: string;
   name: string;
@@ -11,6 +17,20 @@ export type Group = {
   memberCount: number;
   members: GroupMember[];
   netForCurrentUser: number;
+  pendingInvitations?: PendingInvitation[];
+};
+
+export type InvitationListItem = {
+  id: string;
+  groupId: string;
+  groupName: string;
+  inviterName: string;
+  createdAt: string;
+};
+
+export type GroupsListResponse = {
+  groups: Group[];
+  invitations: InvitationListItem[];
 };
 
 export type ShareType = 'PERCENT' | 'FIXED' | 'EQUAL';

@@ -20,6 +20,7 @@ import { User } from '../entities/User';
 import { UserIdentity } from '../entities/UserIdentity';
 import { signAuthToken } from '../utils/jwt';
 import { sanitizeUser } from './authService';
+import { invitationService } from './invitationService';
 import { providerRegistry } from './oauth/providerRegistry';
 import type { OAuthUserInfo } from './oauth/oauthProvider';
 
@@ -217,6 +218,8 @@ export class OAuthService {
       const displayName = info.displayName ?? emailLocalPart(email) ?? 'User';
       user = userRepo.create({ email, displayName, passwordHash: null });
       user = await userRepo.save(user);
+      // ADR-0014 §42: any new user-creation path MUST also call invitationService.attachPendingInvitationsForEmail(newUser) at this point.
+      await invitationService.attachPendingInvitationsForEmail(user, manager);
       const identity = identityRepo.create({
         userId: user.id,
         user,

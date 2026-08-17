@@ -66,7 +66,7 @@ onBeforeUnmount(() => {
     </button>
   </Teleport>
 
-  <main class="flex-1 overflow-y-auto px-4 py-6 text-slate-50 sm:px-6 lg:px-8">
+  <main class="flex-1 overflow-y-auto text-slate-50 sm:px-6 lg:px-8">
     <div class="mx-auto flex max-w-5xl flex-col gap-4">
       <section v-if="isLoading" class="glass-panel rounded-md px-6 py-5 text-slate-300 sm:px-8">
         Loading settings...

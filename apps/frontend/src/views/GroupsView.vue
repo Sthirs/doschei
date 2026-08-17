@@ -11,10 +11,15 @@ import {
   groupInitials,
 } from '@/lib/format';
 import { currentPageTitle } from '@/router';
-import type { Group } from '@/types/group';
+import type {
+  Group,
+  GroupsListResponse,
+  InvitationListItem,
+} from '@/types/group';
 
 const router = useRouter();
 const groups = ref<Group[]>([]);
+const invitations = ref<InvitationListItem[]>([]);
 const isLoading = ref(true);
 const errorMessage = ref('');
 const newGroupName = ref('');
@@ -27,12 +32,52 @@ const loadGroups = async () => {
   errorMessage.value = '';
 
   try {
-    const { data } = await api.get<{ groups: Group[] }>('/groups');
+    const { data } = await api.get<GroupsListResponse>('/groups');
     groups.value = data.groups;
+    invitations.value = data.invitations ?? [];
   } catch {
     errorMessage.value = 'We could not load your groups.';
   } finally {
     isLoading.value = false;
+  }
+};
+
+const acceptingInvitationId = ref<string | null>(null);
+const decliningInvitationId = ref<string | null>(null);
+const invitationErrorMessage = ref('');
+const failingInvitationId = ref<string | null>(null);
+
+const acceptInvitation = async (invitation: InvitationListItem) => {
+  invitationErrorMessage.value = '';
+  failingInvitationId.value = null;
+  acceptingInvitationId.value = invitation.id;
+  try {
+    await api.post(
+      `/groups/${invitation.groupId}/invitations/${invitation.id}/accept`,
+    );
+    await loadGroups();
+  } catch {
+    invitationErrorMessage.value = 'Could not accept the invitation. Please try again.';
+    failingInvitationId.value = invitation.id;
+  } finally {
+    acceptingInvitationId.value = null;
+  }
+};
+
+const declineInvitation = async (invitation: InvitationListItem) => {
+  invitationErrorMessage.value = '';
+  failingInvitationId.value = null;
+  decliningInvitationId.value = invitation.id;
+  try {
+    await api.post(
+      `/groups/${invitation.groupId}/invitations/${invitation.id}/decline`,
+    );
+    await loadGroups();
+  } catch {
+    invitationErrorMessage.value = 'Could not decline the invitation. Please try again.';
+    failingInvitationId.value = invitation.id;
+  } finally {
+    decliningInvitationId.value = null;
   }
 };
 
@@ -109,97 +154,179 @@ onUnmounted(() => {
       </p>
     </div>
 
-    <!-- Group list -->
-    <ul
-      v-else-if="groups.length > 0"
-      class="flex-1 overflow-y-auto px-4 py-4 space-y-3"
-    >
-      <li
-        v-for="group in groups"
-        :key="group.id"
-        class="bg-[#1E1E26] border border-white/[0.08] rounded-xl cursor-pointer transition hover:bg-white/5"
-        @click="
-          router.push({
-            name: 'group-detail',
-            params: { id: group.id },
-            state: { groupName: group.name },
-          })
-        "
+    <template v-else>
+      <!-- Invitations section -->
+      <section
+        v-if="invitations.length > 0"
+        class="shrink-0 flex flex-col gap-3 px-4 pt-4"
       >
-        <div class="flex items-center gap-4 px-4 py-4">
-          <!-- Thumbnail: gradient + initials placeholder -->
-          <div v-if="group.imageUrl" class="h-14 w-14 rounded-xl shrink-0">
-            <img
-              :src="group.imageUrl"
-              :alt="`${group.name} image`"
-              class="h-full w-full rounded-xl object-cover"
-            />
-          </div>
-          <div
-            v-else
-            class="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
-            :aria-label="`${group.name} thumbnail`"
+        <h2
+          class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
+        >
+          Invitations
+        </h2>
+        <ul class="flex flex-col gap-3 border-b-1 pb-4 border-[#fff]/5">
+          <li
+            v-for="invitation in invitations"
+            :key="invitation.id"
+            class="bg-[#1f2b32bf] border border-white/[0.08] rounded-xl"
           >
-            {{ groupInitials(group.name) }}
-          </div>
-
-          <!-- Middle: name + avatars + balance -->
-          <div class="flex-1 min-w-0">
-            <h2
-              class="text-[20px] font-semibold tracking-[-0.025em] text-[#E5E0ED] truncate"
-              style="line-height: 28px"
-            >
-              {{ group.name }}
-            </h2>
-
-            <!-- Member avatars: overlapping circles, max 3 + +N -->
-            <div class="flex items-center mt-1.5 -space-x-2">
+            <div class="flex items-center gap-4 px-4 py-4">
+              <!-- Thumbnail: always gradient for invitations -->
               <div
-                v-for="(member, i) in group.members.slice(0, 3)"
-                :key="member.id"
-                class="h-6 w-6 rounded-full flex items-center justify-center bg-gradient-to-br from-[#6554E7]/60 to-[#4a485d]/60 text-white text-[11px] font-semibold ring-2 ring-[#13121B]"
-                :style="{ zIndex: 3 - i }"
-                :aria-label="member.displayName"
+                class="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
+                :aria-label="`${invitation.groupName} thumbnail`"
               >
-                {{ member.displayName.trim().charAt(0).toUpperCase() }}
+                {{ groupInitials(invitation.groupName) }}
               </div>
-              <div
-                v-if="group.members.length > 3"
-                class="h-6 w-6 rounded-full flex items-center justify-center bg-white/10 text-[#C8C4D7] text-[11px] font-medium ring-2 ring-[#13121B] z-0"
-              >
-                +{{ group.members.length - 3 }}
+
+              <div class="flex flex-col gap-4 flex-1 min-w-0">
+                <!-- Middle: name + inviter -->
+                <div class="flex-1 min-w-0">
+                  <h3
+                    class="text-[20px] font-semibold tracking-[-0.025em] text-[#E5E0ED] truncate"
+                    style="line-height: 28px"
+                  >
+                    {{ invitation.groupName }}
+                  </h3>
+                  <p class="mt-0.5 text-sm text-[#C8C4D7] truncate">
+                    Invited by {{ invitation.inviterName }}
+                  </p>
+                </div>
+
+                <p
+                  v-if="failingInvitationId === invitation.id && invitationErrorMessage"
+                  class="text-xs text-rose-200 bg-rose-500/10 rounded-md px-3 py-1.5"
+                >
+                  {{ invitationErrorMessage }}
+                </p>
+
+                <!-- Actions -->
+                <div class="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    class="w-full rounded-lg bg-[#6554E7] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#5a44cf] disabled:opacity-60"
+                    :disabled="
+                      acceptingInvitationId === invitation.id ||
+                      decliningInvitationId === invitation.id
+                    "
+                    @click="acceptInvitation(invitation)"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    class="w-full rounded-lg border border-[#FFB4AB] px-3 py-1.5 text-sm font-medium text-[#FFB4AB] transition hover:bg-[#FFB4AB]/10 disabled:opacity-60"
+                    :disabled="
+                      acceptingInvitationId === invitation.id ||
+                      decliningInvitationId === invitation.id
+                    "
+                    @click="declineInvitation(invitation)"
+                  >
+                    Decline
+                  </button>
+                </div>
               </div>
             </div>
+          </li>
+        </ul>
+      </section>
 
-            <!-- Balance chip -->
-            <p
-              class="mt-1 text-xs"
-              :class="
-                balanceColorClass(balanceChipKind(group.netForCurrentUser))
-              "
+      <!-- Group list -->
+      <ul
+        v-if="groups.length > 0"
+        class="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+      >
+        <li
+          v-for="group in groups"
+          :key="group.id"
+          class="bg-[#1E1E26] border border-white/[0.08] rounded-xl cursor-pointer transition hover:bg-white/5"
+          @click="
+            router.push({
+              name: 'group-detail',
+              params: { id: group.id },
+              state: { groupName: group.name },
+            })
+          "
+        >
+          <div class="flex items-center gap-4 px-4 py-4">
+            <!-- Thumbnail: gradient + initials placeholder -->
+            <div v-if="group.imageUrl" class="h-14 w-14 rounded-xl shrink-0">
+              <img
+                :src="group.imageUrl"
+                :alt="`${group.name} image`"
+                class="h-full w-full rounded-xl object-cover"
+              />
+            </div>
+            <div
+              v-else
+              class="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
+              :aria-label="`${group.name} thumbnail`"
             >
-              {{ balanceChipLabel(group.netForCurrentUser) }}
-            </p>
+              {{ groupInitials(group.name) }}
+            </div>
+
+            <!-- Middle: name + avatars + balance -->
+            <div class="flex-1 min-w-0">
+              <h2
+                class="text-[20px] font-semibold tracking-[-0.025em] text-[#E5E0ED] truncate"
+                style="line-height: 28px"
+              >
+                {{ group.name }}
+              </h2>
+
+              <!-- Member avatars: overlapping circles, max 3 + +N -->
+              <div class="flex items-center mt-1.5 -space-x-2">
+                <div
+                  v-for="(member, i) in group.members.slice(0, 3)"
+                  :key="member.id"
+                  class="h-6 w-6 rounded-full flex items-center justify-center bg-gradient-to-br from-[#6554E7]/60 to-[#4a485d]/60 text-white text-[11px] font-semibold ring-2 ring-[#13121B]"
+                  :style="{ zIndex: 3 - i }"
+                  :aria-label="member.displayName"
+                >
+                  {{ member.displayName.trim().charAt(0).toUpperCase() }}
+                </div>
+                <div
+                  v-if="group.members.length > 3"
+                  class="h-6 w-6 rounded-full flex items-center justify-center bg-white/10 text-[#C8C4D7] text-[11px] font-medium ring-2 ring-[#13121B] z-0"
+                >
+                  +{{ group.members.length - 3 }}
+                </div>
+              </div>
+
+              <!-- Balance chip -->
+              <p
+                class="mt-1 text-xs"
+                :class="
+                  balanceColorClass(balanceChipKind(group.netForCurrentUser))
+                "
+              >
+                {{ balanceChipLabel(group.netForCurrentUser) }}
+              </p>
+            </div>
+
+            <!-- Right chevron -->
+            <svg
+              class="h-5 w-5 shrink-0 text-[#C8C4D7]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
           </div>
+        </li>
+      </ul>
 
-          <!-- Right chevron -->
-          <svg
-            class="h-5 w-5 shrink-0 text-[#C8C4D7]"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-        </div>
-      </li>
-    </ul>
-
-    <!-- Empty state -->
-    <div v-else class="flex-1 flex items-center justify-center text-[#C8C4D7]">
-      No groups yet.
-    </div>
+      <!-- Empty state -->
+      <div
+        v-if="groups.length === 0 && invitations.length === 0"
+        class="flex-1 flex items-center justify-center text-[#C8C4D7]"
+      >
+        No groups yet.
+      </div>
+    </template>
 
     <!-- Bottom: + Create group button -->
     <div class="shrink-0 relative">

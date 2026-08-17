@@ -42,3 +42,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0011](0011-group-expenses-csv-export.md) | Group expenses CSV export — streaming, per-expense net, single-month | 🟢 accepted |
 | [ADR-0012](0012-routed-pages-for-expense-settleup-forms.md) | Routed pages for expense and settle‑up forms instead of modals | 🟢 accepted |
 | [ADR-0013](0013-account-name-update-endpoint.md) | Account name update endpoint — PATCH /api/auth/me | 🟢 accepted |
+| [ADR-0014](0014-group-invitation-system.md) | Group invitation system — email-keyed pending invitation with accept/decline lifecycle | 🟢 accepted |

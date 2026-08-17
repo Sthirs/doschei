@@ -1,5 +1,6 @@
 import { AppDataSource } from '../db/data-source';
 import { User } from '../entities/User';
+import { invitationService } from './invitationService';
 import { hashPassword, verifyPassword } from '../utils/password';
 
 type LoginInput = {
@@ -35,7 +36,12 @@ export class AuthService {
       passwordHash: await hashPassword(input.password),
     });
 
-    return this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    // ADR-0014 §42: any new user-creation path MUST also call invitationService.attachPendingInvitationsForEmail(newUser) at this point.
+    await invitationService.attachPendingInvitationsForEmail(savedUser);
+
+    return savedUser;
   }
 
   async login(input: LoginInput): Promise<User> {

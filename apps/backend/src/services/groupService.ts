@@ -4,6 +4,7 @@ import { AppDataSource } from '../db/data-source';
 import { Expense } from '../entities/Expense';
 import { ExpenseSplit } from '../entities/ExpenseSplit';
 import { Group } from '../entities/Group';
+import { Invitation } from '../entities/Invitation';
 import { User } from '../entities/User';
 import { csvEscapeField, formatMemberNet, rfc5987Filename, sanitizeLatin1Filename, type CsvExportHeaders, type CsvExportStream } from './csvExport';
 import {
@@ -14,6 +15,7 @@ import {
   type AggregateBalanceInput,
   type ParsedSplit,
 } from './expenseSplitMath';
+import { invitationService } from './invitationService';
 import { buildSettlementSplit, validateSettlementInput } from './settlementRules';
 
 const MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
@@ -64,11 +66,18 @@ type SerializedBalance = {
   perUser: SerializedBalanceEntry[];
 };
 
+type PendingInvitationView = {
+  id: string;
+  email: string;
+  createdAt: string;
+};
+
 export class GroupService {
   private groupRepository = AppDataSource.getRepository(Group);
   private expenseRepository = AppDataSource.getRepository(Expense);
   private userRepository = AppDataSource.getRepository(User);
   private splitRepository = AppDataSource.getRepository(ExpenseSplit);
+  private invitationRepository = AppDataSource.getRepository(Invitation);
 
   private serializeGroup(group: Group, netForCurrentUser = 0): SerializedGroup {
     return {
@@ -82,6 +91,19 @@ export class GroupService {
         email: member.email,
       })),
       netForCurrentUser,
+    };
+  }
+
+  /**
+   * Serializes a pending invitation for the group-detail view.
+   * The invitee's displayName and id are intentionally suppressed —
+   * only the email snapshot and timestamps are exposed until acceptance.
+   */
+  private serializePendingInvitation(invitation: Invitation): PendingInvitationView {
+    return {
+      id: invitation.id,
+      email: invitation.inviteeEmail,
+      createdAt: invitation.createdAt.toISOString(),
     };
   }
 
@@ -254,10 +276,15 @@ export class GroupService {
     const serializedExpenses = expenses.map((expense) => this.serializeExpense(expense));
     const balance = this.computeBalance(group, serializedExpenses, userId);
 
+    const pendingInvitations = await this.invitationRepository.find({
+      where: { groupId, status: 'pending' },
+    });
+
     return {
       ...this.serializeGroup(group),
       expenses: serializedExpenses,
       balance,
+      pendingInvitations: pendingInvitations.map((invitation) => this.serializePendingInvitation(invitation)),
     };
   }
 
@@ -291,21 +318,13 @@ export class GroupService {
       throw new Error('Group not found or you are not a member.');
     }
 
-    const userToAdd = await this.userRepository.findOne({ where: { email } });
-
-    if (!userToAdd) {
-      throw new Error('No user found with that email.');
-    }
-
-    const alreadyMember = group.members.some((m) => m.id === userToAdd.id);
+    const normalizedEmail = email.trim().toLowerCase();
+    const alreadyMember = group.members.some((member) => member.email === normalizedEmail);
     if (alreadyMember) {
       throw new Error('User is already a member of this group.');
     }
 
-    group.members.push(userToAdd);
-    const savedGroup = await this.groupRepository.save(group);
-
-    return this.serializeGroup(savedGroup);
+    return invitationService.createInvitation(groupId, normalizedEmail, userId);
   }
 
   async removeMember(groupId: string, memberUserId: string, userId: string) {

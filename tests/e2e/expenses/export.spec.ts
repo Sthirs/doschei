@@ -3,7 +3,7 @@
 // the export, and assert the downloaded file's name + body. Uses the
 // authenticatedPage fixture (no UI login).
 import { test, expect } from '../fixtures/auth';
-import { GroupsPage, GroupSettingsPage, GroupDetailPage } from '../pages';
+import { GroupsPage, GroupSettingsPage, GroupDetailPage, acceptInvitationViaApi } from '../pages';
 
 test('export a group month as CSV', async ({ authenticatedPage: page }) => {
   const groupsPage = new GroupsPage(page);
@@ -21,8 +21,12 @@ test('export a group month as CSV', async ({ authenticatedPage: page }) => {
   expect(groupId).toBeTruthy();
 
   // Invite Alice so the CSV header has two member columns.
+  // Under the invitation system (ADR-0014) Alice is only invited until she accepts,
+  // so the accept step is performed via the API helper before she appears as a member.
   await page.goto('/groups/' + groupId + '/settings');
   await groupSettingsPage.inviteByEmail('alice@doschei.local');
+  await acceptInvitationViaApi(page, groupId!, 'alice@doschei.local', 'password123');
+  await page.reload();
   await groupSettingsPage.expectMemberVisible('Alice Rossi');
 
   // --- Add one expense in a fixed past month. ---

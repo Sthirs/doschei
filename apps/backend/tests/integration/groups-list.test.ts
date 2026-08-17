@@ -50,10 +50,14 @@ describe('GET /api/groups', () => {
     });
     const groupId = groupRes.body.group.id;
 
-    await createJsonRequest(`/api/groups/${groupId}/members`, {
+    const inviteRes = await createJsonRequest<{ invitation: { id: string } }>(`/api/groups/${groupId}/members`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${payer.body.token}` },
       body: JSON.stringify({ email: participant.body.user.email }),
+    });
+    await createJsonRequest(`/api/groups/${groupId}/invitations/${inviteRes.body.invitation.id}/accept`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${participant.body.token}` },
     });
 
     await createJsonRequest(`/api/groups/${groupId}/expenses`, {
