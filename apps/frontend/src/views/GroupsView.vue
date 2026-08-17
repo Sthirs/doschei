@@ -180,7 +180,7 @@ onUnmounted(() => {
                 {{ groupInitials(invitation.groupName) }}
               </div>
 
-              <div class="flex flex-col gap-4 w-full">
+              <div class="flex flex-col gap-4 flex-1 min-w-0">
                 <!-- Middle: name + inviter -->
                 <div class="flex-1 min-w-0">
                   <h3
