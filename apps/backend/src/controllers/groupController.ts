@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import type { CsvExportStream } from '../services/csvExport';
 import { GroupService } from '../services/groupService';
 import { invitationService } from '../services/invitationService';
+import { isValidEmail } from '../utils/emailValidation';
 
 const groupService = new GroupService();
 
@@ -386,7 +387,7 @@ export const addMember = async (request: AuthenticatedRequest, response: Respons
   const groupId = request.params.id as string;
   const { email } = request.body as { email?: unknown };
 
-  if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || email.trim().length > 254) {
+  if (!isValidEmail(email)) {
     response.status(400).json({ message: 'A valid email is required.' });
     return;
   }
