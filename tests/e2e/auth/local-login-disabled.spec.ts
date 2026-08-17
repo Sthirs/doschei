@@ -12,6 +12,6 @@ const isDisabled = process.env.PLAYWRIGHT_LOCAL_LOGIN_DISABLED === 'true';
 
     await expect(page.getByLabel('Email')).not.toBeVisible();
     await expect(page.getByLabel('Password')).not.toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign in' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'Log in' })).not.toBeVisible();
   },
 );

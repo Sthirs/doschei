@@ -2,8 +2,8 @@ import { expect, type Page } from '@playwright/test';
 
 export class LoginPage {
   private emailField = this.page.getByLabel('Email');
-  private passwordField = this.page.getByLabel('Password');
-  private signInButton = this.page.getByRole('button', { name: 'Sign in' });
+  private passwordField = this.page.getByLabel('Password', { exact: true });
+  private signInButton = this.page.getByRole('button', { name: 'Log in' });
 
   constructor(private page: Page) {}
 
