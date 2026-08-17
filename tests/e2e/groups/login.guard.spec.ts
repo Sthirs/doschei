@@ -9,11 +9,11 @@ test('UI login with demo user works', async ({ page }) => {
   await expect(emailInput).toHaveValue('demo@doschei.local');
 
   // Password field is prefilled with password123 (LoginView.vue:11-14).
-  const passwordInput = page.getByLabel('Password');
+  const passwordInput = page.getByLabel('Password', { exact: true });
   await expect(passwordInput).toHaveValue('password123');
 
-  // Sign in button (LoginView.vue:88-94).
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  // Log in button (LoginView.vue).
+  await page.getByRole('button', { name: 'Log in' }).click();
 
   // Auth guard redirects authenticated users to /groups.
   await page.waitForURL(/\/groups$/);
