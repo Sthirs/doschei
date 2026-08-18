@@ -1,6 +1,6 @@
 # ADR-0015: TypeScript 7 side-by-side with TypeScript 6 via npm aliases
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-08-18
 - **Deciders:** Maintainers
 

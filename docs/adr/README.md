@@ -28,7 +28,7 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 **Status legend:** 🟢 accepted · 🟡 proposed · 🔴 rejected · ⚪ superseded
 
 | ADR | Title | Status |
-| --- | --- | --- |
+| --- | --- | -- |
 | [ADR-0001](0001-monorepo-layout.md) | Monorepo layout with npm workspaces | 🟢 accepted |
 | [ADR-0002](0002-frontend-stack.md) | Frontend stack — Vue 3, TypeScript, Vite, Pinia, Tailwind, PWA | 🟢 accepted |
 | [ADR-0003](0003-backend-stack.md) | Backend stack — Node, TypeScript, Express 5, TypeORM, REST API | 🟢 accepted |
@@ -43,4 +43,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0012](0012-routed-pages-for-expense-settleup-forms.md) | Routed pages for expense and settle‑up forms instead of modals | 🟢 accepted |
 | [ADR-0013](0013-account-name-update-endpoint.md) | Account name update endpoint — PATCH /api/auth/me | 🟢 accepted |
 | [ADR-0014](0014-group-invitation-system.md) | Group invitation system — email-keyed pending invitation with accept/decline lifecycle | 🟢 accepted |
-| [ADR-0015](0015-typescript-7-side-by-side-with-typescript-6.md) | TypeScript 7 side-by-side with TypeScript 6 via npm aliases | 🟡 proposed |
+| [ADR-0015](0015-typescript-7-side-by-side-with-typescript-6.md) | TypeScript 7 side-by-side with TypeScript 6 via npm aliases | 🟢 accepted |
