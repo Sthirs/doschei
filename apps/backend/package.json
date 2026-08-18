@@ -34,7 +34,7 @@
     "@types/jsonwebtoken": "9.0.10",
     "@types/node": "26.2.0",
     "@types/supertest": "7.2.1",
-    "@typescript/native": "npm:typescript@^7.0.2",
+    "@typescript/native": "npm:typescript@7.0.2",
     "eslint": "10.8.1",
     "eslint-config-prettier": "10.1.8",
     "oauth2-mock-server": "9.1.0",
@@ -42,7 +42,7 @@
     "supertest": "7.2.2",
     "ts-node": "10.9.2",
     "tsx": "4.23.12",
-    "typescript": "npm:@typescript/typescript6@~6.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "8.67.0",
     "vitest": "4.1.10"
   }
