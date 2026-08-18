@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0](https://github.com/Sthirs/doschei/compare/v1.1.0...v1.2.0) (2026-08-18)
+
+
+### Features
+
+* add group invitation ([#68](https://github.com/Sthirs/doschei/issues/68)) ([3716612](https://github.com/Sthirs/doschei/commit/37166120acda86d7b9392df31aaf0fd5192b2d15))
+* new UI ([#65](https://github.com/Sthirs/doschei/issues/65)) ([6eb9357](https://github.com/Sthirs/doschei/commit/6eb9357edffc19b9d302dc52c5a033268d89183a))
+* new UI for account view ([#67](https://github.com/Sthirs/doschei/issues/67)) ([6085433](https://github.com/Sthirs/doschei/commit/608543355acfae8d060326b8fb79132731e0e103))
+* new UI for login ([#71](https://github.com/Sthirs/doschei/issues/71)) ([a8373ee](https://github.com/Sthirs/doschei/commit/a8373ee4f563e0cad96fca2fe041e41762cff931))
+
+
+### Bug Fixes
+
+* **deps:** pin dependencies ([#69](https://github.com/Sthirs/doschei/issues/69)) ([ccfd6d7](https://github.com/Sthirs/doschei/commit/ccfd6d75bd805f4901651e736fcba1133f46079e))
+* **deps:** update minor and patch updates ([#64](https://github.com/Sthirs/doschei/issues/64)) ([e21e2c8](https://github.com/Sthirs/doschei/commit/e21e2c8ac89c3350c8e0c317b355ad4950091cd4))
+
 ## [1.1.0](https://github.com/Sthirs/doschei/compare/v1.0.0...v1.1.0) (2026-08-02)
 
 
