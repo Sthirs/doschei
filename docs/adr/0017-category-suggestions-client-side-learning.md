@@ -44,12 +44,17 @@ existing expense rows, and nothing learned across groups.
 
 Mechanics of the decision:
 
-- The engine (`lib/categorySuggest.ts`) is a pure, deterministic, two-stage
+- The engine (`lib/categorySuggest.ts`) is a pure, deterministic, three-stage
   matcher over `{description, category}` pairs: Stage 1 exact normalized-description
   match returning the dominant category at ≥ 60% share with strict dominance;
   Stage 2 token-overlap scoring (Jaccard × query-token recall) requiring an
-  absolute minimum score and dominance over the runner-up. All thresholds are
-  exported constants, tunable without architectural change.
+  absolute minimum score and dominance over the runner-up; Stage 3
+  (taxonomy-name fallback): when Stages 1–2 yield no qualifying candidate,
+  rank every non-generic category label (`Other` and `General` excluded as
+  ambiguous) by how completely its words appear in the entered description —
+  full-name matches first, partial ones (e.g. `gas` → Gas/Fuel, `dining` →
+  Dining Out) ranked by coverage ratio, ties broken deterministically by key.
+  All thresholds are exported constants, tunable without architectural change.
 - Settlement entries and unknown category keys are excluded from the corpus.
 - Suggestions apply silently and only fill the still-default slot
   (`DEFAULT_CATEGORY_KEY`) while the user has not picked a category themselves;
@@ -99,7 +104,10 @@ Mechanics of the decision:
   members categorize expenses; matching quality is bounded by substring/token
   heuristics (no semantic understanding — searching "dinner" will not find
   "Dining Out"); all members of a group get identical suggestions (no
-  personalization); thresholds may need tuning against real usage.
+  personalization); thresholds may need tuning against real usage; partial
+  name matching can mis-fire on coincidental word overlaps (e.g. `out`);
+  impact is bounded because suggestions only fill the still-default slot and
+  never override a manual pick.
 - Follow-ups: a future cross-group or server-side ranking capability must
   **supersede** this ADR (never edit it); threshold tuning is expected to happen
   in the exported constants first, and only escalate to an architecture change if

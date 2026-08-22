@@ -9,7 +9,8 @@ import { CATEGORY_BY_KEY } from '@/lib/categories';
  * the category is still the default and was not manually chosen in the form,
  * and never overrides a manual selection."
  *
- * Pipeline:
+ * Pipeline (history-first; Stage 3 only ever runs when Stages 1–2 produce no
+ * qualifying candidate):
  *   Stage 1 (exact): when the normalised description matches prior entries,
  *     return the dominant category if it owns a strict majority of the exact
  *     matches (`share >= SUGGESTION_MIN_EXACT_SHARE` and `bestCount` strictly
@@ -19,9 +20,20 @@ import { CATEGORY_BY_KEY } from '@/lib/categories';
  *     (`sim * weight`), aggregate per category, and return the highest-scoring
  *     category that clears both `SUGGESTION_MIN_FUZZY_SCORE` and
  *     `SUGGESTION_DOMINANCE_RATIO` over the runner-up.
+ *   Stage 3 (taxonomy-name fallback): when Stages 1–2 yield no qualifying
+ *     candidate, rank every non-generic category label (`other` and `general`
+ *     are excluded as ambiguous across families) by how completely its
+ *     tokens appear in the entered description — labels whose every token is
+ *     covered are full matches (confidence 1), and partial matches (e.g.
+ *     `'gas'` → Gas/Fuel, `'dining'` → Dining Out) are qualified by how
+ *     completely the matched label is covered (ratio of covered label
+ *     tokens to total label tokens). Ties are broken deterministically by
+ *     category key (ASC).
  *
- * Settlement entries are excluded from the corpus because they describe money
- * movement between members, not the subject of an expense. Categories not in
+ * Stage 3 is intentionally subordinate to Stages 1–2: any history that
+ * surfaces a category key always wins over a name-only match. Settlement
+ * entries are excluded from the corpus because they describe money movement
+ * between members, not the subject of an expense. Categories not in
  * `CATEGORY_BY_KEY` are likewise dropped so stale or hand-typed keys cannot
  * pollute the ranking.
  *
@@ -79,9 +91,73 @@ const compareEntriesByValueThenKey = (
 };
 
 /**
+ * Generic category labels (normalised) that are intentionally excluded from
+ * Stage 3 because they are ambiguous across families — picking them via the
+ * name-fallback would be a coin flip.
+ */
+const GENERIC_LABEL_NORMALIZED = new Set(['other', 'general']);
+
+/**
+ * Stage 3 — taxonomy-name fallback. Scans every category in
+ * `CATEGORY_BY_KEY` and ranks non-generic labels by how completely their
+ * tokens are covered by the query tokens (`qTokens`, already computed for
+ * Stage 2). A label qualifies whenever at least one of its tokens appears
+ * in the query; full-name matches (every label token covered) naturally
+ * outrank partial ones via the coverage ratio, and ties are broken by
+ * category key (ASC) so the result is deterministic. Confidence is the
+ * share of the label that the query explains — for a full match this is 1,
+ * for a partial match it is `covered / labelTokens.length` and therefore
+ * ≤ 1. The old exact-name 3a branch is subsumed: an exact normalised
+ * match always yields ratio 1 (every label token is present in the query)
+ * under the unified rule.
+ */
+const suggestCategoryByName = (
+  qTokens: readonly string[],
+): CategorySuggestion | null => {
+  if (qTokens.length === 0) return null;
+
+  const qTokenSet = new Set(qTokens);
+
+  type Qualifier = { key: string; coveredTokenCount: number; ratio: number };
+  const qualifiers: Qualifier[] = [];
+  for (const def of CATEGORY_BY_KEY.values()) {
+    if (GENERIC_LABEL_NORMALIZED.has(normalizeDescription(def.label))) continue;
+    const labelTokens = tokenize(def.label);
+    if (labelTokens.length === 0) continue;
+    let covered = 0;
+    for (const t of labelTokens) {
+      if (qTokenSet.has(t)) covered++;
+    }
+    if (covered >= 1) {
+      qualifiers.push({
+        key: def.key,
+        coveredTokenCount: covered,
+        ratio: covered / labelTokens.length,
+      });
+    }
+  }
+
+  if (qualifiers.length === 0) return null;
+
+  qualifiers.sort((a, b) => {
+    if (b.ratio !== a.ratio) return b.ratio - a.ratio;
+    if (b.coveredTokenCount !== a.coveredTokenCount) {
+      return b.coveredTokenCount - a.coveredTokenCount;
+    }
+    if (a.key < b.key) return -1;
+    if (a.key > b.key) return 1;
+    return 0;
+  });
+
+  const winner = qualifiers[0];
+  return { key: winner.key, confidence: winner.ratio };
+};
+
+/**
  * Suggests the most likely expense category for a description, learning from
  * the user's prior categorised expenses in the group. Returns `null` when no
- * candidate clears the configured thresholds.
+ * candidate clears the configured thresholds and the category taxonomy itself
+ * yields no name match either.
  */
 export const suggestCategory = (
   description: string,
@@ -117,8 +193,10 @@ export const suggestCategory = (
   }
 
   // Stage 2: fuzzy token-based scoring.
-  const q = new Set(tokenize(norm));
-  if (q.size === 0) return null;
+  // Compute qTokens once and reuse in Stage 3 — do not early-return before
+  // Stage 3 has had a chance to run.
+  const qTokens = tokenize(norm);
+  const q = new Set(qTokens);
 
   const qSize = q.size;
   const scores = new Map<string, number>();
@@ -135,20 +213,24 @@ export const suggestCategory = (
     scores.set(entry.category, (scores.get(entry.category) ?? 0) + sim * weight);
   }
 
-  if (scores.size === 0) return null;
+  // Only emit a Stage 2 winner when there is at least one scored category
+  // AND it clears both thresholds; otherwise fall through to Stage 3.
+  if (scores.size > 0) {
+    const ranked = [...scores.entries()].sort(compareEntriesByValueThenKey);
+    const bestKey = ranked[0][0];
+    const bestScore = ranked[0][1];
+    const runnerUpScore = ranked.length > 1 ? ranked[1][1] : 0;
 
-  const ranked = [...scores.entries()].sort(compareEntriesByValueThenKey);
-  const bestKey = ranked[0][0];
-  const bestScore = ranked[0][1];
-  const runnerUpScore = ranked.length > 1 ? ranked[1][1] : 0;
-
-  if (
-    bestScore >= SUGGESTION_MIN_FUZZY_SCORE &&
-    bestScore >= SUGGESTION_DOMINANCE_RATIO * runnerUpScore
-  ) {
-    const confidence = Math.min(1, bestScore / (bestScore + runnerUpScore));
-    return { key: bestKey, confidence };
+    if (
+      bestScore >= SUGGESTION_MIN_FUZZY_SCORE &&
+      bestScore >= SUGGESTION_DOMINANCE_RATIO * runnerUpScore
+    ) {
+      const confidence = Math.min(1, bestScore / (bestScore + runnerUpScore));
+      return { key: bestKey, confidence };
+    }
   }
 
-  return null;
+  // Stage 3: taxonomy-name fallback (history-first priority already enforced
+  // by the Stages 1–2 short-circuits above).
+  return suggestCategoryByName(qTokens);
 };

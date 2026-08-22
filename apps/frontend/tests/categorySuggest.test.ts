@@ -84,18 +84,18 @@ describe('suggestCategory', () => {
     expect(result).toBeNull();
   });
 
-  it('(e) ignores settlement entries from the corpus', () => {
+  it('(e) ignores settlement entries from the corpus (Stage 3 still matches on taxonomy name)', () => {
     const result = suggestCategory('Venice train tickets', [
       entry('Venice train tickets', 'bus-train', 'SETTLEMENT'),
     ]);
-    expect(result).toBeNull();
+    expect(result).toEqual({ key: 'bus-train', confidence: 0.5 });
   });
 
-  it('(f) drops corpus entries whose category is not a known key', () => {
+  it('(f) drops corpus entries whose category is not a known key (Stage 3 still matches on taxonomy name)', () => {
     const result = suggestCategory('Venice train tickets', [
       entry('Venice train tickets', 'nonexistent-key'),
     ]);
-    expect(result).toBeNull();
+    expect(result).toEqual({ key: 'bus-train', confidence: 0.5 });
   });
 
   it('(g) fuzzy match picks the dominant category with high confidence', () => {
@@ -121,5 +121,76 @@ describe('suggestCategory', () => {
       entry('funny times', 'general'),
     ]);
     expect(result).toBeNull();
+  });
+
+  it('(j) Stage 3a: exact category name with empty history returns the matching category', () => {
+    const result = suggestCategory('Groceries', []);
+    expect(result).toEqual({ key: 'groceries', confidence: 1 });
+  });
+
+  it('(k) Stage 3a: exact name match survives case folding and whitespace collapse', () => {
+    const result = suggestCategory('  DINING   OUT ', []);
+    expect(result).toEqual({ key: 'dining-out', confidence: 1 });
+  });
+
+  it('(l) Stage 3: partial name match yields full confidence when the entire label is covered', () => {
+    const result = suggestCategory('groceries for the weekend', []);
+    expect(result).not.toBeNull();
+    expect(result?.key).toBe('groceries');
+    expect(result?.confidence).toBe(1);
+  });
+
+  it('(m) PRIORITY: a Stage 2 history match always beats a Stage 3 name match', () => {
+    const result = suggestCategory('groceries', [
+      entry('Groceries at the bar', 'dining-out'),
+    ]);
+    expect(result).not.toBeNull();
+    expect(result?.key).toBe('dining-out');
+  });
+
+  it('(m-sharp) the same query with EMPTY history falls through to Stage 3, proving the fallback exists', () => {
+    const result = suggestCategory('groceries', []);
+    expect(result).toEqual({ key: 'groceries', confidence: 1 });
+  });
+
+  it('(n) Stage 3: composite category label whose every token is covered yields confidence 1', () => {
+    const result = suggestCategory('new tv phone internet deal', []);
+    expect(result).not.toBeNull();
+    expect(result?.key).toBe('tv-phone-internet');
+    expect(result?.confidence).toBe(1);
+  });
+
+  it('(o) Stage 3: generic labels (`other`, `general`) are excluded from the fallback', () => {
+    expect(suggestCategory('other things', [])).toBeNull();
+    expect(suggestCategory('general store', [])).toBeNull();
+  });
+
+  it('(p) Stage 3: tied full-label coverage is broken deterministically by category key (ASC)', () => {
+    const result = suggestCategory('rent a car', []);
+    expect(result).not.toBeNull();
+    expect(result?.key).toBe('car');
+    expect(result?.confidence).toBe(1);
+  });
+
+  it('(q) Stage 3: partial single-word match ties resolve to the alphabetically-first key', () => {
+    const result = suggestCategory('gas', []);
+    expect(result).toEqual({ key: 'gas-fuel', confidence: 0.5 });
+  });
+
+  it('(r) Stage 3: partial label match resolves the other side of the same composite key', () => {
+    const result = suggestCategory('fuel surcharge', []);
+    expect(result).toEqual({ key: 'gas-fuel', confidence: 0.5 });
+  });
+
+  it('(s) Stage 3: partial multi-word label match yields proportional label coverage', () => {
+    const result = suggestCategory('dining', []);
+    expect(result).toEqual({ key: 'dining-out', confidence: 0.5 });
+  });
+
+  it('(u) Stage 3: sub-threshold history does not block a solid name match', () => {
+    const result = suggestCategory('gas bill', [
+      entry('gas for heating', 'heat-gas'),
+    ]);
+    expect(result).toEqual({ key: 'gas-fuel', confidence: 0.5 });
   });
 });
