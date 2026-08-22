@@ -134,6 +134,15 @@ OAuth sign-in is unaffected by these flags.
 | `AUTH_LOCAL_LOGIN_ENABLED`         | `"true"`  | `POST /api/auth/login` returns 403; the login form is hidden in the UI  |
 | `AUTH_LOCAL_REGISTRATION_ENABLED`  | `"true"`  | `POST /api/auth/register` returns 403                                   |
 
+## Rate limiting
+
+The API applies a global per-IP rate limiter (express-rate-limit) to all /api routes; /api/health is exempt; exceeding the quota returns HTTP 429 with RateLimit/RateLimit-Policy headers (IETF draft-8) and Retry-After; local, Minikube, and CI deployments force a high limit via the chart's devMode toggle so automated tests never hit the cap.
+
+| Variable               | Default  | Effect                                                      |
+|------------------------|----------|-------------------------------------------------------------|
+| `RATE_LIMIT_WINDOW_MS` | `300000` | Length of the per-IP quota window in milliseconds           |
+| `RATE_LIMIT_LIMIT`     | `500`    | Max requests per IP per window; excess gets 429             |
+
 ## Backend integration tests
 
 The backend integration suite targets an already running backend deployment. It does not start a local server process.

@@ -151,6 +151,7 @@ It has a dedicated Dockerfile to build the backend as a microservice that can be
 The business logic is separated from the API routes and the database access layer, following clean architecture principles.
 It uses ESLint and Prettier to maintain a consistent code style and catch potential issues early in the development process.
 It uses Vitest for unit testing and Supertest for integration testing to ensure the quality of the code and the functionality of the API.
+It protects the API with a global per-IP rate limiter based on `express-rate-limit`, allowing 500 requests per IP per 5-minute window by default, configurable via the `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_LIMIT` environment variables and Helm values, with the health endpoint exempt.
 
 ### Database
 
