@@ -9,6 +9,9 @@ on:
       - "*"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 # Cancel superseded runs of the same ref so rapid pushes don't queue duplicate
 # full pipelines. Main-branch runs are never cancelled mid-flight.
 concurrency:
