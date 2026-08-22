@@ -83,20 +83,20 @@ test('expense lifecycle: create → edit every field → delete', async ({ authe
   await groupDetailPage.fillDescription('Groceries for trip');
   // 16. Edit amount.
   await groupDetailPage.fillAmount('20.00');
-  // 17. Edit split mode to EQUAL (toggles from PERCENT → EQUAL).
+  // 17. Edit paid-by: change from Alice Rossi to Demo User.
+  await groupDetailPage.setPaidBy('Demo User');
+  // 18. Edit split mode to EQUAL (toggles from PERCENT → EQUAL).
   await groupDetailPage.setEqualSplit();
-  // 18. Edit date.
+  // 19. Edit date.
   await groupDetailPage.setDate('2024-02-20');
-  // 19. Save.
+  // 20. Save.
   await groupDetailPage.saveExpense();
   await expect(page).toHaveURL(new RegExp(`/groups/${groupId}$`));
-  // 20. Assert the list row now shows the edited values. Paid-by is intentionally
-  // not editable (the edit form and PATCH endpoint omit paidByUserId), so it
-  // stays 'Alice Rossi' from the create step.
+  // 21. Assert the list row now shows the edited values, including the new payer.
   await groupDetailPage.expectExpenseRowVisible({
     description: 'Groceries for trip',
     amount: '20.00',
-    paidByName: 'Alice Rossi',
+    paidByName: 'Demo User',
   });
 
   // --- DELETE step ---

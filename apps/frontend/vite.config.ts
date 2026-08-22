@@ -20,13 +20,18 @@ export default defineConfig({
         // must reach the backend to issue the OAuth redirect to the IdP).
         navigateFallbackDenylist: [/^\/api\//],
       },
-      includeAssets: ['favicon.svg', 'logo.svg', 'logo-192.png', 'logo-512.png'],
+      includeAssets: [
+        'favicon.svg',
+        'logo.svg',
+        'logo-192.png',
+        'logo-512.png',
+      ],
       manifest: {
         name: 'Do Schèi',
         short_name: 'Do Schèi',
         description: 'Manage and share your expenses',
-        theme_color: '#111936',
-        background_color: '#f8fafc',
+        theme_color: '#161320',
+        background_color: '#161320',
         display: 'standalone',
         start_url: '/',
         scope: '/',

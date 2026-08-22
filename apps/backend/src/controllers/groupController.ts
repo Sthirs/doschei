@@ -165,11 +165,12 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
 export const updateExpense = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
   const groupId = request.params.id as string;
   const expenseId = request.params.expenseId as string;
-  const { description, amount, date, category, splits } = request.body as {
+  const { description, amount, date, category, paidByUserId, splits } = request.body as {
     description?: unknown;
     amount?: unknown;
     date?: unknown;
     category?: unknown;
+    paidByUserId?: unknown;
     splits?: unknown;
   };
   const normalizedCategory = typeof category === 'string' ? category.trim() : undefined;
@@ -199,6 +200,11 @@ export const updateExpense = async (request: AuthenticatedRequest, response: Res
     return;
   }
 
+  if (paidByUserId !== undefined && typeof paidByUserId !== 'string') {
+    response.status(400).json({ message: 'paidByUserId must be a string.' });
+    return;
+  }
+
   try {
     const expense = await groupService.updateExpenseForGroup(
       groupId,
@@ -208,6 +214,7 @@ export const updateExpense = async (request: AuthenticatedRequest, response: Res
         amount: typeof amount === 'number' ? amount : undefined,
         date: typeof date === 'string' ? date : undefined,
         category: normalizedCategory && normalizedCategory.length > 0 ? normalizedCategory : undefined,
+        paidByUserId: typeof paidByUserId === 'string' && paidByUserId.trim().length > 0 ? paidByUserId.trim() : undefined,
         splits,
       },
       request.auth!.userId

@@ -58,7 +58,7 @@ onBeforeUnmount(() => {
 
 <template>
   <main
-    class="flex flex-1 min-h-0 flex-col gap-8 overflow-y-auto bg-[#13121B] px-5 pt-8 pb-8 mx-auto w-full max-w-5xl"
+    class="flex flex-1 min-h-0 flex-col sm:gap-8 gap-4 overflow-y-auto bg-[#13121B] px-5 pt-8 pb-8 mx-auto w-full max-w-5xl"
   >
     <!-- Topbar: back arrow -->
     <Teleport to="#topbar-leading">
@@ -82,15 +82,14 @@ onBeforeUnmount(() => {
     <div class="flex flex-col items-center gap-4">
       <div
         data-testid="account-avatar"
-        class="flex h-32 w-32 items-center justify-center rounded-full border-2 border-[#C6BFFF]/20 bg-[#2A2932] text-5xl font-bold text-[#E4E1ED] shadow-lg"
+        class="flex sm:h-32 sm:w-32 h-28 w-28 items-center justify-center rounded-full border-2 border-[#C6BFFF]/20 bg-[#2A2932] sm:text-5xl text-4xl font-bold text-[#E4E1ED] shadow-lg"
       >
         {{ userInitial }}
       </div>
 
       <h2
         data-testid="account-name-heading"
-        class="text-center font-bold text-[#E4E1ED] tracking-[-0.025em] text-[48px]"
-        style="line-height: 56px"
+        class="text-center font-bold text-[#E4E1ED] tracking-[-0.025em] sm:text-[48px] sm:leading-[56px] text-3xl"
       >
         {{ name.trim() || '—' }}
       </h2>
@@ -159,7 +158,7 @@ onBeforeUnmount(() => {
     <button
       type="button"
       aria-label="Sign out"
-      class="mx-auto mt-8 flex items-center gap-2 rounded-full border border-transparent px-8 py-4 font-medium text-[rgba(255,180,171,0.8)] transition hover:bg-[#FFB4AB]/10"
+      class="mx-auto sm:mt-8 mt-4 flex items-center gap-2 rounded-full border border-transparent px-8 py-4 font-medium text-[rgba(255,180,171,0.8)] transition hover:bg-[#FFB4AB]/10"
       @click="logout"
     >
       <svg
