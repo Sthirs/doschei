@@ -38,6 +38,14 @@ export class GroupDetailPage {
   // aria-label of the form "Category: <label>". CategoryPicker is reused by
   // ExpenseFormView, so the same selector works on the routed form.
   private categoryPicker = this.page.getByRole('button', { name: /^Category:/ });
+  // CategoryPicker.vue:160, :252 — both the desktop popover and the mobile
+  // sheet expose a text input with aria-label="Search categories". The desktop
+  // popover auto-focuses this input on open (CategoryPicker.vue:53-56).
+  private categorySearchInput = this.page.getByRole('textbox', { name: 'Search categories' });
+  // CategoryPicker.vue:106-113 — desktop popover aria-label="Select category".
+  // The mobile sheet (CategoryPicker.vue:165-178) uses the same aria-label so
+  // the locator works on both layouts.
+  private categoryDialog = this.page.getByRole('dialog', { name: 'Select category' });
 
   // SettleUpView.vue:278, :285 — the UserPicker instances are identified by
   // their trigger aria-label "Select who paid" (UserPicker.vue:84). There are
@@ -115,11 +123,43 @@ export class GroupDetailPage {
 
   async setCategory(label: string) {
     await this.categoryPicker.click();
-    // CategoryPicker.vue:106-113 — desktop popover aria-label="Select category".
-    // The mobile sheet (CategoryPicker.vue:165-178) uses the same aria-label
-    // so the locator works on both layouts.
-    await this.page.getByRole('dialog', { name: 'Select category' })
-        .getByRole('button', { name: label }).click();
+    await this.categoryDialog.getByRole('button', { name: label }).click();
+  }
+
+  // CategoryPicker.vue:79-87 — Enter on the search input with a non-empty
+  // query calls `select(filteredGroups[0].entries[0].key)` which emits
+  // update:modelValue and closes the picker. The grid-click helper
+  // `setCategory` above is the legacy path; this is the new free-text path.
+  async searchAndPickCategory(query: string) {
+    await this.categoryPicker.click();
+    await expect(this.categoryDialog).toBeVisible();
+    await this.categorySearchInput.fill(query);
+    await this.categorySearchInput.press('Enter');
+    // `select()` calls `close()` so the dialog is removed on success.
+    await expect(this.categoryDialog).not.toBeVisible({ timeout: 5000 });
+  }
+
+  async getCategoryLabel(): Promise<string> {
+    const raw = (await this.categoryPicker.getAttribute('aria-label')) ?? '';
+    const match = /^Category:\s*(.+)$/.exec(raw);
+    return match ? match[1] : raw;
+  }
+
+  async expectCategoryLabel(label: string) {
+    await expect(this.categoryPicker).toHaveAttribute('aria-label', `Category: ${label}`);
+  }
+
+  // ExpenseFormView.vue:30-34 — description-driven auto-selection debounces
+  // 300ms before flipping the category, so a 1000ms poll ceiling leaves
+  // comfortable margin for Vue render + commit.
+  async expectCategoryLabelEventually(label: string, timeoutMs = 1000) {
+    await expect
+        .poll(() => this.categoryPicker.getAttribute('aria-label'), {
+          message: `category trigger aria-label`,
+          timeout: timeoutMs,
+          intervals: [50, 100, 100],
+        })
+        .toBe(`Category: ${label}`);
   }
 
   async fillDescription(text: string) {
