@@ -44,4 +44,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0013](0013-account-name-update-endpoint.md) | Account name update endpoint — PATCH /api/auth/me | 🟢 accepted |
 | [ADR-0014](0014-group-invitation-system.md) | Group invitation system — email-keyed pending invitation with accept/decline lifecycle | 🟢 accepted |
 | [ADR-0015](0015-typescript-7-side-by-side-with-typescript-6.md) | TypeScript 7 side-by-side with TypeScript 6 via npm aliases | 🟢 accepted |
-| [ADR-0016](0016-api-rate-limiting.md) | Global API rate limiting with express-rate-limit | 🟡 proposed |
+| [ADR-0016](0016-api-rate-limiting.md) | Global API rate limiting with express-rate-limit | 🟢 accepted |

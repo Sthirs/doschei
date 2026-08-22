@@ -1,6 +1,6 @@
 # ADR-0016: Global API rate limiting with express-rate-limit
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-08-22
 - **Deciders:** Sthirs
 
