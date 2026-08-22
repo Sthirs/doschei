@@ -84,6 +84,10 @@ spec:
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "AUTH_LOCAL_LOGIN_ENABLED") | quote }}
             - name: AUTH_LOCAL_REGISTRATION_ENABLED
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "AUTH_LOCAL_REGISTRATION_ENABLED") | quote }}
+            - name: RATE_LIMIT_WINDOW_MS
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "RATE_LIMIT_WINDOW_MS") | quote }}
+            - name: RATE_LIMIT_LIMIT
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "RATE_LIMIT_LIMIT") | quote }}
             - name: CORS_ORIGIN
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "CORS_ORIGIN") | quote }}
             - name: DB_HOSTNAME

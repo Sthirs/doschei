@@ -46,6 +46,7 @@ dev
 {{- else if eq $key "SEED_ON_STARTUP" -}}true
 {{- else if eq $key "JWT_SECRET" -}}change-me-dev-secret
 {{- else if eq $key "FRONTEND_URL" -}}{{ printf "http://%s" $root.Values.ingress.host }}
+{{- else if eq $key "RATE_LIMIT_LIMIT" -}}1000000
 {{- else -}}{{- index $root.Values.backend.env $key -}}
 {{- end -}}
 {{- else -}}
