@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/Sthirs/doschei/compare/v1.2.0...v1.3.0) (2026-08-22)
+
+
+### Features
+
+* add rate limiter ([#74](https://github.com/Sthirs/doschei/issues/74)) ([8894a74](https://github.com/Sthirs/doschei/commit/8894a74c5e10081cc635e90723d3bfc861c2b4fa))
+
 ## [1.2.0](https://github.com/Sthirs/doschei/compare/v1.1.0...v1.2.0) (2026-08-18)
 
 
