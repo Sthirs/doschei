@@ -243,7 +243,7 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="px-2 py-2">
-            <div class="sticky top-0 z-10 border-b border-white/10 bg-[#1E1E26] px-2 py-2">
+            <div class="sticky top-0 z-10 bg-[#1E1E26] px-2 py-2">
               <input
                 ref="mobileSearchInputRef"
                 v-model="searchQuery"
