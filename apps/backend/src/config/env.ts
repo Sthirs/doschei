@@ -29,6 +29,32 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => value === 'true'),
+  RATE_LIMIT_WINDOW_MS: z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value.trim() === '') return 300000;
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 2147483647) {
+        throw new Error(
+          'RATE_LIMIT_WINDOW_MS must be a positive integer <= 2147483647 (MemoryStore setInterval cap)',
+        );
+      }
+      return parsed;
+    }),
+  RATE_LIMIT_LIMIT: z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value.trim() === '') return 500;
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new Error(
+          'RATE_LIMIT_LIMIT must be a positive integer (> 0); values <= 0 block all traffic in express-rate-limit >= 7',
+        );
+      }
+      return parsed;
+    }),
   CORS_ORIGIN: z.string().default('http://doschei.127.0.0.1.nip.io'),
   OAUTH_CONFIG: z
     .string()
