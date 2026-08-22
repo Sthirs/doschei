@@ -90,6 +90,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - The user interface supports English and Italian. The application should use the user's saved language preference when available, and fall back to English otherwise.
 - Categories must be represented internally by stable keys, while labels are localized in the frontend.
 - All group members share the same permissions for creating, editing, deleting, and exporting expenses, as well as for recording settle-up payments.
+- Editing an expense allows changing any of its fields, including its description, amount, date, category, payer, and split details.
 - A settle-up payment is represented as a special expense entry so that it appears in the same ledger and affects balances consistently.
 - CSV export must include both regular expenses and settle-up entries that are currently visible in the group ledger.
 - Deleting an expense removes it from active balances immediately; any activity entry generated for the deletion remains part of the activity history.

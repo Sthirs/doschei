@@ -228,9 +228,14 @@ describe('ExpenseFormView', () => {
     const textInputs = wrapper.findAll('input[type="text"]');
     expect((textInputs[0].element as HTMLInputElement).value).toBe('Old');
 
-    // Edit mode does NOT show the "Paid by" chip section — the label is
-    // rendered as a <span> with that exact text in create mode.
-    expect(wrapper.findAll('span').some((s) => s.text() === 'Paid by')).toBe(false);
+    // Edit mode DOES show the "Paid by" section — the label is rendered as a
+    // <span> with that exact text, and member buttons are present.
+    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    expect(paidByLabel).toBeDefined();
+    // The Paid-by section renders a button per group member (2 members in test).
+    const paidBySection = paidByLabel!.element.parentElement!;
+    const paidByButtons = Array.from(paidBySection.querySelectorAll('button'));
+    expect(paidByButtons.length).toBe(2);
 
     // Edit the description and submit.
     await textInputs[0].setValue('New');
@@ -243,7 +248,10 @@ describe('ExpenseFormView', () => {
 
     expect(api.patch).toHaveBeenCalledWith(
       '/groups/g1/expenses/e1',
-      expect.objectContaining({ description: 'New' }),
+      expect.objectContaining({
+        description: 'New',
+        paidByUserId: expect.any(String),
+      }),
     );
     expect(router.currentRoute.value.name).toBe('group-detail');
   });

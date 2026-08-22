@@ -324,6 +324,87 @@ describe('Expenses Endpoints', () => {
       expect(response.status).toBe(400);
       expect(response.body.message).toMatch(/Category must be one of the supported values/i);
     });
+
+    it('changes the payer when paidByUserId refers to another group member', async () => {
+      const author = await registerUser('expense-patch-paidby-author');
+      const otherMember = await registerUser('expense-patch-paidby-other');
+
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('expenses-patch-paidby-group') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      const inviteRes = await createJsonRequest<{ invitation: { id: string } }>(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({ email: otherMember.body.user.email }),
+      });
+      await createJsonRequest(`/api/groups/${groupId}/invitations/${inviteRes.body.invitation.id}/accept`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${otherMember.body.token}` },
+      });
+
+      const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          description: 'Groceries',
+          amount: 40,
+          splits: [{ userId: author.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
+      });
+      const expenseId = expRes.body.expense.id;
+
+      const response = await createJsonRequest<{ expense: { id: string; paidByUserId: string; paidByName: string } }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          paidByUserId: otherMember.body.user.id,
+          splits: [{ userId: author.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.expense.paidByUserId).toBe(otherMember.body.user.id);
+      expect(response.body.expense.paidByName).toBe(otherMember.body.user.displayName);
+    });
+
+    it('rejects a paidByUserId that is not a group member', async () => {
+      const author = await registerUser('expense-patch-paidby-reject-author');
+      const outsider = await registerUser('expense-patch-paidby-reject-outsider');
+
+      const groupRes = await createJsonRequest<{ group: { id: string } }>('/api/groups', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({ name: uniqueValue('expenses-patch-paidby-reject-group') }),
+      });
+      const groupId = groupRes.body.group.id;
+
+      const expRes = await createJsonRequest<{ expense: { id: string } }>(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          description: 'Concert',
+          amount: 80,
+          splits: [{ userId: author.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
+      });
+      const expenseId = expRes.body.expense.id;
+
+      const response = await createJsonRequest<{ message: string }>(`/api/groups/${groupId}/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${author.body.token}` },
+        body: JSON.stringify({
+          paidByUserId: outsider.body.user.id,
+          splits: [{ userId: author.body.user.id, shareType: 'PERCENT', shareValue: 100 }],
+        }),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/not a member of this group/i);
+    });
   });
 
   describe('DELETE /api/groups/:id/expenses/:expenseId', () => {

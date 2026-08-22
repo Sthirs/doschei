@@ -131,22 +131,27 @@ export class GroupDetailPage {
   }
 
   async setPaidBy(displayName: string) {
-    // ExpenseFormView.vue:343-375 — member chips under a "Paid by" label.
+    // ExpenseFormView.vue:386-419 — member chips under a "Paid by" label.
     // Scope to that section so the identically-shaped "Split with" chips
-    // are not matched.
+    // are not matched. The button label now shows only the first word of
+    // the display name (plus the avatar letter), so match on the first word.
+    const firstWord = displayName.trim().split(/\s+/)[0];
     await this.page
         .getByText('Paid by', { exact: true })
         .locator('..')
-        .getByRole('button', { name: displayName })
+        .getByRole('button', { name: new RegExp(firstWord) })
         .click();
   }
 
   private splitMemberButton(displayName: string) {
-    // ExpenseFormView.vue:381-415 — toggle chips under a "Split with" label.
+    // ExpenseFormView.vue:424-459 — toggle chips under a "Split with" label.
+    // The button label now shows only the first word of the display name
+    // (plus the avatar letter), so match on the first word.
+    const firstWord = displayName.trim().split(/\s+/)[0];
     return this.page
         .getByText('Split with', { exact: true })
         .locator('..')
-        .getByRole('button', { name: displayName });
+        .getByRole('button', { name: new RegExp(firstWord) });
   }
 
   async selectSplitMember(displayName: string) {
@@ -283,7 +288,8 @@ export class GroupDetailPage {
   }
 
   async expectNoExpenses() {
-    await expect(this.page.getByText('No expenses yet.')).toBeVisible();
+    // GroupDetailView.vue:583 — empty state renders without a trailing period.
+    await expect(this.page.getByText('No expenses yet')).toBeVisible();
   }
 
   // ---------------------------------------------------------------------------

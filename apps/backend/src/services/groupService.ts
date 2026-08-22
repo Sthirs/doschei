@@ -428,6 +428,7 @@ export class GroupService {
       amount?: number;
       date?: string;
       category?: string;
+      paidByUserId?: string;
       splits?: unknown;
     },
     userId: string,
@@ -445,6 +446,15 @@ export class GroupService {
 
     if (expense.kind === 'SETTLEMENT') {
       throw new Error('Settlements must be updated through the settlements endpoint.');
+    }
+
+    let resolvedPaidByUser: User | undefined;
+    if (updates.paidByUserId !== undefined) {
+      const paidByUser = group.members.find((member) => member.id === updates.paidByUserId);
+      if (!paidByUser) {
+        throw new Error('The selected user is not a member of this group.');
+      }
+      resolvedPaidByUser = paidByUser;
     }
 
     // `splits` is always required on PATCH. The previous splits are deleted
@@ -484,6 +494,9 @@ export class GroupService {
     }
     if (updates.category !== undefined) {
       expense.category = updates.category;
+    }
+    if (resolvedPaidByUser !== undefined) {
+      expense.paidBy = resolvedPaidByUser;
     }
 
     const savedExpense = await AppDataSource.transaction(async (manager) => {

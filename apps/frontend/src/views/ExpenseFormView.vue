@@ -21,6 +21,11 @@ import { formatEur } from '@/lib/format';
 import { DEFAULT_CATEGORY_KEY } from '@/lib/categories';
 import type { Expense, GroupDetail } from '@/types/group';
 
+// Render only the first word of a member's display name inside the compact
+// member buttons; CSS `truncate` adds "…" if even that is too wide.
+const shortName = (displayName: string): string =>
+  displayName.trim().split(/\s+/)[0] || displayName;
+
 const route = useRoute();
 const router = useRouter();
 
@@ -126,7 +131,7 @@ const isFormValid = computed(() => {
   if (!description.value) return false;
   if (typeof amount.value !== 'number' || amount.value <= 0) return false;
   if (!date.value) return false;
-  if (mode.value === 'create' && !paidByUserId.value) return false;
+  if (!paidByUserId.value) return false;
   if (!split.isSplitValid) return false;
   return split.isSplitValid(numericAmount.value);
 });
@@ -141,7 +146,7 @@ const validationMessage = computed(() => {
   if (!date.value) {
     return 'Please provide a valid description, date, and an amount greater than 0.';
   }
-  if (mode.value === 'create' && !paidByUserId.value) {
+  if (!paidByUserId.value) {
     return 'Please select who paid the expense.';
   }
   if (split.splitErrorMessage) {
@@ -182,7 +187,7 @@ const submit = async () => {
     return;
   }
 
-  if (mode.value === 'create' && !paidByUserId.value) {
+  if (!paidByUserId.value) {
     errorMessage.value = 'Please select who paid the expense.';
     return;
   }
@@ -206,6 +211,7 @@ const submit = async () => {
       amount: amt,
       date: date.value,
       category: category.value,
+      paidByUserId: paidByUserId.value,
       splits: splits.map((s) => ({
         userId: s.userId,
         shareType: s.shareType,
@@ -214,7 +220,6 @@ const submit = async () => {
     };
 
     if (mode.value === 'create') {
-      payload.paidByUserId = paidByUserId.value;
       await api.post(`/groups/${groupId.value}/expenses`, payload);
     } else {
       await api.patch(
@@ -378,19 +383,19 @@ onBeforeUnmount(() => {
               />
             </div>
 
-            <!-- Paid by (create mode only) -->
-            <div v-if="mode === 'create'" class="flex flex-col gap-2">
+            <!-- Paid by -->
+            <div class="flex flex-col gap-2">
               <span
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
                 style="color: #c8c4d7"
                 >Paid by</span
               >
-              <div class="flex flex-wrap gap-2">
+              <div class="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
                 <button
                   v-for="member in group.members"
                   :key="member.id"
                   type="button"
-                  class="flex flex-col items-center gap-2 rounded-xl px-3 py-2 transition"
+                  class="flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-2 transition sm:w-20 sm:shrink-0"
                   :class="
                     paidByUserId === member.id
                       ? 'bg-[#6554E7]/20 ring-1 ring-[#6554E7]'
@@ -406,8 +411,8 @@ onBeforeUnmount(() => {
                     style="color: #c6bfff"
                     >{{ member.displayName.charAt(0).toUpperCase() }}</span
                   >
-                  <span class="text-xs" style="color: #e5e0ed">{{
-                    member.displayName
+                  <span class="max-w-full truncate text-xs" style="color: #e5e0ed">{{
+                    shortName(member.displayName)
                   }}</span>
                 </button>
               </div>
@@ -423,12 +428,12 @@ onBeforeUnmount(() => {
                 style="color: #c8c4d7"
                 >Split with</span
               >
-              <div class="flex flex-wrap gap-2">
+              <div class="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
                 <button
                   v-for="member in group.members"
                   :key="member.id"
                   type="button"
-                  class="flex flex-col items-center gap-2 rounded-xl px-3 py-2 transition"
+                  class="flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-2 transition sm:w-20 sm:shrink-0"
                   :class="
                     split.selectedSplitUserIds.includes(member.id)
                       ? 'bg-[#6554E7]/20 ring-1 ring-[#6554E7]'
@@ -446,8 +451,8 @@ onBeforeUnmount(() => {
                     style="color: #c6bfff"
                     >{{ member.displayName.charAt(0).toUpperCase() }}</span
                   >
-                  <span class="text-xs" style="color: #e5e0ed">{{
-                    member.displayName
+                  <span class="max-w-full truncate text-xs" style="color: #e5e0ed">{{
+                    shortName(member.displayName)
                   }}</span>
                 </button>
               </div>
