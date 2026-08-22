@@ -19,12 +19,19 @@ import CategoryPicker from '@/components/CategoryPicker.vue';
 import DateTimePicker from '@/components/DateTimePicker.vue';
 import { formatEur } from '@/lib/format';
 import { DEFAULT_CATEGORY_KEY } from '@/lib/categories';
+import { suggestCategory } from '@/lib/categorySuggest';
 import type { Expense, GroupDetail } from '@/types/group';
 
 // Render only the first word of a member's display name inside the compact
 // member buttons; CSS `truncate` adds "…" if even that is too wide.
 const shortName = (displayName: string): string =>
   displayName.trim().split(/\s+/)[0] || displayName;
+
+// Debounce window for description-driven category auto-selection: the user has
+// to pause typing for this long before we ask the suggestion engine to pick a
+// category. Keep it short enough to feel instant, long enough to coalesce
+// multi-keystroke inputs into a single lookup.
+const DESCRIPTION_SUGGEST_DEBOUNCE_MS = 300;
 
 const route = useRoute();
 const router = useRouter();
@@ -76,6 +83,44 @@ const submitting = ref(false);
 const deleting = ref(false);
 const showDeleteConfirm = ref(false);
 
+// Flips to true the moment the user manually picks a category from the picker,
+// and resets to false on every (re-)initialisation. Together with the
+// `category.value !== DEFAULT_CATEGORY_KEY` guard inside `applySuggestion`,
+// this is what guarantees the suggestion engine can never overwrite a
+// deliberate user choice, and can only fill in the still-default slot.
+const categoryTouched = ref(false);
+
+// Pending debounced suggestion lookup. Held at module scope inside the setup
+// function so it survives across renders; cleared on unmount and on every
+// re-initialise to prevent a stale callback from mutating state.
+let suggestTimer: ReturnType<typeof setTimeout> | undefined;
+
+const onCategoryPicked = () => {
+  categoryTouched.value = true;
+};
+
+const applySuggestion = () => {
+  suggestTimer = undefined;
+  if (categoryTouched.value) return;
+  // Suggestion engine can only fill the default slot. In edit mode a stored
+  // non-default category is treated as already selected, so this guard skips
+  // any lookup and leaves it alone.
+  if (category.value !== DEFAULT_CATEGORY_KEY) return;
+  const suggestion = suggestCategory(
+    description.value,
+    group.value?.expenses ?? [],
+  );
+  if (!suggestion || suggestion.key === category.value) return;
+  // SILENT: no pulse, no animation, no toast — the picker just reflects the
+  // new value on its next paint.
+  category.value = suggestion.key;
+};
+
+const scheduleSuggestion = () => {
+  if (suggestTimer !== undefined) clearTimeout(suggestTimer);
+  suggestTimer = setTimeout(applySuggestion, DESCRIPTION_SUGGEST_DEBOUNCE_MS);
+};
+
 // --- Split composable ---
 // The composable must be called once the group is loaded so it sees the real
 // `members` and (in edit mode) the existing splits. We store its return in a
@@ -90,6 +135,15 @@ const split = reactive<UseExpenseSplitReturn>(
 const initialise = () => {
   showDeleteConfirm.value = false;
   errorMessage.value = '';
+  // Reset the manual-selection flag so a freshly loaded form can still
+  // auto-pick the default slot. Any pending suggestion is also dropped — it
+  // belongs to the previous form instance and would otherwise fire against
+  // freshly-loaded state.
+  categoryTouched.value = false;
+  if (suggestTimer !== undefined) {
+    clearTimeout(suggestTimer);
+    suggestTimer = undefined;
+  }
 
   let expense: Expense | undefined;
   if (mode.value === 'edit' && group.value) {
@@ -281,6 +335,10 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   currentPageTitle.value = null;
+  if (suggestTimer !== undefined) {
+    clearTimeout(suggestTimer);
+    suggestTimer = undefined;
+  }
 });
 </script>
 
@@ -369,7 +427,10 @@ onBeforeUnmount(() => {
 
             <!-- Description + Category -->
             <div class="flex gap-2">
-              <CategoryPicker v-model="category" />
+              <CategoryPicker
+                v-model="category"
+                @update:model-value="onCategoryPicked"
+              />
               <input
                 v-model="description"
                 type="text"
@@ -380,6 +441,7 @@ onBeforeUnmount(() => {
                   border: 1px solid rgba(71, 69, 84, 0.3);
                   color: #e5e0ed;
                 "
+                @input="scheduleSuggestion"
               />
             </div>
 

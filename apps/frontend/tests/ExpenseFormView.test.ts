@@ -78,7 +78,10 @@ const buildRouter = async (initialPath: string): Promise<Router> => {
   return router;
 };
 
-const mountAt = async (path: string) => {
+const mountAt = async (
+  path: string,
+  extraStubs: Record<string, unknown> = {},
+) => {
   const router = await buildRouter(path);
   const wrapper = mount(ExpenseFormView, {
     global: {
@@ -87,6 +90,7 @@ const mountAt = async (path: string) => {
         Teleport: true,
         DateTimePicker: true,
         CategoryPicker: true,
+        ...extraStubs,
       },
     },
   });
@@ -96,6 +100,38 @@ const mountAt = async (path: string) => {
   await wrapper.vm.$nextTick();
   return { wrapper, router };
 };
+
+// Custom CategoryPicker stub for the auto-selection tests. The default
+// `CategoryPicker: true` stub is opaque: it renders an empty placeholder and
+// gives us no way to read the bound `modelValue` or trigger an emit. This stub
+// keeps the same public surface as the real picker (`modelValue` prop +
+// `update:modelValue` emit) so we can assert on what the parent wrote and
+// simulate a manual pick from the picker UI.
+const CategoryPickerStub = {
+  name: 'CategoryPickerStub',
+  props: ['modelValue'],
+  emits: ['update:modelValue'],
+  template: '<div data-testid="category-picker-stub" />',
+};
+
+// Convenience: build a group whose expense history seeds the suggestion
+// engine for `Venice train tickets` -> `bus-train`. Two exact-match entries
+// give Stage 1 a dominant share of 1.0 (bestCount 2 of 2, runnerUp 0).
+const makeGroupWithBusTrainHistory = () =>
+  makeGroup({
+    expenses: [
+      makeExpense({
+        id: 'hist-1',
+        description: 'Venice train tickets',
+        category: 'bus-train',
+      }),
+      makeExpense({
+        id: 'hist-2',
+        description: 'Venice train tickets',
+        category: 'bus-train',
+      }),
+    ],
+  });
 
 const makeMember = (id: string, name: string) => ({
   id,
@@ -283,5 +319,135 @@ describe('ExpenseFormView', () => {
     // The back-arrow lives in a <Teleport> at the top of the template, which
     // renders unconditionally regardless of loading / not-found / form state.
     expect(wrapper.html()).toContain('Back to group');
+  });
+});
+
+describe('ExpenseFormView category auto-selection', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('create mode: typing a known description auto-picks the matching category after the debounce window', async () => {
+    mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
+    const { wrapper } = await mountAt(
+      '/groups/g1/expenses/new',
+      { CategoryPicker: CategoryPickerStub },
+    );
+    const picker = wrapper.findComponent(CategoryPickerStub);
+    expect(picker.props('modelValue')).toBe('general');
+
+    const textInputs = wrapper.findAll('input[type="text"]');
+    await textInputs[0].setValue('Venice train tickets');
+
+    // Debounce window is 300ms — not yet fired.
+    await vi.advanceTimersByTimeAsync(150);
+    expect(picker.props('modelValue')).toBe('general');
+
+    // After the full debounce the suggestion engine runs and the picker
+    // reflects the silent auto-selection.
+    await vi.advanceTimersByTimeAsync(300);
+    await flushPromises();
+    expect(picker.props('modelValue')).toBe('bus-train');
+  });
+
+  it('create mode guard: a manual pick on the picker is preserved across subsequent description inputs', async () => {
+    mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
+    const { wrapper } = await mountAt(
+      '/groups/g1/expenses/new',
+      { CategoryPicker: CategoryPickerStub },
+    );
+    const picker = wrapper.findComponent(CategoryPickerStub);
+
+    // Simulate the user picking a category from the picker: the parent v-model
+    // setter runs and `onCategoryPicked` flips `categoryTouched` to true.
+    picker.vm.$emit('update:modelValue', 'dining-out');
+    await wrapper.vm.$nextTick();
+    expect(picker.props('modelValue')).toBe('dining-out');
+
+    const textInputs = wrapper.findAll('input[type="text"]');
+    await textInputs[0].setValue('Venice train tickets');
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+
+    // Manual selection wins — suggestion engine is blocked by categoryTouched.
+    expect(picker.props('modelValue')).toBe('dining-out');
+  });
+
+  it('edit mode: stored non-default category is preserved through init and through typing', async () => {
+    mocks.sharedGroup.value = makeGroup({
+      expenses: [
+        makeExpense({
+          id: 'e-hotel',
+          description: 'Hotel night',
+          category: 'hotel',
+        }),
+      ],
+    }) as any;
+    const { wrapper } = await mountAt(
+      '/groups/g1/expenses/e-hotel/edit',
+      { CategoryPicker: CategoryPickerStub },
+    );
+    const picker = wrapper.findComponent(CategoryPickerStub);
+
+    // Immediately after init the picker reflects the stored category with no
+    // timer advance — loading the expense must never trigger a suggestion.
+    expect(picker.props('modelValue')).toBe('hotel');
+
+    const textInputs = wrapper.findAll('input[type="text"]');
+    await textInputs[0].setValue('Venice train tickets');
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+
+    // The default-slot guard rejects lookups when the current category is
+    // anything other than `general`, so the stored value stays put.
+    expect(picker.props('modelValue')).toBe('hotel');
+  });
+
+  it('gibberish description produces no suggestion: category stays at its current value', async () => {
+    mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
+    const { wrapper } = await mountAt(
+      '/groups/g1/expenses/new',
+      { CategoryPicker: CategoryPickerStub },
+    );
+    const picker = wrapper.findComponent(CategoryPickerStub);
+
+    const textInputs = wrapper.findAll('input[type="text"]');
+    await textInputs[0].setValue('zzz qq');
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+
+    // No fuzzy token overlap with the seeded corpus → suggestCategory returns
+    // null → applySuggestion is a no-op → picker remains on the default.
+    expect(picker.props('modelValue')).toBe('general');
+  });
+
+  it('unmount while a suggestion timer is pending does not log warnings or errors', async () => {
+    mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const { wrapper } = await mountAt(
+        '/groups/g1/expenses/new',
+        { CategoryPicker: CategoryPickerStub },
+      );
+      const textInputs = wrapper.findAll('input[type="text"]');
+      await textInputs[0].setValue('Venice train tickets');
+
+      wrapper.unmount();
+      // Push past the debounce window — if the timer were still pending the
+      // callback would mutate state on an unmounted component and Vue would
+      // warn. The onBeforeUnmount hook must have cleared it.
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
   });
 });

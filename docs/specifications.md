@@ -64,6 +64,8 @@ Do Schèi is a web application that allows users to track shared expenses and sp
     - Trash
     - TV/Phone/Internet
     - Water
+- Users can search categories by name within the category picker when choosing an expense category.
+- When creating or editing an expense, if no category has been selected yet, the application automatically selects the category whose past descriptions in the same group best match the entered description; when no past expense matches, it instead selects a category whose own name fully or partially matches the entered description.
 - Users can add an expense and choose who paid for it and how it is split among the users in the group.
 - Expenses can be split in one of the following ways:
   - Equal split: the expense is divided equally among all users in the group, or among a selected subset of users.
@@ -96,6 +98,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Deleting an expense removes it from active balances immediately; any activity entry generated for the deletion remains part of the activity history.
 - The canonical financial source of truth is the ledger of expenses and settlement entries; balances are always derived from that ledger.
 - The display name is the single editable profile field; the email address is immutable after account creation and is never accepted by the profile-update API.
+- Category auto-selection learns only from the expense history of the group the expense belongs to, is computed entirely client-side, ignores settle-up entries, applies only while the category is still the default and was not manually chosen in the form, and never overrides a manual selection.
 
 ## Balance Rules
 
