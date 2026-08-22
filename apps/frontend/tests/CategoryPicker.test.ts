@@ -23,7 +23,7 @@ async function openPanel(wrapper: ReturnType<typeof mountPicker>) {
 }
 
 function getSearchInput(wrapper: ReturnType<typeof mountPicker>) {
-  const inputs = wrapper.findAll('input[aria-label="Search categories"]');
+  const inputs = wrapper.findAll<HTMLInputElement>('input[aria-label="Search categories"]');
   return inputs[0];
 }
 
