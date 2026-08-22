@@ -278,9 +278,9 @@ onBeforeUnmount(() => {
 
       <template v-else-if="group">
         <!-- Sticky header: balance + actions -->
-        <div class="shrink-0 px-4 pt-4 pb-3 flex flex-col gap-3">
+        <div class="shrink-0 px-4 pt-3 pb-3 flex flex-col gap-3">
           <!-- Balance summary card -->
-          <section v-if="group.balance" class="balance-card">
+          <section v-if="group.balance" class="balance-card sm:p-4 p-3">
             <div class="flex justify-between">
               <div
                 :class="
@@ -290,13 +290,13 @@ onBeforeUnmount(() => {
                 "
               >
                 <p
-                  class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
+                  class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7] sm:block hidden"
                 >
                   Your Balance
                 </p>
                 <div
                   :class="[
-                    'mt-2 flex items-center justify-between',
+                    'sm:mt-2 mt-0 flex items-center justify-between',
                     group.balance.perUser.length > 0 ? 'mb-2' : '',
                   ]"
                 >
@@ -440,7 +440,6 @@ onBeforeUnmount(() => {
 
         <!-- Scrollable: expenses list -->
         <div class="flex-1 overflow-y-auto px-4">
-          <h2 class="mb-3 text-2xl font-bold text-[#E5E0ED]">Expenses</h2>
 
           <template v-if="group.expenses.length > 0">
             <template
@@ -459,7 +458,7 @@ onBeforeUnmount(() => {
                 <li
                   v-for="expense in monthGroup.expenses"
                   :key="expense.id"
-                  class="expense-row-card cursor-pointer transition hover:bg-white/5"
+                  class="expense-row-card cursor-pointer transition hover:bg-white/5 p-[10px] sm:p-4"
                   @click="
                     expense.kind === 'SETTLEMENT'
                       ? navigateToSettleUpEdit(expense.id)
@@ -581,7 +580,7 @@ onBeforeUnmount(() => {
             </template>
           </template>
 
-          <div v-else class="py-5 text-[#C8C4D7]">No expenses yet.</div>
+          <div v-else class="py-5 text-[#C8C4D7]">No expenses yet</div>
         </div>
 
         <!-- Sticky bottom: + Add expense button -->
