@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 
-import { CATEGORIES_GROUPED, getCategory } from '@/lib/categories';
+import {
+  CATEGORIES_GROUPED,
+  CATEGORY_FAMILY_LABELS,
+  getCategory,
+} from '@/lib/categories';
 
 const props = withDefaults(
   defineProps<{
@@ -16,8 +20,26 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 const isOpen = ref(false);
 const triggerRef = ref<HTMLButtonElement | null>(null);
 const panelRef = ref<HTMLDivElement | null>(null);
+const desktopSearchInputRef = ref<HTMLInputElement | null>(null);
+const mobileSearchInputRef = ref<HTMLInputElement | null>(null);
+const searchQuery = ref('');
 
 const current = computed(() => getCategory(props.modelValue));
+
+const filteredGroups = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return CATEGORIES_GROUPED;
+  return CATEGORIES_GROUPED
+    .map((group) => {
+      const familyLabel = CATEGORY_FAMILY_LABELS[group.family].toLowerCase();
+      const familyMatches = familyLabel.includes(q);
+      const entries = familyMatches
+        ? [...group.entries]
+        : group.entries.filter((e) => e.label.toLowerCase().includes(q));
+      return { ...group, entries };
+    })
+    .filter((group) => group.entries.length > 0);
+});
 
 const sizeClasses = computed(() =>
   props.size === 'sm'
@@ -26,9 +48,11 @@ const sizeClasses = computed(() =>
 );
 
 const open = () => {
+  searchQuery.value = '';
   isOpen.value = true;
   nextTick(() => {
-    panelRef.value?.focus();
+    desktopSearchInputRef.value?.focus();
+    mobileSearchInputRef.value?.focus();
   });
 };
 
@@ -45,7 +69,21 @@ const select = (key: string) => {
 const onKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
     event.preventDefault();
+    if (searchQuery.value) {
+      searchQuery.value = '';
+      return;
+    }
     close();
+    return;
+  }
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    const q = searchQuery.value.trim();
+    if (!q) return;
+    const firstGroup = filteredGroups.value[0];
+    if (firstGroup && firstGroup.entries.length > 0) {
+      select(firstGroup.entries[0].key);
+    }
   }
 };
 
@@ -113,7 +151,21 @@ onBeforeUnmount(() => {
       @keydown="onKeydown"
     >
       <div class="bg-[#1E1E26] max-h-80 overflow-y-auto rounded-xl shadow-xl">
-        <div v-for="group in CATEGORIES_GROUPED" :key="group.family" class="py-1">
+        <div class="sticky top-0 z-10 border-b border-white/10 bg-[#1E1E26] px-3 py-2">
+          <input
+            ref="desktopSearchInputRef"
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search categories"
+            aria-label="Search categories"
+            autocomplete="off"
+            class="w-full rounded-md bg-white/5 px-3 py-1.5 text-sm text-[#E5E0ED] placeholder:text-[#C8C4D7]/50 outline-none focus:ring-1 focus:ring-white/20"
+          />
+        </div>
+        <div v-if="filteredGroups.length === 0" class="px-3 py-4 text-center text-sm text-[#C8C4D7]">
+          <p role="status">No matching category</p>
+        </div>
+        <div v-for="group in filteredGroups" :key="group.family" class="py-1">
           <p class="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">
             {{ group.label }}
           </p>
@@ -191,7 +243,21 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="px-2 py-2">
-            <div v-for="group in CATEGORIES_GROUPED" :key="group.family" class="py-1">
+            <div class="sticky top-0 z-10 border-b border-white/10 bg-[#1E1E26] px-2 py-2">
+              <input
+                ref="mobileSearchInputRef"
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search categories"
+                aria-label="Search categories"
+                autocomplete="off"
+                class="w-full rounded-md bg-white/5 px-3 py-2 text-sm text-[#E5E0ED] placeholder:text-[#C8C4D7]/50 outline-none focus:ring-1 focus:ring-white/20"
+              />
+            </div>
+            <div v-if="filteredGroups.length === 0" class="px-3 py-4 text-center text-sm text-[#C8C4D7]">
+              <p role="status">No matching category</p>
+            </div>
+            <div v-for="group in filteredGroups" :key="group.family" class="py-1">
               <p class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">
                 {{ group.label }}
               </p>
