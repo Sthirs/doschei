@@ -9,9 +9,25 @@ on:
       - "*"
   workflow_dispatch:
 
+# Cancel superseded runs of the same ref so rapid pushes don't queue duplicate
+# full pipelines. Main-branch runs are never cancelled mid-flight.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Unit tests are independent of the Minikube pipeline and therefore run as a
+# separate job in parallel with it. The cluster job must stay a single job:
+# Minikube lives inside the runner VM and cannot be shared across jobs.
 jobs:
-  test:
+  unit:
+    name: Unit tests (${{ matrix.workspace }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace:
+          - backend
+          - frontend
 
     steps:
       - name: Checkout
@@ -27,10 +43,28 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npm run test
+        run: npm run test --workspace @doschei/${{ matrix.workspace }}
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+  # Kept the historical job id `test` (no display-name override) so any branch
+  # protection rule referencing the previous single-job check keeps working.
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # npm ci does not depend on Minikube: overlap it with cluster boot.
+      - name: Install dependencies
+        id: npm-ci
+        run: npm ci
+        background: true
 
       - name: Start minikube
         uses: medyagh/setup-minikube@e9e035a86bbc3caea26a450bd4dbf9d0c453682e # v0.0.21
@@ -38,10 +72,36 @@ jobs:
       - name: Enable ingress addon
         run: minikube addons enable ingress
 
-      - name: Build images in minikube
-        run: |
-          minikube image build -f apps/backend/Dockerfile -t doschei/backend:dev .
-          minikube image build -f apps/frontend/Dockerfile -t doschei/frontend:dev .
+      # Join point: everything below (except the image builds) needs
+      # node_modules, and npx resolves @playwright/test from devDependencies.
+      - name: Wait for dependencies
+        wait: npm-ci
+
+      # Browsers are cached between runs; keyed on the lockfile because the
+      # Playwright version is pinned in devDependencies. The install step still
+      # runs so OS-level deps (--with-deps) stay correct on cache hits.
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # Browser download overlaps the image builds, Helm deploy, and
+      # integration tests below; joined just before the e2e step.
+      - name: Install Playwright browsers
+        id: pw-install
+        run: npx playwright install --with-deps chromium
+        background: true
+
+      # Backend and frontend images are independent; build them concurrently
+      # against the same Minikube Docker daemon. Each build keeps its own log,
+      # and the group fails if either build fails.
+      - parallel:
+          - name: Build backend image in minikube
+            run: minikube image build -f apps/backend/Dockerfile -t doschei/backend:dev .
+
+          - name: Build frontend image in minikube
+            run: minikube image build -f apps/frontend/Dockerfile -t doschei/frontend:dev .
 
       - name: Deploy with Helm
         run: |
@@ -82,6 +142,9 @@ jobs:
           done
 
           npm run test:integration -- "http://${DEV_HOST}"
+
+      - name: Wait for Playwright browsers
+        wait: pw-install
 
       - name: Run Playwright tests
         run: |

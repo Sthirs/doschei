@@ -41,8 +41,8 @@ repos:
         args:
           - --ignore-words-list=expres,afterall
 
-  - repo: https://github.com/rhysd/actionlint
-    rev: 914e7df21a07ef503a81201c76d2b11c789d3fca # frozen: v1.7.12
+  - repo: https://github.com/kjanat/actionlint
+    rev: 671ad88fef5088961a20f3c598655bc9751f747f # frozen: v1.12.0
     hooks:
       - id: actionlint
 
