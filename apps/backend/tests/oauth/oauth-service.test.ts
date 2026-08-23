@@ -63,6 +63,7 @@ type InMemoryUser = {
   email: string;
   passwordHash: string | null;
   displayName: string;
+  language: string;
 };
 type InMemoryIdentity = {
   id: string;
@@ -252,13 +253,14 @@ describe('OAuthService', () => {
   });
 
   describe('handleCallback', () => {
-    function oauthInfo(overrides: Partial<{ emailVerified: boolean; email: string; displayName: string; subject: string }> = {}) {
+    function oauthInfo(overrides: Partial<{ emailVerified: boolean; email: string; displayName: string; subject: string; locale: string }> = {}) {
       return {
         provider: TEST_PROVIDER,
         subject: overrides.subject ?? TEST_SUBJECT,
         email: overrides.email ?? TEST_EMAIL,
         emailVerified: overrides.emailVerified ?? true,
         displayName: overrides.displayName ?? TEST_DISPLAY_NAME,
+        locale: overrides.locale,
       };
     }
 
@@ -277,6 +279,7 @@ describe('OAuthService', () => {
         id: expect.any(String),
         email: TEST_EMAIL,
         displayName: TEST_DISPLAY_NAME,
+        language: 'en',
       });
 
       // Verify the issued JWT decodes to { userId, email }.
@@ -288,8 +291,55 @@ describe('OAuthService', () => {
       // (signals "OAuth-only", not local auth), ONE new identity.
       expect(inMemoryUsers).toHaveLength(1);
       expect(inMemoryUsers[0]!.passwordHash).toBeNull();
+      expect(inMemoryUsers[0]!.language).toBe('en');
       expect(inMemoryIdentities).toHaveLength(1);
       expect(inMemoryIdentities[0]!.subject).toBe(TEST_SUBJECT);
+    });
+
+    it('first sign-in with IdP locale=it sets user.language=it (locale claim wins)', async () => {
+      vi.mocked(stubProvider.fetchUserInfo).mockResolvedValue(oauthInfo({ locale: 'it' }));
+      const cookie = buildStateCookie(TEST_PROVIDER, 'state-x', 'verifier-x');
+
+      const result = await service.handleCallback(
+        TEST_PROVIDER,
+        'https://app.test/callback?code=c&state=state-x',
+        'state-x',
+        cookie,
+      );
+
+      expect(result.user.language).toBe('it');
+      expect(inMemoryUsers[0]!.language).toBe('it');
+    });
+
+    it('first sign-in with Accept-Language=it-IT,it;q=0.9 (no IdP locale) → language=it', async () => {
+      vi.mocked(stubProvider.fetchUserInfo).mockResolvedValue(oauthInfo());
+      const cookie = buildStateCookie(TEST_PROVIDER, 'state-x', 'verifier-x');
+
+      const result = await service.handleCallback(
+        TEST_PROVIDER,
+        'https://app.test/callback?code=c&state=state-x',
+        'state-x',
+        cookie,
+        'it-IT,it;q=0.9',
+      );
+
+      expect(result.user.language).toBe('it');
+      expect(inMemoryUsers[0]!.language).toBe('it');
+    });
+
+    it('first sign-in with locale=it-CH (region suffix) → language=it', async () => {
+      vi.mocked(stubProvider.fetchUserInfo).mockResolvedValue(oauthInfo({ locale: 'it-CH' }));
+      const cookie = buildStateCookie(TEST_PROVIDER, 'state-x', 'verifier-x');
+
+      const result = await service.handleCallback(
+        TEST_PROVIDER,
+        'https://app.test/callback?code=c&state=state-x',
+        'state-x',
+        cookie,
+      );
+
+      expect(result.user.language).toBe('it');
+      expect(inMemoryUsers[0]!.language).toBe('it');
     });
 
     it('Q1=a link: existing local user with matching email → only UserIdentity is created, passwordHash untouched, no second User', async () => {
@@ -301,6 +351,7 @@ describe('OAuthService', () => {
         email: TEST_EMAIL,
         passwordHash: 'hashed-password-do-not-overwrite',
         displayName: 'Local Display',
+        language: 'en',
       });
 
       vi.mocked(stubProvider.fetchUserInfo).mockResolvedValue(oauthInfo());
@@ -337,6 +388,7 @@ describe('OAuthService', () => {
         email: TEST_EMAIL,
         passwordHash: null,
         displayName: 'Original Display Name',
+        language: 'en',
       });
       inMemoryIdentities.push({
         id: 'identity-1',
@@ -362,6 +414,45 @@ describe('OAuthService', () => {
       expect(result.user.displayName).toBe('Original Display Name');
       expect(inMemoryUsers).toHaveLength(1);
       expect(inMemoryIdentities).toHaveLength(1);
+    });
+
+    it('returning OAuth user: language is NOT overwritten even when IdP sends a new locale (ADR-0018 displayName-style preservation)', async () => {
+      // Pre-seed an OAuth user whose language was set to 'it' on a prior
+      // sign-in (e.g. via the Account-screen PATCH). The service must
+      // NOT overwrite it on the next callback, even when the IdP now
+      // sends locale='en'. Mirrors ADR-0013 displayName preservation.
+      const existingUserId = 'returning-lang-user';
+      inMemoryUsers.push({
+        id: existingUserId,
+        email: TEST_EMAIL,
+        passwordHash: null,
+        displayName: 'Original Display Name',
+        language: 'it',
+      });
+      inMemoryIdentities.push({
+        id: 'identity-lang-1',
+        userId: existingUserId,
+        provider: TEST_PROVIDER,
+        subject: TEST_SUBJECT,
+        email: TEST_EMAIL,
+      });
+
+      vi.mocked(stubProvider.fetchUserInfo).mockResolvedValue(
+        oauthInfo({ locale: 'en' }),
+      );
+      const cookie = buildStateCookie(TEST_PROVIDER, 'state-x', 'verifier-x');
+
+      const result = await service.handleCallback(
+        TEST_PROVIDER,
+        'https://app.test/callback?code=c&state=state-x',
+        'state-x',
+        cookie,
+        'en-US,en;q=0.9',
+      );
+
+      expect(result.user.id).toBe(existingUserId);
+      expect(result.user.language).toBe('it');
+      expect(inMemoryUsers[0]!.language).toBe('it');
     });
 
     it('rejects email_verified=false with UnverifiedEmailError and creates no DB rows', async () => {

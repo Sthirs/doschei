@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 import GroupsView from '@/views/GroupsView.vue';
+import { i18n } from '@/i18n';
 import type { Group, InvitationListItem } from '@/types/group';
 
 // Mock the api module
@@ -53,7 +54,7 @@ const makeGroup = (overrides: Partial<Group> = {}): Group => ({
 
 const mountComponent = async (groups: Group[] = []) => {
   mockApiGet.mockResolvedValue({ data: { groups } });
-  const wrapper = mount(GroupsView);
+  const wrapper = mount(GroupsView, { global: { plugins: [i18n] } });
   await vi.dynamicImportSettled();
   await wrapper.vm.$nextTick();
   return wrapper;
@@ -64,7 +65,7 @@ const mountWithInvitations = async (
   groups: Group[] = [],
 ) => {
   mockApiGet.mockResolvedValue({ data: { groups, invitations } });
-  const wrapper = mount(GroupsView);
+  const wrapper = mount(GroupsView, { global: { plugins: [i18n] } });
   await vi.dynamicImportSettled();
   await wrapper.vm.$nextTick();
   return wrapper;

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 
 import DateTimePicker from '@/components/DateTimePicker.vue';
+import { i18n } from '@/i18n';
 
 // Stub DatePicker (from v-calendar) as a simple passthrough that renders the
 // v-model value and emits nothing on its own. The unit test asserts WRAPPER
@@ -17,6 +18,7 @@ function mountPicker(props: Record<string, unknown> = {}) {
   return mount(DateTimePicker, {
     props: { modelValue: '2024-01-15', ...props },
     global: {
+      plugins: [i18n],
       stubs: {
         DatePicker: stubDatePicker,
         // Stub Teleport as a passthrough so the teleported sheet content is

@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 import GroupSettingsPanel from '@/components/GroupSettingsPanel.vue';
+import { i18n } from '@/i18n';
 import type { GroupDetail } from '@/types/group';
 
 // Mock the api module
@@ -52,6 +53,7 @@ const makeGroup = (overrides: Partial<GroupDetail> = {}): GroupDetail => ({
 const mountComponent = (group: GroupDetail = makeGroup()) => {
   return mount(GroupSettingsPanel, {
     props: { group },
+    global: { plugins: [i18n] },
   });
 };
 

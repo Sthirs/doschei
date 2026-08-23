@@ -83,13 +83,14 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Activities are tracked.
 - Group expenses can be exported as a CSV file.
 - Users can view and edit their account profile. Users can change their display name; the name is editable even when it was originally provided by an OAuth provider. The user's email address cannot be changed. The profile picture is shown as the first letter of the display name (initials avatar); uploading or changing a profile picture is not supported.
+- Users can select the interface language (English or Italian) in their account. The language defaults to the device/browser language captured at registration; the saved preference applies at sign-in and takes effect immediately when changed.
 
 ## Product Decisions
 
 - The first release targets a single currency per workspace, with EUR as the default currency.
 - Monetary values must be stored and processed as integer cents to avoid floating-point rounding issues.
 - Expense dates are stored as calendar dates and represent the date selected by the user, without time-of-day semantics.
-- The user interface supports English and Italian. The application should use the user's saved language preference when available, and fall back to English otherwise.
+- The user interface supports English and Italian. The interface language resolves in the following order: the user's saved preference (selectable in the account, stored server-side) → the device/browser language captured at registration → the browser language for anonymous visitors → English.
 - Categories must be represented internally by stable keys, while labels are localized in the frontend.
 - All group members share the same permissions for creating, editing, deleting, and exporting expenses, as well as for recording settle-up payments.
 - Editing an expense allows changing any of its fields, including its description, amount, date, category, payer, and split details.
@@ -98,7 +99,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Deleting an expense removes it from active balances immediately; any activity entry generated for the deletion remains part of the activity history.
 - The canonical financial source of truth is the ledger of expenses and settlement entries; balances are always derived from that ledger.
 - The display name is the single editable profile field; the email address is immutable after account creation and is never accepted by the profile-update API.
-- Category auto-selection learns only from the expense history of the group the expense belongs to, is computed entirely client-side, ignores settle-up entries, applies only while the category is still the default and was not manually chosen in the form, and never overrides a manual selection.
+- Category auto-selection learns only from the expense history of the group the expense belongs to, is computed entirely client-side, ignores settle-up entries, applies only while the category is still the default and was not manually chosen in the form, and never overrides a manual selection. The taxonomy-name fallback matches against category labels in the user's active interface language.
 
 ## Balance Rules
 
@@ -196,13 +197,12 @@ The CI pipeline includes the following steps:
 
 #### - Features
 
-- **§Features line 7 — "multilingual and supports English and Italian": NOT IMPLEMENTED.**
-  No `vue-i18n` (or any i18n) library is present (`apps/frontend/package.json`
-  has no i18n dependency). `apps/frontend/src/main.ts` registers only Pinia and
-  Vue Router. All UI strings are hardcoded English (e.g.
-  `apps/frontend/src/views/LoginView.vue`, `apps/frontend/src/views/GroupDetailView.vue`).
-  There are no locale files, no language-preference storage, and
-  `apps/frontend/index.html` declares `lang="en"` only.
+- **§Features line 7 — "multilingual and supports English and Italian": IMPLEMENTED (2026-08).**
+  vue-i18n v11 with EN/IT catalogs (`apps/frontend/src/i18n/`), per-user
+  `language` column exposed through all auth responses, language selector in
+  the account screen, device-language capture at registration, and localized
+  category labels behind stable keys. See [`ADR-0018`](adr/0018-internationalization-en-it.md)
+  (proposed) and the Playwright proof in `tests/e2e/account/language.spec.ts`.
 
 - **§Features line 8 — "Users can create an account and sign in": PARTIALLY IMPLEMENTED.**
   Backend `POST /api/auth/register` exists
@@ -265,12 +265,11 @@ The CI pipeline includes the following steps:
   with ADR-0006 (either tighten the wording to "processed" or migrate the
   schema to integer cents).
 
-- **§Product Decisions line 90 — "Categories must be represented internally by stable keys, while labels are localized in the frontend": PARTIAL.**
-  Stable keys exist (`apps/frontend/src/lib/categories.ts` uses kebab-case keys
-  and `apps/backend/src/controllers/groupController.ts` validates them). However,
-  the labels are **hardcoded English strings**, not localized — there is no i18n
-  layer (see the §Features line 7 gap). The "localized labels" half of this
-  decision is not yet implemented.
+- **§Product Decisions line 90 — "Categories must be represented internally by stable keys, while labels are localized in the frontend": IMPLEMENTED (2026-08).**
+  The `label` field was removed from `CategoryDefinition`; labels live in the
+  EN/IT catalogs under `categories.*` and the picker renders/searches them via
+  the active locale. See [`ADR-0018`](adr/0018-internationalization-en-it.md)
+  (proposed).
 
 - **§Product Decisions line 94 — "any activity entry generated for the deletion remains part of the activity history": MOOT.**
   Tied to the §Features line 81 activity-tracking gap above. Since activity

@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { onMounted, onUnmounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
 import {
   balanceChipKind,
-  balanceChipLabel,
   balanceColorClass,
+  formatEur,
   groupInitials,
 } from '@/lib/format';
 import { currentPageTitle } from '@/router';
@@ -17,6 +18,7 @@ import type {
   InvitationListItem,
 } from '@/types/group';
 
+const { t, locale } = useI18n();
 const router = useRouter();
 const groups = ref<Group[]>([]);
 const invitations = ref<InvitationListItem[]>([]);
@@ -36,7 +38,7 @@ const loadGroups = async () => {
     groups.value = data.groups;
     invitations.value = data.invitations ?? [];
   } catch {
-    errorMessage.value = 'We could not load your groups.';
+    errorMessage.value = t('groups.loadFailed');
   } finally {
     isLoading.value = false;
   }
@@ -57,7 +59,7 @@ const acceptInvitation = async (invitation: InvitationListItem) => {
     );
     await loadGroups();
   } catch {
-    invitationErrorMessage.value = 'Could not accept the invitation. Please try again.';
+    invitationErrorMessage.value = t('groups.acceptError');
     failingInvitationId.value = invitation.id;
   } finally {
     acceptingInvitationId.value = null;
@@ -74,7 +76,7 @@ const declineInvitation = async (invitation: InvitationListItem) => {
     );
     await loadGroups();
   } catch {
-    invitationErrorMessage.value = 'Could not decline the invitation. Please try again.';
+    invitationErrorMessage.value = t('groups.declineError');
     failingInvitationId.value = invitation.id;
   } finally {
     decliningInvitationId.value = null;
@@ -97,7 +99,7 @@ const createGroup = async () => {
   const name = newGroupName.value.trim();
 
   if (!name) {
-    createErrorMessage.value = 'Enter a group name.';
+    createErrorMessage.value = t('groups.enterGroupName');
     return;
   }
 
@@ -115,15 +117,25 @@ const createGroup = async () => {
     ) {
       createErrorMessage.value = error.response.data.message;
     } else {
-      createErrorMessage.value = 'We could not create your group.';
+      createErrorMessage.value = t('groups.createFailed');
     }
   } finally {
     isCreating.value = false;
   }
 };
 
+// Compose the per-row balance label inline (was `balanceChipLabel` in format.ts
+// before Task 2 extracted the sentence into the message catalog).
+const balanceChipLabel = (netForCurrentUser: number): string => {
+  const kind = balanceChipKind(netForCurrentUser);
+  const amount = formatEur(Math.abs(netForCurrentUser), locale.value);
+  if (kind === 'owed') return t('common.balanceOwed', { amount });
+  if (kind === 'owe') return t('common.balanceOwe', { amount });
+  return t('common.balanceSettled');
+};
+
 onMounted(() => {
-  currentPageTitle.value = 'Do Schèi';
+  currentPageTitle.value = t('groups.title');
   loadGroups();
 });
 
@@ -139,7 +151,7 @@ onUnmounted(() => {
       v-if="isLoading"
       class="flex-1 flex items-center justify-center text-[#C8C4D7]"
     >
-      Loading your groups...
+      {{ t('groups.loading') }}
     </div>
 
     <!-- Error state -->
@@ -163,7 +175,7 @@ onUnmounted(() => {
         <h2
           class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
         >
-          Invitations
+          {{ t('groups.invitations') }}
         </h2>
         <ul class="flex flex-col gap-3 border-b-1 pb-4 border-[#fff]/5">
           <li
@@ -175,7 +187,7 @@ onUnmounted(() => {
               <!-- Thumbnail: always gradient for invitations -->
               <div
                 class="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
-                :aria-label="`${invitation.groupName} thumbnail`"
+                :aria-label="t('groups.thumbnailAria', { name: invitation.groupName })"
               >
                 {{ groupInitials(invitation.groupName) }}
               </div>
@@ -190,7 +202,7 @@ onUnmounted(() => {
                     {{ invitation.groupName }}
                   </h3>
                   <p class="mt-0.5 text-sm text-[#C8C4D7] truncate">
-                    Invited by {{ invitation.inviterName }}
+                    {{ t('groups.invitedBy', { name: invitation.inviterName }) }}
                   </p>
                 </div>
 
@@ -212,7 +224,7 @@ onUnmounted(() => {
                     "
                     @click="acceptInvitation(invitation)"
                   >
-                    Accept
+                    {{ t('groups.accept') }}
                   </button>
                   <button
                     type="button"
@@ -223,7 +235,7 @@ onUnmounted(() => {
                     "
                     @click="declineInvitation(invitation)"
                   >
-                    Decline
+                    {{ t('groups.decline') }}
                   </button>
                 </div>
               </div>
@@ -254,14 +266,14 @@ onUnmounted(() => {
             <div v-if="group.imageUrl" class="h-14 w-14 rounded-xl shrink-0">
               <img
                 :src="group.imageUrl"
-                :alt="`${group.name} image`"
+                :alt="t('groups.groupImageAria', { name: group.name })"
                 class="h-full w-full rounded-xl object-cover"
               />
             </div>
             <div
               v-else
               class="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
-              :aria-label="`${group.name} thumbnail`"
+              :aria-label="t('groups.thumbnailAria', { name: group.name })"
             >
               {{ groupInitials(group.name) }}
             </div>
@@ -324,7 +336,7 @@ onUnmounted(() => {
         v-if="groups.length === 0 && invitations.length === 0"
         class="flex-1 flex items-center justify-center text-[#C8C4D7]"
       >
-        No groups yet.
+        {{ t('groups.noGroups') }}
       </div>
     </template>
 
@@ -341,7 +353,7 @@ onUnmounted(() => {
           style="line-height: 27px"
           @click="openCreateForm"
         >
-          + Create group
+          {{ t('groups.createGroup') }}
         </button>
       </div>
 
@@ -352,12 +364,12 @@ onUnmounted(() => {
         @submit.prevent="createGroup"
       >
         <label class="flex-1">
-          <span class="sr-only">Group name</span>
+          <span class="sr-only">{{ t('groups.createGroupLabel') }}</span>
           <input
             v-model="newGroupName"
             type="text"
             name="groupName"
-            placeholder="Group name"
+            :placeholder="t('groups.createGroupPlaceholder')"
             autocomplete="off"
             class="w-full rounded-xl border border-[rgba(71,69,84,0.3)] bg-[#201F27] px-4 py-3 text-base text-[#E5E0ED] outline-none transition placeholder:text-[#C8C4D7] focus:border-brand-500/40 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
           />
@@ -368,7 +380,7 @@ onUnmounted(() => {
             class="flex-1 rounded-xl bg-[#6554E7] py-3 text-base font-normal text-[#F0EBFF] transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="isCreating"
           >
-            {{ isCreating ? 'Creating...' : 'Create' }}
+            {{ isCreating ? t('groups.creating') : t('groups.create') }}
           </button>
           <button
             type="button"
@@ -376,7 +388,7 @@ onUnmounted(() => {
             :disabled="isCreating"
             @click="closeCreateForm"
           >
-            Cancel
+            {{ t('common.cancel') }}
           </button>
         </div>
         <p

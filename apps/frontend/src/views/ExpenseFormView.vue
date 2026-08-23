@@ -7,6 +7,7 @@ import {
   ref,
   toRef,
 } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
@@ -18,9 +19,17 @@ import {
 import CategoryPicker from '@/components/CategoryPicker.vue';
 import DateTimePicker from '@/components/DateTimePicker.vue';
 import { formatEur } from '@/lib/format';
-import { DEFAULT_CATEGORY_KEY } from '@/lib/categories';
+import { CATEGORIES, DEFAULT_CATEGORY_KEY } from '@/lib/categories';
 import { suggestCategory } from '@/lib/categorySuggest';
 import type { Expense, GroupDetail } from '@/types/group';
+
+const { t, locale } = useI18n();
+
+// Stage-3 label map for the suggestion engine, kept reactive to the active
+// locale so Italian descriptions match Italian category names.
+const categoryLabels = computed<Record<string, string>>(() =>
+  Object.fromEntries(CATEGORIES.map((c) => [c.key, t(`categories.items.${c.key}`)])),
+);
 
 // Render only the first word of a member's display name inside the compact
 // member buttons; CSS `truncate` adds "…" if even that is too wide.
@@ -106,10 +115,7 @@ const applySuggestion = () => {
   // non-default category is treated as already selected, so this guard skips
   // any lookup and leaves it alone.
   if (category.value !== DEFAULT_CATEGORY_KEY) return;
-  const suggestion = suggestCategory(
-    description.value,
-    group.value?.expenses ?? [],
-  );
+  const suggestion = suggestCategory(description.value, group.value?.expenses ?? [], categoryLabels.value);
   if (!suggestion || suggestion.key === category.value) return;
   // SILENT: no pulse, no animation, no toast — the picker just reflects the
   // new value on its next paint.
@@ -130,6 +136,16 @@ const membersRef = toRef(() => group.value?.members ?? []);
 const split = reactive<UseExpenseSplitReturn>(
   {} as unknown as UseExpenseSplitReturn,
 );
+
+// Localized messages for `useExpenseSplit`. Resolved here so the composable
+// stays free of any i18n dependency (ADR-0006/0017 purity).
+const splitMessages = {
+  noMembersSelected: t('expenseForm.splitNoMembersSelected'),
+  percentagesMustSum: (current: string): string =>
+    t('expenseForm.splitPercentagesMustSum', { current }),
+  fixedMustSum: (current: string, total: string): string =>
+    t('expenseForm.splitFixedMustSum', { current, total }),
+};
 
 // --- Initialization (after data load) ---
 const initialise = () => {
@@ -160,7 +176,7 @@ const initialise = () => {
   // would not see any members and would not set up its re-init watcher.
   Object.assign(
     split,
-    useExpenseSplit(membersRef, expense ? expense.splits : undefined),
+    useExpenseSplit(membersRef, expense ? expense.splits : undefined, splitMessages),
   );
 
   if (expense) {
@@ -192,16 +208,16 @@ const isFormValid = computed(() => {
 
 const validationMessage = computed(() => {
   if (!description.value) {
-    return 'Please provide a valid description and an amount greater than 0.';
+    return t('expenseForm.validationDescriptionAmount');
   }
   if (typeof amount.value !== 'number' || amount.value <= 0) {
-    return 'Please provide a valid description and an amount greater than 0.';
+    return t('expenseForm.validationDescriptionAmount');
   }
   if (!date.value) {
-    return 'Please provide a valid description, date, and an amount greater than 0.';
+    return t('expenseForm.validationDescriptionDateAmount');
   }
   if (!paidByUserId.value) {
-    return 'Please select who paid the expense.';
+    return t('expenseForm.validationSelectPayer');
   }
   if (split.splitErrorMessage) {
     const splitErr = split.splitErrorMessage(numericAmount.value);
@@ -211,7 +227,7 @@ const validationMessage = computed(() => {
 });
 
 const pageTitle = computed(() =>
-  mode.value === 'edit' ? 'Edit Expense' : 'Add Expense',
+  mode.value === 'edit' ? t('expenseForm.editTitle') : t('expenseForm.addTitle'),
 );
 
 // --- Navigation ---
@@ -230,19 +246,17 @@ const submit = async () => {
     typeof amount.value !== 'number' ||
     amount.value <= 0
   ) {
-    errorMessage.value =
-      'Please provide a valid description and an amount greater than 0.';
+    errorMessage.value = t('expenseForm.validationDescriptionAmount');
     return;
   }
 
   if (!date.value) {
-    errorMessage.value =
-      'Please provide a valid description, date, and an amount greater than 0.';
+    errorMessage.value = t('expenseForm.validationDescriptionDateAmount');
     return;
   }
 
   if (!paidByUserId.value) {
-    errorMessage.value = 'Please select who paid the expense.';
+    errorMessage.value = t('expenseForm.validationSelectPayer');
     return;
   }
 
@@ -250,7 +264,7 @@ const submit = async () => {
     errorMessage.value =
       (split.splitErrorMessage &&
         split.splitErrorMessage(numericAmount.value)) ||
-      'Please fix the split values.';
+      t('expenseForm.validationFixSplit');
     return;
   }
 
@@ -285,8 +299,8 @@ const submit = async () => {
   } catch {
     errorMessage.value =
       mode.value === 'edit'
-        ? 'Could not update the expense. Please try again.'
-        : 'Could not add the expense. Please try again.';
+        ? t('expenseForm.updateError')
+        : t('expenseForm.addError');
   } finally {
     submitting.value = false;
   }
@@ -309,7 +323,7 @@ const confirmDelete = async () => {
     await api.delete(`/groups/${groupId.value}/expenses/${expenseId.value}`);
     goBack();
   } catch {
-    errorMessage.value = 'Could not delete the expense. Please try again.';
+    errorMessage.value = t('expenseForm.deleteError');
   } finally {
     deleting.value = false;
   }
@@ -348,7 +362,7 @@ onBeforeUnmount(() => {
     <button
       type="button"
       class="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-slate-100"
-      aria-label="Back to group"
+      :aria-label="t('expenseForm.backToGroup')"
       @click="goBack"
     >
       <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
@@ -366,7 +380,7 @@ onBeforeUnmount(() => {
     v-if="!group && !notFound && !loadError"
     class="flex-1 overflow-y-auto px-4 py-6"
   >
-    <p class="text-[#C8C4D7] text-center">Loading...</p>
+    <p class="text-[#C8C4D7] text-center">{{ t('expenseForm.loading') }}</p>
   </main>
 
   <!-- Group-load failure -->
@@ -374,7 +388,7 @@ onBeforeUnmount(() => {
     <p
       class="rounded-xl px-4 py-3 text-sm text-rose-200 bg-rose-500/10 border border-rose-500/20"
     >
-      Group not found.
+      {{ t('expenseForm.groupNotFound') }}
     </p>
   </main>
 
@@ -383,7 +397,7 @@ onBeforeUnmount(() => {
     <p
       class="rounded-xl px-4 py-3 text-sm text-rose-200 bg-rose-500/10 border border-rose-500/20"
     >
-      Expense not found.
+      {{ t('expenseForm.expenseNotFound') }}
     </p>
   </main>
 
@@ -405,7 +419,7 @@ onBeforeUnmount(() => {
               <label
                 for="expense-amount"
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
-                >Amount</label
+                >{{ t('expenseForm.amountLabel') }}</label
               >
               <div class="relative">
                 <input
@@ -414,7 +428,7 @@ onBeforeUnmount(() => {
                   type="number"
                   step="0.01"
                   min="0.01"
-                  placeholder="0.00"
+                  :placeholder="t('expenseForm.amountPlaceholder')"
                   autofocus
                   class="w-full rounded-lg bg-[#201F27] border border-[rgba(71,69,84,0.3)] py-3 pl-4 pr-12 text-base text-left text-[#E5E0ED] outline-none placeholder-[#C8C4D7] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
@@ -434,7 +448,7 @@ onBeforeUnmount(() => {
               <input
                 v-model="description"
                 type="text"
-                placeholder="Description"
+                :placeholder="t('expenseForm.descriptionPlaceholder')"
                 class="flex-1 rounded-xl px-4 py-3 text-sm outline-none"
                 style="
                   background: #201f27;
@@ -450,7 +464,7 @@ onBeforeUnmount(() => {
               <span
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
                 style="color: #c8c4d7"
-                >Paid by</span
+                >{{ t('expenseForm.paidBy') }}</span
               >
               <div class="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
                 <button
@@ -488,7 +502,7 @@ onBeforeUnmount(() => {
               <span
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
                 style="color: #c8c4d7"
-                >Split with</span
+                >{{ t('expenseForm.splitWith') }}</span
               >
               <div class="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
                 <button
@@ -543,7 +557,7 @@ onBeforeUnmount(() => {
                   :style="split.splitMode !== 'EQUAL' ? 'color: #C8C4D7' : ''"
                   @click="split.splitMode = 'EQUAL'"
                 >
-                  Equally
+                  {{ t('expenseForm.splitModeEqual') }}
                 </button>
                 <button
                   type="button"
@@ -556,7 +570,7 @@ onBeforeUnmount(() => {
                   :style="split.splitMode !== 'PERCENT' ? 'color: #C8C4D7' : ''"
                   @click="split.splitMode = 'PERCENT'"
                 >
-                  Percentage
+                  {{ t('expenseForm.splitModePercent') }}
                 </button>
                 <button
                   type="button"
@@ -569,7 +583,7 @@ onBeforeUnmount(() => {
                   :style="split.splitMode !== 'FIXED' ? 'color: #C8C4D7' : ''"
                   @click="split.splitMode = 'FIXED'"
                 >
-                  Fixed
+                  {{ t('expenseForm.splitModeFixed') }}
                 </button>
               </div>
 
@@ -581,8 +595,7 @@ onBeforeUnmount(() => {
                 class="text-sm text-right"
                 style="color: #c8c4d7"
               >
-                Each pays
-                {{ formatEur(split.equalSplitPerPerson(Number(amount))) }}
+                {{ t('expenseForm.eachPays', { amount: formatEur(split.equalSplitPerPerson(Number(amount)), locale) }) }}
               </p>
 
               <!-- Percentage rows -->
@@ -629,7 +642,7 @@ onBeforeUnmount(() => {
                   <span class="w-4 text-sm" style="color: #c8c4d7">%</span>
                 </div>
                 <p class="text-sm text-right" style="color: #c8c4d7">
-                  Total: {{ Number(split.percentSum).toFixed(1) }}%
+                  {{ t('expenseForm.totalPercent', { total: Number(split.percentSum).toFixed(1) }) }}
                 </p>
               </div>
 
@@ -676,7 +689,7 @@ onBeforeUnmount(() => {
                   <span class="w-4 text-sm" style="color: #c8c4d7">&euro;</span>
                 </div>
                 <p class="text-sm text-right" style="color: #c8c4d7">
-                  Total: {{ formatEur(Number(split.fixedSum)) }}
+                  {{ t('expenseForm.totalEur', { total: formatEur(Number(split.fixedSum), locale) }) }}
                 </p>
               </div>
 
@@ -713,11 +726,10 @@ onBeforeUnmount(() => {
               class="text-center text-xl font-semibold mb-4"
               style="color: #e5e0ed"
             >
-              Are you sure?
+              {{ t('expenseForm.areYouSure') }}
             </h3>
             <p class="mb-6 text-sm text-center" style="color: #c8c4d7">
-              Do you really want to delete this expense? This action cannot be
-              undone.
+              {{ t('expenseForm.deleteExpenseWarning') }}
             </p>
 
             <p
@@ -740,7 +752,7 @@ onBeforeUnmount(() => {
                 :disabled="deleting"
                 @click="confirmDelete"
               >
-                {{ deleting ? 'Deleting...' : 'Confirm Delete' }}
+                {{ deleting ? t('common.deleting') : t('expenseForm.confirmDelete') }}
               </button>
               <button
                 type="button"
@@ -749,7 +761,7 @@ onBeforeUnmount(() => {
                 :disabled="deleting"
                 @click="cancelDelete"
               >
-                Cancel
+                {{ t('expenseForm.cancel') }}
               </button>
             </div>
           </div>
@@ -768,7 +780,7 @@ onBeforeUnmount(() => {
           style="background: #6554e7; color: #f0ebff"
           :disabled="submitting || !isFormValid"
         >
-          {{ submitting ? 'Saving...' : 'Save' }}
+          {{ submitting ? t('expenseForm.saving') : t('expenseForm.save') }}
         </button>
 
         <button
@@ -782,7 +794,7 @@ onBeforeUnmount(() => {
           "
           @click="startDelete"
         >
-          Delete
+          {{ t('expenseForm.delete') }}
         </button>
       </div>
     </div>

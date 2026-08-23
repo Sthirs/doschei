@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+
 import { DatePicker } from 'v-calendar';
+
+const { t } = useI18n();
 
 interface Props {
   modelValue: string;
@@ -69,7 +73,7 @@ function cancel(): void {
   >
     <span
       class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
-      >Date</span
+      >{{ t('dateTimePicker.dateLabel') }}</span
     >
     <div
       class="rounded-xl px-4 py-3 bg-[#201F27] border border-[rgba(71,69,84,0.3)] flex items-center justify-between gap-3"
@@ -116,7 +120,7 @@ function cancel(): void {
     <div
       v-if="isOpen"
       role="dialog"
-      aria-label="Select date"
+      :aria-label="t('dateTimePicker.selectDateAria')"
       class="fixed inset-0 z-50"
     >
       <!-- Scrim -->
@@ -139,7 +143,7 @@ function cancel(): void {
           <div class="flex flex-col">
             <span
               class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C6BFFF]"
-              >SELECT DATE</span
+              >{{ t('dateTimePicker.selectDateHeading') }}</span
             >
             <span class="text-2xl font-bold text-[#E5E0ED]">{{
               formatDate(draft)
@@ -186,14 +190,14 @@ function cancel(): void {
             class="rounded-full px-6 py-3 text-[12px] font-medium tracking-[0.05em] text-[#C8C4D7]"
             @click="cancel"
           >
-            Cancel
+            {{ t('dateTimePicker.cancel') }}
           </button>
           <button
             type="button"
             class="rounded-full px-6 py-3 text-[12px] font-medium tracking-[0.05em] text-[#F0EBFF] bg-[#6554E7]"
             @click="apply"
           >
-            Apply
+            {{ t('dateTimePicker.apply') }}
           </button>
         </div>
       </div>

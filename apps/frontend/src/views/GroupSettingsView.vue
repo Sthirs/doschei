@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
@@ -7,6 +8,7 @@ import GroupSettingsPanel from '@/components/GroupSettingsPanel.vue';
 import { currentPageTitle } from '@/router';
 import type { GroupDetail } from '@/types/group';
 
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -23,9 +25,9 @@ const loadGroup = async () => {
   try {
     const { data } = await api.get<{ group: GroupDetail }>(`/groups/${groupId.value}`);
     group.value = data.group;
-    currentPageTitle.value = `${data.group.name} Settings`;
+    currentPageTitle.value = t('groupDetail.settingsTitleSuffix', { name: data.group.name });
   } catch {
-    errorMessage.value = 'We could not load this group.';
+    errorMessage.value = t('groupDetail.loadFailed');
   } finally {
     isLoading.value = false;
   }
@@ -37,7 +39,9 @@ const goBack = () => {
 
 onMounted(() => {
   if (history.state.groupName) {
-    currentPageTitle.value = `${history.state.groupName} Settings`;
+    currentPageTitle.value = t('groupDetail.settingsTitleSuffix', {
+      name: String(history.state.groupName),
+    });
   }
   loadGroup();
 });
@@ -53,7 +57,7 @@ onBeforeUnmount(() => {
     <button
       type="button"
       class="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-slate-100"
-      aria-label="Back to group"
+      :aria-label="t('groupSettings.backToGroup')"
       @click="goBack"
     >
       <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
@@ -69,7 +73,7 @@ onBeforeUnmount(() => {
   <main class="flex-1 overflow-y-auto text-slate-50 sm:px-6 lg:px-8">
     <div class="mx-auto flex max-w-5xl flex-col gap-4">
       <section v-if="isLoading" class="glass-panel rounded-md px-6 py-5 text-slate-300 sm:px-8">
-        Loading settings...
+        {{ t('groupSettings.loading') }}
       </section>
 
       <template v-else-if="group">

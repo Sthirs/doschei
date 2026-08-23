@@ -21,6 +21,14 @@ export type OAuthUserInfo = {
   email: string;
   emailVerified: boolean;
   displayName?: string;
+  /**
+   * BCP-47 language tag from the IdP's UserInfo `locale` claim (Google
+   * returns it under the default `openid email profile` scope). ADR-0018
+   * D3: when present, this is preferred over the browser's
+   * Accept-Language header for setting the new user's `language`.
+   * Optional because not every IdP emits it.
+   */
+  locale?: string;
 };
 
 export interface OAuthProvider {

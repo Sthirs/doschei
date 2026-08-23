@@ -4,6 +4,7 @@ import { AccountPage } from '../pages/AccountPage';
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
 const TOKEN_KEY = 'doschei.auth.token';
 const ORIGINAL_NAME = 'Demo User';
+const ORIGINAL_LANGUAGE = 'en';
 
 /**
  * Restore the demo user's display name via the API so sibling suites
@@ -19,7 +20,7 @@ async function restoreDemoName(page: import('@playwright/test').Page) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ displayName: ORIGINAL_NAME }),
+    body: JSON.stringify({ displayName: ORIGINAL_NAME, language: ORIGINAL_LANGUAGE }),
   });
 }
 
@@ -45,7 +46,7 @@ test.afterAll(async () => {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${data.token}`,
     },
-    body: JSON.stringify({ displayName: ORIGINAL_NAME }),
+    body: JSON.stringify({ displayName: ORIGINAL_NAME, language: ORIGINAL_LANGUAGE }),
   });
 });
 

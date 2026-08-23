@@ -5,24 +5,34 @@ import {
   balanceChipKind,
   balanceColorClass,
   groupInitials,
-  balanceChipLabel,
 } from '@/lib/format';
 
 describe('formatEur', () => {
-  it('formats a positive amount with EUR symbol', () => {
+  it('formats a positive amount with EUR symbol (en locale default)', () => {
     expect(formatEur(42.5)).toBe('€42.50');
+    expect(formatEur(42.5, 'en')).toBe('€42.50');
   });
 
   it('formats zero', () => {
     expect(formatEur(0)).toBe('€0.00');
+    expect(formatEur(0, 'en')).toBe('€0.00');
   });
 
-  it('formats a negative amount with a leading minus', () => {
+  it('formats a negative amount with a leading minus (en locale)', () => {
     expect(formatEur(-15)).toBe('-€15.00');
+    expect(formatEur(-15, 'en')).toBe('-€15.00');
   });
 
   it('never emits a dollar sign', () => {
     expect(formatEur(42.5)).not.toContain('$');
+    expect(formatEur(42.5, 'it')).not.toContain('$');
+  });
+
+  it('it locale uses comma as decimal separator and symbol after the number', () => {
+    // Whitespace between digits and symbol differs across runtimes (regular
+    // space vs U+00A0), so match on substance rather than exact spacing.
+    expect(formatEur(42.5, 'it')).toMatch(/42,50\s?€/);
+    expect(formatEur(42.5, 'it')).not.toContain('.');
   });
 });
 
@@ -63,18 +73,10 @@ describe('groupInitials', () => {
   it('returns empty string for whitespace-only input', () => {
     expect(groupInitials('   ')).toBe('');
   });
-});
 
-describe('balanceChipLabel', () => {
-  it('labels a positive net as being owed', () => {
-    expect(balanceChipLabel(10)).toBe('You are owed €10.00');
-  });
-
-  it('labels a negative net as owing', () => {
-    expect(balanceChipLabel(-12.5)).toBe('You owe €12.50');
-  });
-
-  it('labels a zero net as settled', () => {
-    expect(balanceChipLabel(0)).toBe('Settled');
+  it('skips Italian stopwords', () => {
+    expect(groupInitials('Viaggio a Roma')).toBe('VR');
+    expect(groupInitials('Cena con gli amici')).toBe('CA');
+    expect(groupInitials('Spesa di ieri')).toBe('SI');
   });
 });

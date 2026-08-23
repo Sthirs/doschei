@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
@@ -10,6 +11,7 @@ import UserPicker from '@/components/UserPicker.vue';
 import DateTimePicker from '@/components/DateTimePicker.vue';
 import type { GroupDetail } from '@/types/group';
 
+const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
@@ -80,7 +82,7 @@ const initialise = () => {
 onMounted(async () => {
   // Title set synchronously so the topbar shows the right label even before
   // the group state is applied.
-  currentPageTitle.value = mode.value === 'edit' ? 'Edit Payment' : 'Settle Up';
+  currentPageTitle.value = mode.value === 'edit' ? t('settleUp.editTitle') : t('settleUp.addTitle');
 
   const passedGroup = sharedGroup.value;
   sharedGroup.value = null;
@@ -128,10 +130,10 @@ const validationMessage = computed(() => {
     payeeId.value !== '' &&
     payerId.value === payeeId.value
   ) {
-    return 'The payer and the payee must be different people.';
+    return t('settleUp.payerPayeeDifferent');
   }
   if (typeof amount.value !== 'number' || amount.value <= 0) {
-    return 'Please enter an amount greater than 0.';
+    return t('settleUp.amountGreaterThanZero');
   }
   return '';
 });
@@ -169,7 +171,7 @@ const submit = async () => {
       state: { groupName: group.value?.name },
     });
   } catch {
-    errorMessage.value = 'Could not save the settlement. Please try again.';
+    errorMessage.value = t('settleUp.saveError');
   } finally {
     submitting.value = false;
   }
@@ -186,7 +188,7 @@ const deleteSettlement = async () => {
       state: { groupName: group.value?.name },
     });
   } catch {
-    errorMessage.value = 'Could not delete the settlement. Please try again.';
+    errorMessage.value = t('settleUp.deleteError');
   } finally {
     submitting.value = false;
   }
@@ -199,7 +201,7 @@ const deleteSettlement = async () => {
     <button
       type="button"
       class="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-slate-100"
-      aria-label="Back to group"
+      :aria-label="t('settleUp.backToGroup')"
       @click="goBack"
     >
       <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
@@ -217,7 +219,7 @@ const deleteSettlement = async () => {
     v-if="!group && !notFound && !loadError"
     class="flex-1 overflow-y-auto px-4 py-6 text-[#E5E0ED]"
   >
-    <div class="mx-auto w-full max-w-md">Loading...</div>
+    <div class="mx-auto w-full max-w-md">{{ t('settleUp.loading') }}</div>
   </main>
 
   <!-- Group-load failure -->
@@ -229,7 +231,7 @@ const deleteSettlement = async () => {
       <p
         class="rounded-xl px-4 py-3 text-sm text-rose-200 bg-rose-500/10 border border-rose-500/20"
       >
-        Group not found.
+        {{ t('settleUp.groupNotFound') }}
       </p>
     </div>
   </main>
@@ -243,7 +245,7 @@ const deleteSettlement = async () => {
       <p
         class="rounded-xl px-4 py-3 text-sm text-rose-200 bg-rose-500/10 border border-rose-500/20"
       >
-        Settlement not found.
+        {{ t('settleUp.settlementNotFound') }}
       </p>
     </div>
   </main>
@@ -277,7 +279,7 @@ const deleteSettlement = async () => {
             </svg>
           </div>
           <h2 class="text-2xl font-bold leading-8 text-[#E5E0ED]">
-            Record a Payment
+            {{ t('settleUp.recordPaymentHeading') }}
           </h2>
         </div>
 
@@ -295,7 +297,7 @@ const deleteSettlement = async () => {
               type="number"
               step="0.01"
               min="0.01"
-              placeholder="0.00"
+              :placeholder="t('settleUp.amountPlaceholder')"
               class="w-full bg-transparent text-center text-3xl font-bold text-[#E5E0ED] outline-none placeholder-[#C8C4D7] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               @input="amountTouched = true"
             />
@@ -310,14 +312,14 @@ const deleteSettlement = async () => {
             <label class="flex-1 flex flex-col gap-1.5">
               <span
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
-                >Who paid</span
+                >{{ t('settleUp.whoPaid') }}</span
               >
               <UserPicker v-model="payerId" :members="group.members" />
             </label>
             <label class="flex-1 flex flex-col gap-1.5">
               <span
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
-                >To whom</span
+                >{{ t('settleUp.toWhom') }}</span
               >
               <UserPicker v-model="payeeId" :members="group.members" />
             </label>
@@ -328,8 +330,7 @@ const deleteSettlement = async () => {
 
           <!-- Balance impact caption -->
           <p class="text-sm text-center text-[#C8C4D7]">
-            This payment will settle your balance of
-            {{ formatEur(Math.abs(group.balance.netForCurrentUser)) }}.
+            {{ t('settleUp.balanceImpact', { amount: formatEur(Math.abs(group.balance.netForCurrentUser), locale) }) }}
           </p>
 
           <!-- Validation / error messages -->
@@ -354,10 +355,10 @@ const deleteSettlement = async () => {
           class="rounded-2xl bg-[#1E1E26] border border-white/[0.08] p-6"
         >
           <h3 class="text-center text-xl font-semibold text-[#E5E0ED] mb-4">
-            Delete payment?
+            {{ t('settleUp.deletePaymentHeading') }}
           </h3>
           <p class="text-center text-sm text-[#C8C4D7] mb-6">
-            This action cannot be undone.
+            {{ t('settleUp.deletePaymentWarning') }}
           </p>
           <p
             v-if="errorMessage"
@@ -372,7 +373,7 @@ const deleteSettlement = async () => {
               :disabled="submitting"
               @click="showDeleteConfirm = false"
             >
-              Cancel
+              {{ t('settleUp.cancel') }}
             </button>
             <button
               type="button"
@@ -380,7 +381,7 @@ const deleteSettlement = async () => {
               :disabled="submitting"
               @click="deleteSettlement"
             >
-              {{ submitting ? 'Deleting...' : 'Delete' }}
+              {{ submitting ? t('settleUp.deleting') : t('settleUp.delete') }}
             </button>
           </div>
         </div>
@@ -397,8 +398,8 @@ const deleteSettlement = async () => {
           class="w-full rounded-xl bg-[#6554E7] py-4 text-base font-semibold text-[#F0EBFF] transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:bg-[#474554]"
           :disabled="!isValid || submitting"
         >
-          <span v-if="submitting">Saving...</span>
-          <span v-else>+ Record Payment</span>
+          <span v-if="submitting">{{ t('settleUp.saving') }}</span>
+          <span v-else>{{ t('settleUp.recordPaymentButton') }}</span>
         </button>
 
         <button
@@ -407,7 +408,7 @@ const deleteSettlement = async () => {
           class="w-full py-2 text-center text-sm font-medium text-[#FFB4AB] transition hover:text-[#ff8a80]"
           @click="showDeleteConfirm = true"
         >
-          Delete this payment
+          {{ t('settleUp.deleteThisPayment') }}
         </button>
       </div>
     </div>

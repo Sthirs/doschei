@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 import SettleUpView from '@/views/SettleUpView.vue';
+import { i18n } from '@/i18n';
 import { api } from '@/lib/api';
 import type { Expense, GroupDetail } from '@/types/group';
 
@@ -99,6 +100,7 @@ const mountView = async (group: GroupDetail) => {
   mocks.sharedGroup.value = group;
   const wrapper = mount(SettleUpView, {
     global: {
+      plugins: [i18n],
       stubs: {
         Teleport: true,
         DateTimePicker: true,

@@ -10,7 +10,7 @@ describe('PATCH /api/auth/me', () => {
     const token = reg.body.token;
     const original = reg.body.user;
 
-    const patch = await createJsonRequest<{ user: { id: string; email: string; displayName: string } }>('/api/auth/me', {
+    const patch = await createJsonRequest<{ user: { id: string; email: string; displayName: string; language: 'en' | 'it' } }>('/api/auth/me', {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ displayName: 'Updated Name' }),
@@ -18,7 +18,7 @@ describe('PATCH /api/auth/me', () => {
     expect(patch.status).toBe(200);
     expect(patch.body.user.displayName).toBe('Updated Name');
 
-    const reRead = await createJsonRequest<{ user: { id: string; email: string; displayName: string } }>('/api/auth/me', {
+    const reRead = await createJsonRequest<{ user: { id: string; email: string; displayName: string; language: 'en' | 'it' } }>('/api/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(reRead.status).toBe(200);
@@ -59,7 +59,7 @@ describe('PATCH /api/auth/me', () => {
     const token = reg.body.token;
     const originalEmail = reg.body.user.email;
 
-    const patch = await createJsonRequest<{ user: { id: string; email: string; displayName: string } }>('/api/auth/me', {
+    const patch = await createJsonRequest<{ user: { id: string; email: string; displayName: string; language: 'en' | 'it' } }>('/api/auth/me', {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ displayName: 'New Name', email: 'attacker@doschei.local' }),
@@ -69,11 +69,116 @@ describe('PATCH /api/auth/me', () => {
     expect(patch.body.user.email).toBe(originalEmail);
     expect(patch.body.user.email).not.toBe('attacker@doschei.local');
 
-    const reRead = await createJsonRequest<{ user: { id: string; email: string; displayName: string } }>('/api/auth/me', {
+    const reRead = await createJsonRequest<{ user: { id: string; email: string; displayName: string; language: 'en' | 'it' } }>('/api/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(reRead.status).toBe(200);
     expect(reRead.body.user.email).toBe(originalEmail);
     expect(reRead.body.user.email).not.toBe('attacker@doschei.local');
+  });
+
+  it('updates the language and persists it; can be reverted to "en"', async () => {
+    const reg = await registerUser('account-lang-roundtrip');
+    const token = reg.body.token;
+
+    const patchIt = await createJsonRequest<{ user: { language: 'en' | 'it' } }>('/api/auth/me', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ language: 'it' }),
+    });
+    expect(patchIt.status).toBe(200);
+    expect(patchIt.body.user.language).toBe('it');
+
+    const readAfterIt = await createJsonRequest<{ user: { language: 'en' | 'it' } }>('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(readAfterIt.status).toBe(200);
+    expect(readAfterIt.body.user.language).toBe('it');
+
+    const patchEn = await createJsonRequest<{ user: { language: 'en' | 'it' } }>('/api/auth/me', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ language: 'en' }),
+    });
+    expect(patchEn.status).toBe(200);
+    expect(patchEn.body.user.language).toBe('en');
+
+    const readAfterEn = await createJsonRequest<{ user: { language: 'en' | 'it' } }>('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(readAfterEn.status).toBe(200);
+    expect(readAfterEn.body.user.language).toBe('en');
+  });
+
+  it('rejects an unsupported language with 400', async () => {
+    const reg = await registerUser('account-lang-invalid-fr');
+    const token = reg.body.token;
+
+    const res = await createJsonRequest<{ message: string }>('/api/auth/me', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ language: 'fr' }),
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/language must be/i);
+  });
+
+  it('rejects a non-string language with 400', async () => {
+    const reg = await registerUser('account-lang-invalid-num');
+    const token = reg.body.token;
+
+    const res = await createJsonRequest<{ message: string }>('/api/auth/me', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ language: 123 }),
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/language must be/i);
+  });
+
+  it('rejects a PATCH with neither displayName nor language', async () => {
+    const reg = await registerUser('account-lang-neither');
+    const token = reg.body.token;
+
+    const res = await createJsonRequest<{ message: string }>('/api/auth/me', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/at least one of displayName or language/i);
+  });
+
+  it('does NOT alter language when only displayName is patched', async () => {
+    const reg = await registerUser('account-lang-displayname-only');
+    const token = reg.body.token;
+
+    const setLang = await createJsonRequest<{ user: { language: 'en' | 'it' } }>('/api/auth/me', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ language: 'it' }),
+    });
+    expect(setLang.status).toBe(200);
+    expect(setLang.body.user.language).toBe('it');
+
+    const patchName = await createJsonRequest<{
+      user: { displayName: string; language: 'en' | 'it' };
+    }>('/api/auth/me', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ displayName: 'Renamed User' }),
+    });
+    expect(patchName.status).toBe(200);
+    expect(patchName.body.user.displayName).toBe('Renamed User');
+    expect(patchName.body.user.language).toBe('it');
+
+    const reRead = await createJsonRequest<{
+      user: { displayName: string; language: 'en' | 'it' };
+    }>('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(reRead.status).toBe(200);
+    expect(reRead.body.user.displayName).toBe('Renamed User');
+    expect(reRead.body.user.language).toBe('it');
   });
 });

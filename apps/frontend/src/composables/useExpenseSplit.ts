@@ -5,6 +5,33 @@ import type { ExpenseSplit, GroupMember, ShareType } from '@/types/group';
 
 export type SplitValueMap = Record<string, number | ''>;
 
+/**
+ * Localized error messages consumed by `splitErrorMessage`. The composable
+ * stays free of any i18n dependency — callers (typically ExpenseFormView)
+ * resolve the strings via `t()` and pass them in. Keeping the boundary at the
+ * composable API preserves the ADR-0006/0017 purity ethos: the composable
+ * owns logic, the view owns strings.
+ */
+export type SplitMessages = {
+  noMembersSelected: string;
+  percentagesMustSum: (current: string) => string;
+  fixedMustSum: (current: string, total: string) => string;
+};
+
+/**
+ * English fallback used when the caller does not supply localized messages
+ * (tests and any non-view consumer). Views MUST pass `t()`-derived messages —
+ * these defaults exist only so the composable keeps working without an i18n
+ * context and so the original English wording has a single home.
+ */
+const DEFAULT_SPLIT_MESSAGES: SplitMessages = {
+  noMembersSelected: 'Select at least one person to split with.',
+  percentagesMustSum: (current) =>
+    `Percentages must sum to 100 (current: ${current}).`,
+  fixedMustSum: (current, total) =>
+    `Fixed amounts must sum to €${total} (current: €${current}).`,
+};
+
 export type UseExpenseSplitReturn = {
   selectedSplitUserIds: Ref<string[]>;
   splitMode: Ref<ShareType>;
@@ -48,6 +75,7 @@ const numberOrZero = (values: SplitValueMap, userId: string): number => {
 export const useExpenseSplit = (
   members: Ref<GroupMember[]>,
   initialSplits?: ExpenseSplit[],
+  messages: SplitMessages = DEFAULT_SPLIT_MESSAGES,
 ): UseExpenseSplitReturn => {
   const selectedSplitUserIds = ref<string[]>([]);
   const splitMode = ref<ShareType>('EQUAL');
@@ -117,16 +145,19 @@ export const useExpenseSplit = (
 
   const splitErrorMessage = (amount: number): string => {
     if (selectedSplitUserIds.value.length === 0) {
-      return 'Select at least one person to split with.';
+      return messages.noMembersSelected;
     }
     if (splitMode.value === 'PERCENT') {
       if (Math.abs(percentSum.value - 100) > 0.01) {
-        return `Percentages must sum to 100 (current: ${percentSum.value.toFixed(2)}).`;
+        return messages.percentagesMustSum(percentSum.value.toFixed(2));
       }
     }
     if (splitMode.value === 'FIXED') {
       if (amount && amount > 0 && Math.abs(fixedSum.value - amount) > 0.01) {
-        return `Fixed amounts must sum to \u20AC${amount.toFixed(2)} (current: \u20AC${fixedSum.value.toFixed(2)}).`;
+        return messages.fixedMustSum(
+          fixedSum.value.toFixed(2),
+          amount.toFixed(2),
+        );
       }
     }
     return '';

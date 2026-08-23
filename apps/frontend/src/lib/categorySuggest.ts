@@ -62,13 +62,14 @@ export const normalizeDescription = (s: string): string =>
   s.trim().toLowerCase().replace(/\s+/g, ' ');
 
 /**
- * Tokenises a description for fuzzy matching: normalise, split on any
- * non-alphanumeric run, drop tokens shorter than 2 characters, and dedupe
+ * Tokenises a description for fuzzy matching: normalise, split on any run of
+ * non-letter/non-number characters (Unicode-aware so accented words like
+ * "caffè" stay intact), drop tokens shorter than 2 characters, and dedupe
  * while preserving first-seen order.
  */
 export const tokenize = (s: string): string[] => {
   const normalized = normalizeDescription(s);
-  const rawTokens = normalized.split(/[^a-z0-9]+/).filter((t) => t.length >= 2);
+  const rawTokens = normalized.split(/[^\p{L}\p{N}]+/u).filter((t) => t.length >= 2);
   const seen = new Set<string>();
   const out: string[] = [];
   for (const t of rawTokens) {
@@ -91,28 +92,29 @@ const compareEntriesByValueThenKey = (
 };
 
 /**
- * Generic category labels (normalised) that are intentionally excluded from
- * Stage 3 because they are ambiguous across families — picking them via the
- * name-fallback would be a coin flip.
+ * Generic category KEYS intentionally excluded from Stage 3 because they are
+ * ambiguous across families — picking them via the name-fallback would be a
+ * coin flip. Key-based (not label-based) so the exclusion is locale-proof.
  */
-const GENERIC_LABEL_NORMALIZED = new Set(['other', 'general']);
+const isGenericKey = (key: string): boolean =>
+  key.endsWith('-other') || key === 'general';
 
 /**
- * Stage 3 — taxonomy-name fallback. Scans every category in
- * `CATEGORY_BY_KEY` and ranks non-generic labels by how completely their
- * tokens are covered by the query tokens (`qTokens`, already computed for
- * Stage 2). A label qualifies whenever at least one of its tokens appears
- * in the query; full-name matches (every label token covered) naturally
- * outrank partial ones via the coverage ratio, and ties are broken by
- * category key (ASC) so the result is deterministic. Confidence is the
- * share of the label that the query explains — for a full match this is 1,
- * for a partial match it is `covered / labelTokens.length` and therefore
- * ≤ 1. The old exact-name 3a branch is subsumed: an exact normalised
- * match always yields ratio 1 (every label token is present in the query)
- * under the unified rule.
+ * Stage 3 — taxonomy-name fallback. Scans every category in `CATEGORY_BY_KEY`
+ * and ranks non-generic categories by how completely their LOCALIZED label's
+ * tokens (from `labels`, keyed by category key) are covered by the query
+ * tokens (`qTokens`, already computed for Stage 2). A label qualifies whenever
+ * at least one of its tokens appears in the query; full-name matches (every
+ * label token covered) naturally outrank partial ones via the coverage ratio,
+ * and ties are broken by category key (ASC) so the result is deterministic.
+ * Confidence is the share of the label that the query explains — for a full
+ * match this is 1, for a partial match it is `covered / labelTokens.length`
+ * and therefore ≤ 1. Categories without an entry in `labels` are skipped, so
+ * an empty map disables Stage 3 entirely.
  */
 const suggestCategoryByName = (
   qTokens: readonly string[],
+  labels: Readonly<Record<string, string>>,
 ): CategorySuggestion | null => {
   if (qTokens.length === 0) return null;
 
@@ -121,8 +123,10 @@ const suggestCategoryByName = (
   type Qualifier = { key: string; coveredTokenCount: number; ratio: number };
   const qualifiers: Qualifier[] = [];
   for (const def of CATEGORY_BY_KEY.values()) {
-    if (GENERIC_LABEL_NORMALIZED.has(normalizeDescription(def.label))) continue;
-    const labelTokens = tokenize(def.label);
+    if (isGenericKey(def.key)) continue;
+    const label = labels[def.key];
+    if (!label) continue;
+    const labelTokens = tokenize(label);
     if (labelTokens.length === 0) continue;
     let covered = 0;
     for (const t of labelTokens) {
@@ -155,13 +159,15 @@ const suggestCategoryByName = (
 
 /**
  * Suggests the most likely expense category for a description, learning from
- * the user's prior categorised expenses in the group. Returns `null` when no
- * candidate clears the configured thresholds and the category taxonomy itself
- * yields no name match either.
+ * the user's prior categorised expenses in the group. `labels` maps category
+ * key → localized label for the ACTIVE locale (Stage 3 matches against it);
+ * an empty map disables the taxonomy-name fallback. Returns `null` when no
+ * candidate clears the configured thresholds.
  */
 export const suggestCategory = (
   description: string,
   history: ReadonlyArray<CategoryLearningEntry>,
+  labels: Readonly<Record<string, string>> = {},
 ): CategorySuggestion | null => {
   const norm = normalizeDescription(description);
   if (norm === '') return null;
@@ -232,5 +238,5 @@ export const suggestCategory = (
 
   // Stage 3: taxonomy-name fallback (history-first priority already enforced
   // by the Stages 1–2 short-circuits above).
-  return suggestCategoryByName(qTokens);
+  return suggestCategoryByName(qTokens, labels);
 };
