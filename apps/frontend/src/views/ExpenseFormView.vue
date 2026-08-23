@@ -19,11 +19,17 @@ import {
 import CategoryPicker from '@/components/CategoryPicker.vue';
 import DateTimePicker from '@/components/DateTimePicker.vue';
 import { formatEur } from '@/lib/format';
-import { DEFAULT_CATEGORY_KEY } from '@/lib/categories';
+import { CATEGORIES, DEFAULT_CATEGORY_KEY } from '@/lib/categories';
 import { suggestCategory } from '@/lib/categorySuggest';
 import type { Expense, GroupDetail } from '@/types/group';
 
 const { t, locale } = useI18n();
+
+// Stage-3 label map for the suggestion engine, kept reactive to the active
+// locale so Italian descriptions match Italian category names.
+const categoryLabels = computed<Record<string, string>>(() =>
+  Object.fromEntries(CATEGORIES.map((c) => [c.key, t(`categories.items.${c.key}`)])),
+);
 
 // Render only the first word of a member's display name inside the compact
 // member buttons; CSS `truncate` adds "…" if even that is too wide.
@@ -109,10 +115,7 @@ const applySuggestion = () => {
   // non-default category is treated as already selected, so this guard skips
   // any lookup and leaves it alone.
   if (category.value !== DEFAULT_CATEGORY_KEY) return;
-  const suggestion = suggestCategory(
-    description.value,
-    group.value?.expenses ?? [],
-  );
+  const suggestion = suggestCategory(description.value, group.value?.expenses ?? [], categoryLabels.value);
   if (!suggestion || suggestion.key === category.value) return;
   // SILENT: no pulse, no animation, no toast — the picker just reflects the
   // new value on its next paint.

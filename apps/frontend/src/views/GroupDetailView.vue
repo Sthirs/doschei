@@ -12,6 +12,9 @@ import { useAuthStore } from '@/stores/auth';
 import type { GroupDetail, Expense } from '@/types/group';
 
 const { t, locale } = useI18n();
+
+const itemLabel = (categoryKey: string): string =>
+  t(`categories.items.${getCategory(categoryKey).key}`);
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
@@ -506,7 +509,7 @@ onBeforeUnmount(() => {
                       :title="
                         expense.kind === 'SETTLEMENT'
                           ? t('groupDetail.settlementTitle')
-                          : getCategory(expense.category).label
+                          : itemLabel(expense.category)
                       "
                     >
                       <span
@@ -518,7 +521,7 @@ onBeforeUnmount(() => {
                       <img
                         v-else
                         :src="getCategory(expense.category).iconPath"
-                        :alt="getCategory(expense.category).label"
+                        :alt="itemLabel(expense.category)"
                         class="h-5 w-5"
                         aria-hidden="true"
                       />

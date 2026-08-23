@@ -2,11 +2,8 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import {
-  CATEGORIES_GROUPED,
-  CATEGORY_FAMILY_LABELS,
-  getCategory,
-} from '@/lib/categories';
+import { CATEGORIES_GROUPED, getCategory } from '@/lib/categories';
+import type { CategoryFamily } from '@/lib/categories';
 
 const { t } = useI18n();
 
@@ -29,16 +26,20 @@ const searchQuery = ref('');
 
 const current = computed(() => getCategory(props.modelValue));
 
+const familyLabel = (family: CategoryFamily): string =>
+  t(`categories.families.${family}`);
+const itemLabel = (key: string): string => t(`categories.items.${key}`);
+
 const filteredGroups = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) return CATEGORIES_GROUPED;
   return CATEGORIES_GROUPED
     .map((group) => {
-      const familyLabel = CATEGORY_FAMILY_LABELS[group.family].toLowerCase();
-      const familyMatches = familyLabel.includes(q);
+      const famLabel = familyLabel(group.family).toLowerCase();
+      const familyMatches = famLabel.includes(q);
       const entries = familyMatches
         ? [...group.entries]
-        : group.entries.filter((e) => e.label.toLowerCase().includes(q));
+        : group.entries.filter((e) => itemLabel(e.key).toLowerCase().includes(q));
       return { ...group, entries };
     })
     .filter((group) => group.entries.length > 0);
@@ -130,13 +131,13 @@ onBeforeUnmount(() => {
         backgroundColor: `${current.color}33`,
         border: `1px solid ${current.color}4D`,
       }"
-      :title="current.label"
-      :aria-label="`Category: ${current.label}`"
+      :title="itemLabel(current.key)"
+      :aria-label="t('categoryPicker.categoryLabelAria', { label: itemLabel(current.key) })"
       @click.stop="open"
     >
       <img
         :src="current.iconPath"
-        :alt="current.label"
+        :alt="itemLabel(current.key)"
         class="h-4 w-4"
         aria-hidden="true"
       />
@@ -170,7 +171,7 @@ onBeforeUnmount(() => {
         </div>
         <div v-for="group in filteredGroups" :key="group.family" class="py-1">
           <p class="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">
-            {{ group.label }}
+            {{ familyLabel(group.family) }}
           </p>
           <button
             v-for="cat in group.entries"
@@ -193,12 +194,12 @@ onBeforeUnmount(() => {
             >
               <img
                 :src="cat.iconPath"
-                :alt="cat.label"
+                :alt="itemLabel(cat.key)"
                 class="h-4 w-4"
                 aria-hidden="true"
               />
             </span>
-            <span class="flex-1">{{ cat.label }}</span>
+            <span class="flex-1">{{ itemLabel(cat.key) }}</span>
             <svg
               v-if="cat.key === modelValue"
               viewBox="0 0 20 20"
@@ -262,7 +263,7 @@ onBeforeUnmount(() => {
             </div>
             <div v-for="group in filteredGroups" :key="group.family" class="py-1">
               <p class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">
-                {{ group.label }}
+                {{ familyLabel(group.family) }}
               </p>
               <button
                 v-for="cat in group.entries"
@@ -285,12 +286,12 @@ onBeforeUnmount(() => {
                 >
                   <img
                     :src="cat.iconPath"
-                    :alt="cat.label"
+                    :alt="itemLabel(cat.key)"
                     class="h-4 w-4"
                     aria-hidden="true"
                   />
                 </span>
-                <span class="flex-1">{{ cat.label }}</span>
+                <span class="flex-1">{{ itemLabel(cat.key) }}</span>
                 <svg
                   v-if="cat.key === modelValue"
                   viewBox="0 0 20 20"
