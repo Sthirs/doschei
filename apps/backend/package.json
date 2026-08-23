@@ -15,13 +15,13 @@
     "bcryptjs": "3.0.3",
     "concurrently": "10.0.5",
     "cors": "2.8.6",
-    "cypress": "15.20.1",
+    "cypress": "15.21.0",
     "dotenv": "17.4.2",
     "express": "5.2.1",
     "cookie-parser": "1.4.7",
     "express-rate-limit": "8.6.2",
     "jsonwebtoken": "9.0.3",
-    "openid-client": "6.8.5",
+    "openid-client": "6.8.7",
     "pg": "8.23.0",
     "reflect-metadata": "0.2.2",
     "typeorm": "1.1.0",
@@ -45,6 +45,6 @@
     "tsx": "4.23.12",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "typescript-eslint": "8.67.0",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   }
 }
