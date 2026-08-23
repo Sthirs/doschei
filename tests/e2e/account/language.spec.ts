@@ -56,7 +56,9 @@ test.describe('account language selection (EN → IT)', () => {
     await page.goto('/groups');
     await expect(page.getByText(/Ti devono|Devi |Pari/).first()).toBeVisible();
 
-    // Log out, log back in — the saved preference survives the session.
+    // Sign Out lives on the account screen; the saved preference must survive re-login.
+    await page.goto('/account');
+    await expect(page.getByRole('button', { name: 'Esci' })).toBeVisible();
     await page.getByRole('button', { name: 'Esci' }).click();
     await expect(page).toHaveURL(/\/login/);
     await page.locator('#email').fill('demo@doschei.local');
