@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/Sthirs/doschei/compare/v1.2.0...v1.3.0) (2026-08-23)
+
+
+### Features
+
+* add i18n and Italian translation ([#77](https://github.com/Sthirs/doschei/issues/77)) ([87033a6](https://github.com/Sthirs/doschei/commit/87033a66ba7df70f2fb587ba19027345b42fbcfc))
+* add rate limiter ([#74](https://github.com/Sthirs/doschei/issues/74)) ([8894a74](https://github.com/Sthirs/doschei/commit/8894a74c5e10081cc635e90723d3bfc861c2b4fa))
+* auto-select category ([#76](https://github.com/Sthirs/doschei/issues/76)) ([d41a100](https://github.com/Sthirs/doschei/commit/d41a100eb7be8f50e2bb5db02f701916e1560cc7))
+
+
+### Bug Fixes
+
+* **deps:** update minor and patch updates ([#80](https://github.com/Sthirs/doschei/issues/80)) ([33b51f3](https://github.com/Sthirs/doschei/commit/33b51f32af34581b9c2834b43b217a17717a8f77))
+
 ## [1.2.0](https://github.com/Sthirs/doschei/compare/v1.1.0...v1.2.0) (2026-08-18)
 
 
