@@ -186,7 +186,7 @@ onUnmounted(() => {
             <div class="flex items-center gap-4 px-4 py-4">
               <!-- Thumbnail: always gradient for invitations -->
               <div
-                class="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
+                class="h-20 w-20 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
                 :aria-label="t('groups.thumbnailAria', { name: invitation.groupName })"
               >
                 {{ groupInitials(invitation.groupName) }}
@@ -272,7 +272,7 @@ onUnmounted(() => {
             </div>
             <div
               v-else
-              class="h-14 w-14 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
+              class="h-20 w-20 rounded-xl shrink-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-lg"
               :aria-label="t('groups.thumbnailAria', { name: group.name })"
             >
               {{ groupInitials(group.name) }}
