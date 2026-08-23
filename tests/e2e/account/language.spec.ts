@@ -59,7 +59,7 @@ test.describe('account language selection (EN → IT via Save)', () => {
     // Groups screen renders the localized balance chips.
     // NB: Intl 'it' renders EUR as "40,00 €" — do not pin the English amount shape here.
     await page.goto('/groups');
-    await expect(page.getByText(/Ti devono|Devi |Pari/).first()).toBeVisible();
+    await expect(page.getByText(/Ti devono|Devi |pari/i).first()).toBeVisible();
 
     // Log out (Sign Out lives on the account screen), log back in —
     // the saved preference survives the session.

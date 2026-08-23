@@ -40,7 +40,7 @@ export const it = {
     saveChanges: 'Salva modifiche',
     balanceOwed: 'Ti devono {amount}',
     balanceOwe: 'Devi {amount}',
-    balanceSettled: 'Pari',
+    balanceSettled: 'In pari',
   },
 
   app: {
