@@ -14,7 +14,7 @@ const STORAGE_KEY = 'doschei.lang';
 
 /**
  * Collect the dot-separated leaf keys of a nested message object.
- * Leaf detection: primitive value (not a plain object, not an array).
+ * Leaf detection: primitive value, function, or array (not a plain object).
  */
 function deepKeys(
   value: unknown,
@@ -31,6 +31,10 @@ function deepKeys(
   const out: string[] = [];
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
     const next = prefix === '' ? k : `${prefix}.${k}`;
+    if (typeof v === 'function') {
+      out.push(next);
+      continue;
+    }
     out.push(...deepKeys(v, next));
   }
   return out;
@@ -90,7 +94,9 @@ describe('i18n/key parity', () => {
 
   it('missing a key in it would break parity', () => {
     // Self-check: deleting one key MUST make this fail.
-    const mutated = structuredClone(itMessages);
+    // JSON deep-clone drops function values, but `deepKeys` records their keys
+    // by name — parity only checks presence, not callable identity.
+    const mutated = JSON.parse(JSON.stringify(itMessages)) as Record<string, unknown>;
     // @ts-expect-error: deliberate runtime mutation for the assertion
     delete mutated.common.save;
     expect([...deepKeys(mutated)].sort()).not.toEqual([...deepKeys(en)].sort());

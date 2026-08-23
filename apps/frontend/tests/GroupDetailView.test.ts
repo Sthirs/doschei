@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { ref } from 'vue';
 
 import GroupDetailView from '@/views/GroupDetailView.vue';
+import { i18n } from '@/i18n';
 import { api } from '@/lib/api';
 
 // The default group payload used by the mocked api.get. Declared as a hoisted
@@ -125,6 +126,7 @@ vi.mock('@/stores/auth', () => ({
 const mountGroupDetailView = () =>
   mount(GroupDetailView, {
     global: {
+      plugins: [i18n],
       stubs: {
         Teleport: true,
         DateTimePicker: true,

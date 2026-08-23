@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
 import { currentPageTitle } from '@/router';
@@ -8,9 +9,13 @@ import { useAuthStore } from '@/stores/auth';
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const { t } = useI18n();
 
-const currentTitle = computed(() => String(currentPageTitle.value ?? route.meta.title ?? route.name ?? 'App'));
+const currentTitle = computed(() =>
+  String(currentPageTitle.value ?? route.meta.title ?? t('app.fallbackTitle')),
+);
 const userInitial = computed(() => authStore.user?.displayName?.trim().charAt(0).toUpperCase() ?? 'U');
+const openAccountAria = computed(() => t('app.openAccountPageAria'));
 
 const goToAccount = async () => {
   await router.push({ name: 'account' });
@@ -33,7 +38,7 @@ const goToAccount = async () => {
       <button
         type="button"
         class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-[#E5E0ED] transition hover:border-brand-500/40 hover:bg-brand-500/10 focus:outline-none focus:ring-2 focus:ring-brand-500/40 sm:h-11 sm:w-11"
-        aria-label="Open account page"
+        :aria-label="openAccountAria"
         @click="goToAccount"
       >
         <span aria-hidden="true">{{ userInitial }}</span>

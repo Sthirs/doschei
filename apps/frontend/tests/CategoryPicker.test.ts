@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 
 import CategoryPicker from '@/components/CategoryPicker.vue';
+import { i18n } from '@/i18n';
 
 function mountPicker(props: Record<string, unknown> = {}) {
   return mount(CategoryPicker, {
     props: { modelValue: 'general', ...props },
     global: {
+      plugins: [i18n],
       stubs: {
         Teleport: {
           template: '<div class="teleport-stub"><slot /></div>',

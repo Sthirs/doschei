@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 
+const { t } = useI18n();
 const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
@@ -28,7 +30,7 @@ const submit = async () => {
     await authStore.login(form);
     await router.push(redirectTarget.value);
   } catch {
-    errorMessage.value = 'We could not log you in with those credentials.';
+    errorMessage.value = t('login.loginFailed');
   }
 };
 
@@ -56,38 +58,38 @@ onMounted(async () => {
     <div class="w-full max-w-[390px]">
       <img src="/logo.svg" alt="Do Schèi logo" class="mx-auto h-35 w-35" />
       <h1 class="mt-4 text-center text-5xl font-bold text-[#C6BFFF]">Do Schèi</h1>
-      <h2 class="mt-2 text-center text-3xl font-bold text-text-primary">Bentornato</h2>
-      <p class="mt-2 text-center text-base text-text-secondary">Manage your shared expenses</p>
+      <h2 class="mt-2 text-center text-3xl font-bold text-text-primary">{{ t('login.welcome') }}</h2>
+      <p class="mt-2 text-center text-base text-text-secondary">{{ t('login.subtitle') }}</p>
 
       <div class="mt-8">
         <template v-if="authConfig === null || authConfig.localLoginEnabled">
           <form class="space-y-6" @submit.prevent="submit">
             <div>
-              <label class="sr-only" for="email">Email</label>
+              <label class="sr-only" for="email">{{ t('login.email') }}</label>
               <input
                 id="email"
                 v-model="form.email"
                 type="email"
                 required
-                placeholder="Email"
+                :placeholder="t('login.email')"
                 class="h-[58px] w-full rounded-xl border border-white/10 bg-[#1E1E26] px-4 text-text-primary outline-none transition placeholder:text-text-secondary focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
               />
             </div>
 
             <div class="relative">
-              <label class="sr-only" for="password">Password</label>
+              <label class="sr-only" for="password">{{ t('login.password') }}</label>
               <input
                 id="password"
                 v-model="form.password"
                 :type="showPassword ? 'text' : 'password'"
                 required
-                placeholder="Password"
+                :placeholder="t('login.password')"
                 class="h-[58px] w-full rounded-xl border border-white/10 bg-[#1E1E26] px-4 pr-12 text-text-primary outline-none transition placeholder:text-text-secondary focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30"
               />
               <button
                 type="button"
                 class="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary transition hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                :aria-label="showPassword ? t('login.hidePassword') : t('login.showPassword')"
                 :aria-pressed="showPassword"
                 @click="showPassword = !showPassword"
               >
@@ -105,14 +107,14 @@ onMounted(async () => {
               :disabled="authStore.isLoading"
               class="flex h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-brand-500 font-semibold text-[#F0EBFF] transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {{ authStore.isLoading ? 'Logging in...' : 'Log In' }}
+              {{ authStore.isLoading ? t('login.loggingIn') : t('login.logIn') }}
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F0EBFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             </button>
           </form>
         </template>
         <template v-else-if="!oauthConfig?.enabled">
           <p class="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-center text-sm text-text-secondary">
-            Sign-in is not available — contact an administrator.
+            {{ t('login.signInUnavailable') }}
           </p>
         </template>
 

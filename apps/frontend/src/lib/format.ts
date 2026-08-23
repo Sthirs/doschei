@@ -1,6 +1,10 @@
-// Format a EUR amount (number of euros, e.g. 42.5) as "€42.50"
-export const formatEur = (eur: number): string => {
-  return new Intl.NumberFormat('en', {
+import { normalizeLocale } from '@/i18n';
+
+// Format a EUR amount (number of euros, e.g. 42.5) as "€42.50".
+//
+// Locale accepts any BCP-47-ish string and is normalized internally ('en' fallback).
+export const formatEur = (eur: number, locale: string = 'en'): string => {
+  return new Intl.NumberFormat(normalizeLocale(locale), {
     style: 'currency',
     currency: 'EUR',
     minimumFractionDigits: 2,
@@ -25,9 +29,15 @@ export const balanceColorClass = (kind: 'owed' | 'owe' | 'settled'): string => {
   return map[kind];
 };
 
-// Filler words skipped when picking initials ("Weekend in Venice" → "WV")
+// Filler words skipped when picking initials ("Weekend in Venice" → "WV").
+// Combined English + Italian stopwords so groupInitials behaves correctly for
+// both locales without the caller needing to specify.
 const GROUP_INITIAL_STOPWORDS = new Set([
+  // English
   'a', 'an', 'and', 'at', 'by', 'for', 'from', 'in', 'of', 'on', 'the', 'to', 'with',
+  // Italian
+  'di', 'del', 'della', 'dei', 'degli', 'delle', 'e', 'il', 'lo', 'la', 'gli', 'le',
+  'un', 'una', 'uno', 'per', 'con', 'su', 'in', 'al', 'alla', 'ai', 'agli', 'dal', 'dalla',
 ]);
 
 // Extract up to 2 initials from group name (first letter of first 2 meaningful words)
@@ -38,12 +48,4 @@ export const groupInitials = (name: string): string => {
     .split(/\s+/)
     .filter((w) => !GROUP_INITIAL_STOPWORDS.has(w.toLowerCase()));
   return words.slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
-};
-
-// Get chip label text
-export const balanceChipLabel = (netForCurrentUser: number): string => {
-  const kind = balanceChipKind(netForCurrentUser);
-  if (kind === 'owed') return `You are owed ${formatEur(netForCurrentUser)}`;
-  if (kind === 'owe') return `You owe ${formatEur(Math.abs(netForCurrentUser))}`;
-  return 'Settled';
 };

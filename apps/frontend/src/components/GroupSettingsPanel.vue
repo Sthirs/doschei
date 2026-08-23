@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { ref } from 'vue';
 
 import { api } from '@/lib/api';
@@ -28,6 +29,8 @@ const isCurrentUser = (memberId: string): boolean => {
   return authStore.user?.id === memberId;
 };
 
+const { t } = useI18n();
+
 const groupName = ref(props.group.name);
 const isSubmittingName = ref(false);
 const nameError = ref('');
@@ -41,7 +44,7 @@ const cancellingInvitationId = ref<string | null>(null);
 
 const saveName = async () => {
   if (!groupName.value.trim()) {
-    nameError.value = 'Group name cannot be empty.';
+    nameError.value = t('groupSettings.groupNameEmpty');
     return;
   }
 
@@ -52,7 +55,7 @@ const saveName = async () => {
     await api.patch(`/groups/${props.group.id}`, { name: groupName.value.trim() });
     emit('updated');
   } catch {
-    nameError.value = 'Could not update the group name.';
+    nameError.value = t('groupSettings.updateNameError');
   } finally {
     isSubmittingName.value = false;
   }
@@ -60,7 +63,7 @@ const saveName = async () => {
 
 const addMember = async () => {
   if (!memberEmail.value.trim()) {
-    memberError.value = 'Please enter an email address.';
+    memberError.value = t('groupSettings.addMemberEmailEmpty');
     return;
   }
 
@@ -75,7 +78,7 @@ const addMember = async () => {
     emit('updated');
   } catch (error: unknown) {
     const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-    memberError.value = msg || 'Could not add member.';
+    memberError.value = msg || t('groupSettings.addMemberError');
   } finally {
     isSubmittingMember.value = false;
   }
@@ -88,7 +91,7 @@ const removeMember = async (member: GroupMember) => {
     await api.delete(`/groups/${props.group.id}/members/${member.id}`);
     emit('updated');
   } catch {
-    memberError.value = `Could not remove ${member.displayName}.`;
+    memberError.value = t('groupSettings.removeMemberError', { name: member.displayName });
   } finally {
     removingMemberId.value = null;
   }
@@ -101,7 +104,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
     await api.delete(`/groups/${props.group.id}/invitations/${invitation.id}`);
     emit('updated');
   } catch {
-    memberError.value = `Could not cancel invitation for ${invitation.email}.`;
+    memberError.value = t('groupSettings.cancelInvitationError', { email: invitation.email });
   } finally {
     cancellingInvitationId.value = null;
   }
@@ -117,7 +120,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
     >
       <img
         :src="props.group.imageUrl"
-        :alt="`${props.group.name} image`"
+        :alt="t('groups.groupImageAria', { name: props.group.name })"
         class="h-24 w-24 rounded-full object-cover"
       />
     </div>
@@ -125,7 +128,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
     <!-- 2. GROUP NAME -->
     <div class="flex flex-col gap-2">
       <label class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]">
-        GROUP NAME
+        {{ t('groupSettings.groupNameLabel') }}
       </label>
       <input
         v-model="groupName"
@@ -139,7 +142,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
     <!-- 3. ADD MEMBERS -->
     <div class="flex flex-col gap-2">
       <label class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]">
-        ADD MEMBERS
+        {{ t('groupSettings.addMembersLabel') }}
       </label>
       <form class="flex gap-2" @submit.prevent="addMember">
         <div class="relative flex-1">
@@ -161,7 +164,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
           <input
             v-model="memberEmail"
             type="email"
-            placeholder="user@example.com"
+            :placeholder="t('groupSettings.emailPlaceholder')"
             class="w-full rounded-xl border border-transparent bg-[#201F27] py-3 pl-10 pr-4 text-base text-[#E5E0ED] outline-none transition placeholder:text-[#C8C4D7] focus:border-[#6554E7]/40"
             style="height: 48px"
           />
@@ -172,7 +175,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
           style="width: 80px"
           :disabled="isSubmittingMember"
         >
-          ADD
+          {{ t('groupSettings.add') }}
         </button>
       </form>
       <p v-if="memberError" class="text-sm text-[#FFB4AB]">{{ memberError }}</p>
@@ -181,7 +184,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
     <!-- 4. MEMBERS -->
     <div class="flex flex-col gap-2">
       <label class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]">
-        MEMBERS ({{ props.group.members.length }})
+        {{ t('groupSettings.membersLabel', { count: props.group.members.length }) }}
       </label>
       <ul class="flex flex-col gap-1">
         <li
@@ -198,7 +201,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
           <!-- Name + email -->
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-[#E5E0ED]">
-              {{ isCurrentUser(member.id) ? 'You' : member.displayName }}
+              {{ isCurrentUser(member.id) ? t('groupSettings.youLabel') : member.displayName }}
             </p>
             <p class="truncate text-xs text-[#C8C4D7]">
               {{ member.email }}
@@ -209,7 +212,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
             v-if="props.group.members.length > 1 && !isCurrentUser(member.id)"
             type="button"
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#C8C4D7] transition hover:bg-white/10 hover:text-[#E5E0ED] disabled:opacity-60"
-            aria-label="Remove member"
+            :aria-label="t('groupSettings.removeMemberAria')"
             :disabled="removingMemberId === member.id"
             @click="removeMember(member)"
           >
@@ -225,13 +228,13 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
       </ul>
     </div>
 
-    <!-- 5. PENDING INVITATIONS -->
+    <!-- 5. {{ t('groupSettings.pendingInvitationsLabel') }} -->
     <div
       v-if="props.group.pendingInvitations && props.group.pendingInvitations.length > 0"
       class="flex flex-col gap-2"
     >
       <label class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]">
-        PENDING INVITATIONS
+        {{ t('groupSettings.pendingInvitationsLabel') }}
       </label>
       <ul class="flex flex-col gap-1">
         <li
@@ -249,7 +252,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
           <button
             type="button"
             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#C8C4D7] transition hover:bg-white/10 hover:text-[#E5E0ED] disabled:opacity-60"
-            aria-label="Cancel invitation"
+            :aria-label="t('groupSettings.cancelInvitationAria')"
             :disabled="cancellingInvitationId === invitation.id"
             @click="cancelInvitation(invitation)"
           >
@@ -273,7 +276,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
       :disabled="isSubmittingName || groupName.trim() === props.group.name"
       @click="saveName"
     >
-      Save
+      {{ t('groupSettings.save') }}
     </button>
   </section>
 </template>

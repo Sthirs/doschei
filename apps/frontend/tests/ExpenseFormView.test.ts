@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import { createRouter, createMemoryHistory, type Router } from 'vue-router';
 
 import ExpenseFormView from '@/views/ExpenseFormView.vue';
+import { i18n } from '@/i18n';
 import { api } from '@/lib/api';
 import { currentPageTitle } from '@/router';
 import type { GroupDetail } from '@/types/group';
@@ -85,7 +86,7 @@ const mountAt = async (
   const router = await buildRouter(path);
   const wrapper = mount(ExpenseFormView, {
     global: {
-      plugins: [router],
+      plugins: [router, i18n],
       stubs: {
         Teleport: true,
         DateTimePicker: true,

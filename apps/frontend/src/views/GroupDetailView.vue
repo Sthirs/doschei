@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
@@ -10,6 +11,7 @@ import { useAuthStore } from '@/stores/auth';
 
 import type { GroupDetail, Expense } from '@/types/group';
 
+const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
@@ -65,8 +67,10 @@ const categoryIconStyle = (categoryKey: string) => {
 
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
 const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
+// `toLocaleDateString` is called with the active locale so Italian users see
+// Italian month names ("gennaio", "febbraio", …).
 const monthName = (m: number) =>
-  new Date(2000, m - 1, 1).toLocaleDateString('en-US', { month: 'long' });
+  new Date(2000, m - 1, 1).toLocaleDateString(locale.value, { month: 'long' });
 
 const loadGroup = async () => {
   isLoading.value = true;
@@ -79,7 +83,7 @@ const loadGroup = async () => {
     group.value = data.group;
     currentPageTitle.value = data.group.name;
   } catch {
-    errorMessage.value = 'We could not load this group.';
+    errorMessage.value = t('groupDetail.loadFailed');
   } finally {
     isLoading.value = false;
   }
@@ -110,7 +114,7 @@ const formatDateShort = (dateStr: string) => {
   const date = fromDateValue(dateStr);
   return {
     monthShort: date
-      .toLocaleDateString('en-US', { month: 'short' })
+      .toLocaleDateString(locale.value, { month: 'short' })
       .toUpperCase(),
     day: String(date.getDate()).padStart(2, '0'),
   };
@@ -138,7 +142,7 @@ const groupExpensesByMonth = computed(() => {
 
   sorted.forEach((expense) => {
     const date = fromDateValue(getExpenseDateValue(expense));
-    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    const month = date.toLocaleDateString(locale.value, { month: 'long' });
     const year = date.getFullYear();
     const monthYear = `${month} ${year}`;
 
@@ -171,7 +175,7 @@ const exportCsv = async () => {
     });
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
-      exportErrorMessage.value = data.message ?? 'Export failed.';
+      exportErrorMessage.value = data.message ?? t('groupDetail.exportFailed');
       return;
     }
     const blob = await response.blob();
@@ -190,15 +194,18 @@ const exportCsv = async () => {
     URL.revokeObjectURL(objectUrl);
     showExportModal.value = false;
   } catch {
-    exportErrorMessage.value = 'Export failed. Please try again.';
+    exportErrorMessage.value = t('groupDetail.exportFailedTryAgain');
   } finally {
     isExporting.value = false;
   }
 };
 
+const groupSettingsTitle = (name: string): string =>
+  t('groupDetail.settingsTitleSuffix', { name });
+
 onMounted(() => {
   if (history.state.groupName) {
-    currentPageTitle.value = String(history.state.groupName);
+    currentPageTitle.value = groupSettingsTitle(String(history.state.groupName));
   }
   loadGroup();
 });
@@ -214,7 +221,7 @@ onBeforeUnmount(() => {
     <button
       type="button"
       class="flex h-9 w-9 items-center justify-center rounded-full text-[#C8C4D7] transition hover:bg-white/10 hover:text-[#E5E0ED]"
-      aria-label="Back to groups"
+      :aria-label="t('groupDetail.backToGroups')"
       @click="goBack"
     >
       <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
@@ -241,13 +248,13 @@ onBeforeUnmount(() => {
         })
       "
     >
-      Settings
+      {{ t('groupDetail.settings') }}
     </button>
     <button
       v-if="group"
       type="button"
       class="flex h-9 w-9 items-center justify-center rounded-full text-[#C8C4D7] transition hover:bg-white/10 hover:text-[#E5E0ED] sm:hidden"
-      aria-label="Toggle settings"
+      :aria-label="t('groupDetail.toggleSettings')"
       @click="
         router.push({
           name: 'group-settings',
@@ -273,7 +280,7 @@ onBeforeUnmount(() => {
         v-if="isLoading"
         class="flex-1 flex items-center justify-center text-[#C8C4D7]"
       >
-        Loading group...
+        {{ t('groupDetail.loading') }}
       </div>
 
       <template v-else-if="group">
@@ -292,7 +299,7 @@ onBeforeUnmount(() => {
                 <p
                   class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7] sm:block hidden"
                 >
-                  Your Balance
+                  {{ t('groupDetail.yourBalance') }}
                 </p>
                 <div
                   :class="[
@@ -305,23 +312,21 @@ onBeforeUnmount(() => {
                     class="font-display text-2xl font-normal text-[#2ECC71]"
                     style="line-height: 30px"
                   >
-                    You are owed
-                    {{ formatEur(group.balance.netForCurrentUser) }}
+                    {{ t('common.balanceOwed', { amount: formatEur(group.balance.netForCurrentUser, locale) }) }}
                   </p>
                   <p
                     v-else-if="group.balance.netForCurrentUser < 0"
                     class="font-display text-2xl font-normal text-[#FFB4AB]"
                     style="line-height: 30px"
                   >
-                    You owe
-                    {{ formatEur(Math.abs(group.balance.netForCurrentUser)) }}
+                    {{ t('common.balanceOwe', { amount: formatEur(Math.abs(group.balance.netForCurrentUser), locale) }) }}
                   </p>
                   <p
                     v-else
                     class="font-display text-2xl font-normal text-[#C8C4D7]"
                     style="line-height: 30px"
                   >
-                    Settled
+                    {{ t('common.balanceSettled') }}
                   </p>
                 </div>
               </div>
@@ -368,7 +373,7 @@ onBeforeUnmount(() => {
               class="mt-2 flex items-center gap-1 font-display text-sm font-normal text-[#C8C4D7] transition hover:text-[#E5E0ED]"
               @click="showBreakdown = !showBreakdown"
             >
-              {{ showBreakdown ? 'Hide breakdown' : 'See breakdown' }}
+              {{ showBreakdown ? t('groupDetail.hideBreakdown') : t('groupDetail.seeBreakdown') }}
               <svg
                 viewBox="0 0 24 24"
                 class="h-4 w-4 fill-none stroke-current transition-transform"
@@ -395,8 +400,8 @@ onBeforeUnmount(() => {
                 <span class="text-[#C8C4D7]">
                   {{
                     entry.netForCurrentUser > 0
-                      ? `${entry.displayName} owes you`
-                      : `You owe ${entry.displayName}`
+                      ? t('groupDetail.entryOwesYou', { name: entry.displayName })
+                      : t('groupDetail.entryYouOwe', { name: entry.displayName })
                   }}
                 </span>
                 <span
@@ -407,7 +412,7 @@ onBeforeUnmount(() => {
                   "
                   class="font-semibold"
                 >
-                  {{ formatEur(Math.abs(entry.netForCurrentUser)) }}
+                  {{ formatEur(Math.abs(entry.netForCurrentUser), locale) }}
                 </span>
               </li>
             </ul>
@@ -421,19 +426,19 @@ onBeforeUnmount(() => {
             :disabled="group.members.length < 2"
             :title="
               group.members.length < 2
-                ? 'Invite someone to this group first'
-                : 'Record a payment between members'
+                ? t('groupDetail.settleUpDisabledInviteTitle')
+                : t('groupDetail.settleUpDisabledRecordTitle')
             "
             @click="navigateToSettleUpNew()"
           >
-            Settle Up
+            {{ t('groupDetail.settleUp') }}
           </button>
             <button
               type="button"
               class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]"
               @click="showExportModal = true"
             >
-              Export
+              {{ t('groupDetail.export') }}
             </button>
           </div>
         </div>
@@ -500,7 +505,7 @@ onBeforeUnmount(() => {
                       "
                       :title="
                         expense.kind === 'SETTLEMENT'
-                          ? 'Settlement'
+                          ? t('groupDetail.settlementTitle')
                           : getCategory(expense.category).label
                       "
                     >
@@ -532,15 +537,14 @@ onBeforeUnmount(() => {
                         class="text-xs font-normal text-[#C8C4D7]"
                         style="line-height: 18px"
                       >
-                        {{ expense.paidByName }} paid
-                        {{ expense.settledWithName }}
+                        {{ t('groupDetail.settlementPaidPayee', { payer: expense.paidByName, payee: expense.settledWithName }) }}
                       </p>
                       <p
                         v-else
                         class="text-xs font-normal text-[#C8C4D7]"
                         style="line-height: 18px"
                       >
-                        Paid by {{ expense.paidByName }}
+                        {{ t('groupDetail.expensePaidBy', { name: expense.paidByName }) }}
                       </p>
                     </div>
 
@@ -549,7 +553,7 @@ onBeforeUnmount(() => {
                       <span
                         class="text-base font-normal text-[#E5E0ED]"
                         style="line-height: 24px"
-                        >{{ formatEur(expense.amount) }}</span
+                        >{{ formatEur(expense.amount, locale) }}</span
                       >
                       <!-- YOU OWE / YOU LENT badge (only for EXPENSE, not SETTLEMENT) -->
                       <span
@@ -560,8 +564,7 @@ onBeforeUnmount(() => {
                         class="font-display text-[10px] font-semibold uppercase tracking-[-0.025em] text-[#FFB4AB]"
                         style="line-height: 15px"
                       >
-                        You owe
-                        {{ formatEur(Math.abs(expenseNetForUser(expense))) }}
+                        {{ t('groupDetail.expenseYouOwe', { amount: formatEur(Math.abs(expenseNetForUser(expense)), locale) }) }}
                       </span>
                       <span
                         v-else-if="
@@ -571,7 +574,7 @@ onBeforeUnmount(() => {
                         class="font-display text-[10px] font-semibold uppercase tracking-[-0.025em] text-[#4BDDB7]"
                         style="line-height: 15px"
                       >
-                        You lent {{ formatEur(expenseNetForUser(expense)) }}
+                        {{ t('groupDetail.expenseYouLent', { amount: formatEur(expenseNetForUser(expense), locale) }) }}
                       </span>
                     </div>
                   </div>
@@ -580,7 +583,7 @@ onBeforeUnmount(() => {
             </template>
           </template>
 
-          <div v-else class="py-5 text-[#C8C4D7]">No expenses yet</div>
+          <div v-else class="py-5 text-[#C8C4D7]">{{ t('groupDetail.noExpenses') }}</div>
         </div>
 
         <!-- Sticky bottom: + Add expense button -->
@@ -595,7 +598,7 @@ onBeforeUnmount(() => {
             style="line-height: 27px"
             @click="navigateToExpenseNew()"
           >
-            + Add expense
+            {{ t('groupDetail.addExpense') }}
           </button>
         </div>
 
@@ -609,18 +612,18 @@ onBeforeUnmount(() => {
             class="w-full max-w-md rounded-t-2xl border border-[rgba(71,69,84,0.3)] bg-[#201F27] p-6 shadow-xl sm:rounded-2xl"
             role="dialog"
             aria-modal="true"
-            aria-label="Export expenses"
+            :aria-label="t('groupDetail.exportModalTitle')"
           >
             <div class="flex items-start justify-between">
               <p
                 class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
               >
-                Select Period
+                {{ t('groupDetail.selectPeriod') }}
               </p>
               <button
                 type="button"
                 class="text-[#C8C4D7] transition hover:text-[#E5E0ED]"
-                aria-label="Close"
+                :aria-label="t('common.close')"
                 @click="showExportModal = false"
               >
                 <svg
@@ -639,7 +642,7 @@ onBeforeUnmount(() => {
               <label class="flex-1 flex flex-col gap-1.5">
                 <span
                   class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
-                  >Month</span
+                  >{{ t('groupDetail.monthLabel') }}</span
                 >
                 <select
                   v-model.number="exportMonthValue"
@@ -653,7 +656,7 @@ onBeforeUnmount(() => {
               <label class="flex-1 flex flex-col gap-1.5">
                 <span
                   class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
-                  >Year</span
+                  >{{ t('groupDetail.yearLabel') }}</span
                 >
                 <select
                   v-model.number="exportYearValue"
@@ -700,16 +703,16 @@ onBeforeUnmount(() => {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                   />
                 </svg>
-                Exporting...
+                {{ t('groupDetail.exporting') }}
               </span>
-              <span v-else>Export Expenses</span>
+              <span v-else>{{ t('groupDetail.exportExpenses') }}</span>
             </button>
             <button
               type="button"
               class="mt-2 w-full py-2 text-center text-sm text-[#C8C4D7] transition hover:text-[#E5E0ED]"
               @click="showExportModal = false"
             >
-              Cancel
+              {{ t('common.cancel') }}
             </button>
           </div>
         </div>

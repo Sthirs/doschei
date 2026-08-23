@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 import {
   CATEGORIES_GROUPED,
   CATEGORY_FAMILY_LABELS,
   getCategory,
 } from '@/lib/categories';
+
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{
@@ -147,7 +150,7 @@ onBeforeUnmount(() => {
       class="absolute left-0 top-full z-50 mt-2 hidden w-72 flex-col overflow-hidden rounded-xl sm:flex"
       role="dialog"
       aria-modal="true"
-      aria-label="Select category"
+      :aria-label="t('categoryPicker.dialogAriaLabel')"
       @keydown="onKeydown"
     >
       <div class="bg-[#1E1E26] max-h-80 overflow-y-auto rounded-xl shadow-xl">
@@ -156,14 +159,14 @@ onBeforeUnmount(() => {
             ref="desktopSearchInputRef"
             v-model="searchQuery"
             type="text"
-            placeholder="Search categories"
-            aria-label="Search categories"
+            :placeholder="t('categoryPicker.searchPlaceholder')"
+            :aria-label="t('categoryPicker.searchAriaLabel')"
             autocomplete="off"
             class="w-full rounded-md bg-white/5 px-3 py-1.5 text-sm text-[#E5E0ED] placeholder:text-[#C8C4D7]/50 outline-none focus:ring-1 focus:ring-white/20"
           />
         </div>
         <div v-if="filteredGroups.length === 0" class="px-3 py-4 text-center text-sm text-[#C8C4D7]">
-          <p role="status">No matching category</p>
+          <p role="status">{{ t('categoryPicker.noMatchingCategory') }}</p>
         </div>
         <div v-for="group in filteredGroups" :key="group.family" class="py-1">
           <p class="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">
@@ -225,15 +228,15 @@ onBeforeUnmount(() => {
           class="bg-[#1E1E26] max-h-[85vh] overflow-y-auto rounded-t-xl"
           role="dialog"
           aria-modal="true"
-          aria-label="Select category"
+          :aria-label="t('categoryPicker.dialogAriaLabel')"
           @click.stop
         >
           <div class="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#1E1E26] px-4 py-3">
-            <h3 class="text-sm font-medium text-[#E5E0ED]">Select Category</h3>
+            <h3 class="text-sm font-medium text-[#E5E0ED]">{{ t('categoryPicker.selectCategoryHeading') }}</h3>
             <button
               type="button"
               class="rounded-md p-1 text-[#C8C4D7] hover:text-[#E5E0ED]"
-              aria-label="Close"
+              :aria-label="t('common.close')"
               @click="close"
             >
               <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
@@ -248,14 +251,14 @@ onBeforeUnmount(() => {
                 ref="mobileSearchInputRef"
                 v-model="searchQuery"
                 type="text"
-                placeholder="Search categories"
-                aria-label="Search categories"
+                :placeholder="t('categoryPicker.searchPlaceholder')"
+                :aria-label="t('categoryPicker.searchAriaLabel')"
                 autocomplete="off"
                 class="w-full rounded-md bg-white/5 px-3 py-2 text-sm text-[#E5E0ED] placeholder:text-[#C8C4D7]/50 outline-none focus:ring-1 focus:ring-white/20"
               />
             </div>
             <div v-if="filteredGroups.length === 0" class="px-3 py-4 text-center text-sm text-[#C8C4D7]">
-              <p role="status">No matching category</p>
+              <p role="status">{{ t('categoryPicker.noMatchingCategory') }}</p>
             </div>
             <div v-for="group in filteredGroups" :key="group.family" class="py-1">
               <p class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">

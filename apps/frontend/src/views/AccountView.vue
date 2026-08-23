@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
 import { currentPageTitle } from '@/router';
@@ -7,6 +8,7 @@ import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { t } = useI18n();
 
 const name = ref(authStore.user?.displayName ?? '');
 const email = authStore.user?.email ?? '';
@@ -41,14 +43,14 @@ const save = async () => {
   try {
     await authStore.updateProfileName(name.value.trim());
   } catch {
-    errorMessage.value = 'Could not save your changes. Please try again.';
+    errorMessage.value = t('account.saveError');
   } finally {
     isSaving.value = false;
   }
 };
 
 onMounted(() => {
-  currentPageTitle.value = 'Account';
+  currentPageTitle.value = t('account.title');
 });
 
 onBeforeUnmount(() => {
@@ -65,7 +67,7 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-slate-100"
-        aria-label="Back to groups"
+        :aria-label="t('account.backToGroups')"
         @click="goBack"
       >
         <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
@@ -100,7 +102,7 @@ onBeforeUnmount(() => {
       <p
         class="mb-6 text-xs font-medium uppercase tracking-[0.05em] text-[#C6BFFF]"
       >
-        Account Details
+        {{ t('account.accountDetails') }}
       </p>
 
       <div class="flex flex-col gap-5">
@@ -108,14 +110,14 @@ onBeforeUnmount(() => {
           <label
             for="account-name"
             class="mb-2 block text-xs uppercase tracking-[0.05em] text-[#C8C4D7]"
-            >Full name</label
+            >{{ t('account.fullName') }}</label
           >
           <input
             id="account-name"
             v-model="name"
             type="text"
             maxlength="100"
-            placeholder="Full name"
+            :placeholder="t('account.fullNamePlaceholder')"
             class="w-full rounded-md border border-[#474554]/30 bg-[rgba(42,41,50,0.5)] px-4 py-3 text-[#E4E1ED] placeholder:text-[#C8C4D7]/50 focus:border-[#6554E7] focus:outline-none"
           />
         </div>
@@ -124,7 +126,7 @@ onBeforeUnmount(() => {
           <label
             for="account-email"
             class="mb-2 block text-xs uppercase tracking-[0.05em] text-[#C8C4D7]"
-            >Email address</label
+            >{{ t('account.emailAddress') }}</label
           >
           <input
             id="account-email"
@@ -150,14 +152,14 @@ onBeforeUnmount(() => {
         class="mt-6 w-full rounded-lg bg-[#6654E7] px-4 py-3 font-medium text-[#F0EBFF] shadow-inner transition enabled:hover:bg-[#5a47d4] disabled:cursor-not-allowed disabled:opacity-50"
         @click="save"
       >
-        {{ isSaving ? 'Saving…' : 'Save Changes' }}
+        {{ isSaving ? t('common.saving') : t('account.saveChanges') }}
       </button>
     </section>
 
     <!-- Sign Out -->
     <button
       type="button"
-      aria-label="Sign out"
+      :aria-label="t('account.signOutAria')"
       class="mx-auto sm:mt-8 mt-4 flex items-center gap-2 rounded-full border border-transparent px-8 py-4 font-medium text-[rgba(255,180,171,0.8)] transition hover:bg-[#FFB4AB]/10"
       @click="logout"
     >
@@ -174,7 +176,7 @@ onBeforeUnmount(() => {
         <polyline points="16 17 21 12 16 7" />
         <line x1="21" y1="12" x2="9" y2="12" />
       </svg>
-      Sign Out
+      {{ t('account.signOut') }}
     </button>
   </main>
 </template>
