@@ -189,6 +189,7 @@ export class OidcProvider implements OAuthProvider {
       emailVerified: Boolean(userInfo.email_verified),
       displayName:
         typeof userInfo.name === 'string' ? userInfo.name : undefined,
+      locale: typeof userInfo.locale === 'string' ? userInfo.locale : undefined,
     };
   }
 

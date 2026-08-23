@@ -23,6 +23,9 @@ export class User {
   @Column({ type: 'varchar', name: 'display_name' })
   displayName!: string;
 
+  @Column({ type: 'varchar', length: 8, default: 'en' })
+  language!: string;
+
   @ManyToMany(() => Group, (group) => group.members)
   groups!: Group[];
 

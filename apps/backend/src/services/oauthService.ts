@@ -19,7 +19,7 @@ import { AppDataSource } from '../db/data-source';
 import { User } from '../entities/User';
 import { UserIdentity } from '../entities/UserIdentity';
 import { signAuthToken } from '../utils/jwt';
-import { sanitizeUser } from './authService';
+import { normalizeRequestedLanguage, sanitizeUser } from './authService';
 import { invitationService } from './invitationService';
 import { providerRegistry } from './oauth/providerRegistry';
 import type { OAuthUserInfo } from './oauth/oauthProvider';
@@ -151,6 +151,7 @@ export class OAuthService {
     callbackUrl: string,
     queryState: string,
     cookieJwt: string,
+    acceptLanguage?: string | string[] | undefined,
   ): Promise<CallbackResult> {
     const payload = verifyStateCookie(cookieJwt);
 
@@ -216,7 +217,13 @@ export class OAuthService {
         throw new UserNotRegisteredError(email);
       }
       const displayName = info.displayName ?? emailLocalPart(email) ?? 'User';
-      user = userRepo.create({ email, displayName, passwordHash: null });
+      // ADR-0018 D3: device-language capture on FIRST sign-in only.
+      // Preference order: IdP `locale` claim → browser Accept-Language
+      // header → 'en'. Returning-OAuth and link-by-email branches above
+      // never touch user.language (mirror of ADR-0013 displayName
+      // preservation — the user owns their preference via Account).
+      const language = normalizeRequestedLanguage(info.locale ?? acceptLanguage);
+      user = userRepo.create({ email, displayName, passwordHash: null, language });
       user = await userRepo.save(user);
       // ADR-0014 §42: any new user-creation path MUST also call invitationService.attachPendingInvitationsForEmail(newUser) at this point.
       await invitationService.attachPendingInvitationsForEmail(user, manager);

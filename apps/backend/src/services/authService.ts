@@ -12,12 +12,85 @@ type RegisterInput = {
   email: string;
   password: string;
   displayName: string;
+  language?: string;
 };
+
+export type SupportedLanguage = 'en' | 'it';
+
+/**
+ * Normalize a client-supplied language hint into one of the two supported
+ * locales. The input can be:
+ *
+ *   - undefined / null / non-string → 'en' (graceful default)
+ *   - a single BCP-47 tag, with or without a region suffix
+ *     (`'it'`, `'it-IT'`, `'en-US'`)
+ *   - a raw `Accept-Language` header value with comma-separated, q-ranked
+ *     segments (`'it-IT,it;q=0.9,en;q=0.8'`) — the first wins
+ *   - a `string[]` (e.g. a caller that already parsed the header into an
+ *     array) — the first element is processed as above
+ *
+ * Anything that does not start with `it` after lowercasing and region-
+ * stripping falls back to `'en'`. The helper is intentionally permissive
+ * — never throws — so the registration and PATCH /me paths cannot be
+ * crashed by a malformed client header.
+ */
+export function normalizeRequestedLanguage(raw: unknown): SupportedLanguage {
+  let candidate: unknown;
+  if (Array.isArray(raw)) {
+    candidate = raw[0];
+  } else {
+    candidate = raw;
+  }
+  if (typeof candidate !== 'string') {
+    return 'en';
+  }
+  const lowered = candidate.toLowerCase();
+  const firstByComma = lowered.split(',')[0] ?? '';
+  const firstByQ = firstByComma.split(';')[0] ?? '';
+  const primary = firstByQ.split('-')[0] ?? '';
+  return primary === 'it' ? 'it' : 'en';
+}
+
+/**
+ * Strict validator for an EXPLICITLY-supplied language value (the PATCH
+ * /api/auth/me path). Returns the supported locale when the value can be
+ * unambiguously mapped to one, otherwise `null` — the controller turns
+ * `null` into a 400.
+ *
+ * Contrast with `normalizeRequestedLanguage`: that helper is permissive
+ * and used for DEVICE-derived inputs (Accept-Language header, IdP
+ * `locale` claim), where a typo must not block sign-in. The PATCH path
+ * takes an EXPLICIT user choice, so an unknown value is a real client
+ * error worth surfacing.
+ *
+ * Accepts:
+ *   - a bare tag (`'it'`, `'en'`)
+ *   - a tag with region suffix (`'it-IT'`, `'en-US'`); region is stripped
+ *     before matching
+ *   - leading/trailing whitespace (trimmed before parsing)
+ *
+ * Rejects:
+ *   - non-string input (numbers, objects, arrays, boolean, null,
+ *     undefined)
+ *   - empty / whitespace-only string
+ *   - tags whose primary subtag is neither `'en'` nor `'it'`
+ *     (`'fr'`, `'xx'`, `'en-Latn'`)
+ */
+export function parseLanguage(raw: unknown): SupportedLanguage | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+  const primary = trimmed.toLowerCase().split('-')[0];
+  if (primary === 'en') return 'en';
+  if (primary === 'it') return 'it';
+  return null;
+}
 
 export const sanitizeUser = (user: User) => ({
   id: user.id,
   email: user.email,
   displayName: user.displayName,
+  language: user.language,
 });
 
 export class AuthService {
@@ -34,6 +107,7 @@ export class AuthService {
       email: input.email.toLowerCase(),
       displayName: input.displayName,
       passwordHash: await hashPassword(input.password),
+      language: normalizeRequestedLanguage(input.language),
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -64,14 +138,29 @@ export class AuthService {
     return this.userRepository.findOne({ where: { id: userId } });
   }
 
-  async updateName(userId: string, displayName: string): Promise<User> {
+  /**
+   * Update the authenticated user's profile. Both fields are optional;
+   * the caller (authController.updateName) MUST enforce that at least
+   * one is provided. Language, if supplied, is restricted to the values
+   * produced by `normalizeRequestedLanguage` (`'en' | 'it'`).
+   */
+  async updateName(
+    userId: string,
+    displayName: string | undefined,
+    language: SupportedLanguage | undefined,
+  ): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
     if (!user) {
       throw new Error('User not found.');
     }
 
-    user.displayName = displayName;
+    if (displayName !== undefined) {
+      user.displayName = displayName;
+    }
+    if (language !== undefined) {
+      user.language = language;
+    }
     return this.userRepository.save(user);
   }
 }

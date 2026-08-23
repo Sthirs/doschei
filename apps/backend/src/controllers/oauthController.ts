@@ -77,7 +77,18 @@ export const oauthCallback = async (req: Request, res: Response): Promise<void> 
   const callbackUrl = `${buildOAuthRedirectUri()}${queryString}`;
 
   try {
-    const { token } = await oauthService.handleCallback(provider, callbackUrl, queryState, cookieJwt);
+    // ADR-0018 D3: thread the browser's Accept-Language header so the
+    // service can fall back to it when the IdP does not emit a `locale`
+    // claim (first-user-creation branch only; returning / link-by-email
+    // branches never overwrite the user's saved language).
+    const acceptLanguage = req.headers['accept-language'];
+    const { token } = await oauthService.handleCallback(
+      provider,
+      callbackUrl,
+      queryState,
+      cookieJwt,
+      acceptLanguage,
+    );
     res.clearCookie('doschei.oauth.state', { path: '/' });
     res.redirect(`${loggedFrontendUrl}/auth/callback?token=${encodeURIComponent(token)}`);
   } catch (error) {
