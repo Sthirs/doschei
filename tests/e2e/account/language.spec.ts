@@ -22,12 +22,12 @@ async function restoreDemoProfile(page: import('@playwright/test').Page) {
   });
 }
 
-test.describe('account language selection (EN → IT)', () => {
+test.describe('account language selection (EN → IT via Save)', () => {
   test.afterEach(async ({ authenticatedPage: page }) => {
     await restoreDemoProfile(page);
   });
 
-  test('switching to Italiano translates the UI, persists across reload and re-login', async ({
+  test('language applies only after Save; persists across reload and re-login', async ({
     authenticatedPage: page,
   }) => {
     const account = new AccountPage(page);
@@ -38,25 +38,31 @@ test.describe('account language selection (EN → IT)', () => {
     await expect(page.getByText('Account Details')).toBeVisible();
     await expect(account.languageSelect).toHaveValue('en');
 
-    // Switch to Italian — the change applies immediately...
+    // Selecting Italiano alone must NOT translate nor save anything yet.
     await account.selectLanguage('it');
-    await expect(page.getByText('Dettagli account')).toBeVisible();
-    await expect(page.getByText('Nome completo')).toBeVisible();
-    await expect(page.locator('#account-name')).toHaveAttribute('placeholder', 'Nome completo');
-    await expect(page.getByText('Salva modifiche')).toBeVisible();
-    await expect(account.languageSelect).toHaveValue('it');
-    await expect(page.locator('html')).toHaveAttribute('lang', 'it');
+    await expect(page.getByText('Dettagli account')).toHaveCount(0);
+    await expect(page.getByText('Account Details')).toBeVisible();
 
-    // ...and persists server-side: a full reload keeps the Italian UI.
+    // Pressing Save persists AND applies the new locale.
+    await page.getByTestId('account-save').click();
+    await expect(page.getByText('Dettagli account')).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'it');
+    await expect(account.languageSelect).toHaveValue('it');
+    await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
+    await expect(page.locator('#account-name')).toHaveAttribute('placeholder', 'Nome completo');
+
+    // Reload — the server-side preference keeps the Italian UI.
     await page.reload();
     await expect(page.getByText('Dettagli account')).toBeVisible();
     await expect(account.languageSelect).toHaveValue('it');
 
+    // Groups screen renders the localized balance chips.
     // NB: Intl 'it' renders EUR as "40,00 €" — do not pin the English amount shape here.
     await page.goto('/groups');
     await expect(page.getByText(/Ti devono|Devi |Pari/).first()).toBeVisible();
 
-    // Sign Out lives on the account screen; the saved preference must survive re-login.
+    // Log out (Sign Out lives on the account screen), log back in —
+    // the saved preference survives the session.
     await page.goto('/account');
     await expect(page.getByRole('button', { name: 'Esci' })).toBeVisible();
     await page.getByRole('button', { name: 'Esci' }).click();
@@ -70,9 +76,10 @@ test.describe('account language selection (EN → IT)', () => {
     await expect(page.getByText('Dettagli account')).toBeVisible();
     await expect(account.languageSelect).toHaveValue('it');
 
-    // Switch back to English inside the same test so the afterEach restore
-    // is a no-op safety net rather than the only cleanup.
+    // Switch back to English: select + Save (Italian button label while in IT).
     await account.selectLanguage('en');
+    await page.getByRole('button', { name: 'Salva modifiche' }).click();
     await expect(page.getByText('Account Details')).toBeVisible();
+    await expect(account.languageSelect).toHaveValue('en');
   });
 });

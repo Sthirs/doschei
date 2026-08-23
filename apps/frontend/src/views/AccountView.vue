@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
-import { normalizeLocale, setAppLocale, type Locale } from '@/i18n';
+import { normalizeLocale, type Locale } from '@/i18n';
 import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -14,42 +14,25 @@ const { t } = useI18n();
 const name = ref(authStore.user?.displayName ?? '');
 const email = authStore.user?.email ?? '';
 const isSaving = ref(false);
-const isSavingLanguage = ref(false);
 const errorMessage = ref('');
 
 // The select shows endonyms (English / Italiano) which are intentionally
 // NOT translated — a user must be able to read them before switching.
+// The choice only persists when the user presses Save Changes.
 const selectedLanguage = ref<Locale>(normalizeLocale(authStore.user?.language));
-
-const onLanguageChange = async () => {
-  const next = selectedLanguage.value;
-  const previous = normalizeLocale(authStore.user?.language);
-  if (next === previous) return;
-  errorMessage.value = '';
-  setAppLocale(next);
-  isSavingLanguage.value = true;
-  try {
-    await authStore.updateLanguage(next);
-  } catch {
-    setAppLocale(previous);
-    selectedLanguage.value = previous;
-    errorMessage.value = t('account.saveError');
-  } finally {
-    isSavingLanguage.value = false;
-  }
-};
+const savedLanguage = computed(() => normalizeLocale(authStore.user?.language));
 
 const userInitial = computed(
   () => name.value.trim().charAt(0).toUpperCase() || 'U',
 );
-const isDirty = computed(
+const isNameDirty = computed(
   () =>
     name.value.trim() !== (authStore.user?.displayName ?? '') &&
     name.value.trim().length > 0,
 );
-const canSave = computed(
-  () => isDirty.value && !isSaving.value && name.value.trim().length <= 100,
-);
+const isLanguageDirty = computed(() => selectedLanguage.value !== savedLanguage.value);
+const isDirty = computed(() => isNameDirty.value || isLanguageDirty.value);
+const canSave = computed(() => isDirty.value && !isSaving.value);
 
 const goBack = () => {
   router.push('/groups');
@@ -64,8 +47,11 @@ const save = async () => {
   if (!canSave.value) return;
   isSaving.value = true;
   errorMessage.value = '';
+  const changes: { displayName?: string; language?: Locale } = {};
+  if (isNameDirty.value) changes.displayName = name.value.trim();
+  if (isLanguageDirty.value) changes.language = selectedLanguage.value;
   try {
-    await authStore.updateProfileName(name.value.trim());
+    await authStore.updateProfile(changes);
   } catch {
     errorMessage.value = t('account.saveError');
   } finally {
@@ -166,17 +152,28 @@ onBeforeUnmount(() => {
             class="mb-2 block text-xs uppercase tracking-[0.05em] text-[#C8C4D7]"
             >{{ t('common.language') }}</label
           >
-          <select
-            id="account-language"
-            v-model="selectedLanguage"
-            data-testid="account-language"
-            :disabled="isSavingLanguage"
-            class="w-full rounded-md border border-[#474554]/30 bg-[rgba(42,41,50,0.5)] px-4 py-3 text-[#E4E1ED] focus:border-[#6554E7] focus:outline-none"
-            @change="onLanguageChange"
-          >
-            <option value="en">English</option>
-            <option value="it">Italiano</option>
-          </select>
+          <div class="relative">
+            <select
+              id="account-language"
+              v-model="selectedLanguage"
+              data-testid="account-language"
+              class="w-full appearance-none rounded-md border border-[#474554]/30 bg-[rgba(42,41,50,0.5)] py-3 pl-4 pr-10 text-[#E4E1ED] focus:border-[#6554E7] focus:outline-none"
+            >
+              <option value="en">English</option>
+              <option value="it">Italiano</option>
+            </select>
+            <svg
+              viewBox="0 0 20 20"
+              class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 fill-current text-[#C8C4D7]"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
         </div>
       </div>
 

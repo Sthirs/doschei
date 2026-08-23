@@ -64,24 +64,13 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem(TOKEN_KEY, token);
       await this.fetchCurrentUser();
     },
-    async updateProfileName(displayName: string) {
+    async updateProfile(changes: { displayName?: string; language?: Locale }) {
       this.isLoading = true;
 
       try {
-        const { data } = await api.patch<{ user: AuthUser }>('/auth/me', { displayName });
+        const { data } = await api.patch<{ user: AuthUser }>('/auth/me', changes);
         this.user = data.user;
-        return data.user;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    async updateLanguage(language: Locale) {
-      this.isLoading = true;
-
-      try {
-        const { data } = await api.patch<{ user: AuthUser }>('/auth/me', { language });
-        this.user = data.user;
-        setAppLocale(language);
+        if (changes.language) setAppLocale(changes.language);
         return data.user;
       } finally {
         this.isLoading = false;

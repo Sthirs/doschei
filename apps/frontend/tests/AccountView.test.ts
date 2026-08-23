@@ -60,34 +60,57 @@ describe('AccountView language selector', () => {
     globalThis.localStorage?.clear();
   });
 
-  it('switches locale immediately and persists via PATCH /auth/me', async () => {
-    vi.mocked(api.patch).mockResolvedValue({
-      data: { user: { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'it' } },
-    });
+  it('does not PATCH while selecting; persists only when Save is pressed and applies the locale then', async () => {
+    const patchUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'it' };
+    vi.mocked(api.patch).mockResolvedValue({ data: { user: patchUser } });
     const wrapper = await mountView();
 
     await wrapper.find('[data-testid="account-language"]').setValue('it');
-    expect(document.documentElement.lang).toBe('it');
+    expect(api.patch).not.toHaveBeenCalled();
+    expect(document.documentElement.lang).toBe('en');
+
+    await wrapper.find('[data-testid="account-save"]').trigger('click');
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    expect(api.patch).toHaveBeenCalledWith('/auth/me', { language: 'it' });
 
     await flushPromises();
-    expect(api.patch).toHaveBeenCalledWith('/auth/me', { language: 'it' });
     expect(document.documentElement.lang).toBe('it');
-    expect(wrapper.find('[data-testid="account-error"]').exists()).toBe(false);
   });
 
-  it('reverts locale and shows the localized error when the PATCH fails', async () => {
+  it('sends displayName and language together when both changed', async () => {
+    const patchUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Nuovo Nome', language: 'it' };
+    vi.mocked(api.patch).mockResolvedValue({ data: { user: patchUser } });
+    const wrapper = await mountView();
+
+    await wrapper.find('#account-name').setValue('Nuovo Nome');
+    await wrapper.find('[data-testid="account-language"]').setValue('it');
+    await wrapper.find('[data-testid="account-save"]').trigger('click');
+
+    expect(api.patch).toHaveBeenCalledWith('/auth/me', {
+      displayName: 'Nuovo Nome',
+      language: 'it',
+    });
+  });
+
+  it('on failed Save the locale stays unchanged and the error is shown', async () => {
     vi.mocked(api.patch).mockRejectedValue(new Error('boom'));
     const wrapper = await mountView();
 
     await wrapper.find('[data-testid="account-language"]').setValue('it');
+    await wrapper.find('[data-testid="account-save"]').trigger('click');
     await flushPromises();
 
     expect(document.documentElement.lang).toBe('en');
-    expect(
-      (wrapper.find('[data-testid="account-language"]').element as HTMLSelectElement).value,
-    ).toBe('en');
     expect(wrapper.find('[data-testid="account-error"]').text()).toContain(
       'Could not save your changes',
     );
+  });
+
+  it('Save stays disabled until something changed', async () => {
+    const wrapper = await mountView();
+    expect(wrapper.find('[data-testid="account-save"]').attributes('disabled')).toBeDefined();
+
+    await wrapper.find('[data-testid="account-language"]').setValue('it');
+    expect(wrapper.find('[data-testid="account-save"]').attributes('disabled')).toBeUndefined();
   });
 });
