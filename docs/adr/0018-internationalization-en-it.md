@@ -1,6 +1,6 @@
 # ADR-0018: Internationalization — vue-i18n, English & Italian, per-user language
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-08-23
 - **Deciders:** Sthirs
 
