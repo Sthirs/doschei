@@ -46,3 +46,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0015](0015-typescript-7-side-by-side-with-typescript-6.md) | TypeScript 7 side-by-side with TypeScript 6 via npm aliases | 🟢 accepted |
 | [ADR-0016](0016-api-rate-limiting.md) | Global API rate limiting with express-rate-limit | 🟢 accepted |
 | [ADR-0017](0017-category-suggestions-client-side-learning.md) | Category suggestions — client-side, group-scoped learning; no server suggestion role | 🟢 accepted |
+| [ADR-0018](0018-internationalization-en-it.md) | Internationalization — vue-i18n, EN/IT, per-user language | 🟡 proposed |
