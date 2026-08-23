@@ -104,18 +104,6 @@ npm run telepresence:leave
 - TypeORM still uses schema synchronization in development (`DB_SYNC=true`).
 - Seed data is created by the in-cluster backend startup path.
 
-### Production upgrade note (per-user language)
-
-Production runs with `DB_SYNC=false`, so before/with upgrading to a backend that
-serves `users.language`, run the one-time migration:
-
-```sql
-ALTER TABLE users ADD COLUMN language varchar(8) NOT NULL DEFAULT 'en';
-```
-
-Development (Minikube + devMode) provisions the column automatically through
-schema sync; no action is needed there.
-
 ## Useful commands
 
 ```bash
