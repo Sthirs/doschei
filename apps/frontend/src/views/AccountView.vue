@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
+import { normalizeLocale, setAppLocale, type Locale } from '@/i18n';
 import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -13,7 +14,30 @@ const { t } = useI18n();
 const name = ref(authStore.user?.displayName ?? '');
 const email = authStore.user?.email ?? '';
 const isSaving = ref(false);
+const isSavingLanguage = ref(false);
 const errorMessage = ref('');
+
+// The select shows endonyms (English / Italiano) which are intentionally
+// NOT translated — a user must be able to read them before switching.
+const selectedLanguage = ref<Locale>(normalizeLocale(authStore.user?.language));
+
+const onLanguageChange = async () => {
+  const next = selectedLanguage.value;
+  const previous = normalizeLocale(authStore.user?.language);
+  if (next === previous) return;
+  errorMessage.value = '';
+  setAppLocale(next);
+  isSavingLanguage.value = true;
+  try {
+    await authStore.updateLanguage(next);
+  } catch {
+    setAppLocale(previous);
+    selectedLanguage.value = previous;
+    errorMessage.value = t('account.saveError');
+  } finally {
+    isSavingLanguage.value = false;
+  }
+};
 
 const userInitial = computed(
   () => name.value.trim().charAt(0).toUpperCase() || 'U',
@@ -134,6 +158,25 @@ onBeforeUnmount(() => {
             disabled
             class="w-full cursor-not-allowed rounded-md border border-[#474554]/30 bg-[rgba(42,41,50,0.5)] px-4 py-3 text-[#E4E1ED] opacity-60"
           />
+        </div>
+
+        <div class="flex flex-col">
+          <label
+            for="account-language"
+            class="mb-2 block text-xs uppercase tracking-[0.05em] text-[#C8C4D7]"
+            >{{ t('common.language') }}</label
+          >
+          <select
+            id="account-language"
+            v-model="selectedLanguage"
+            data-testid="account-language"
+            :disabled="isSavingLanguage"
+            class="w-full rounded-md border border-[#474554]/30 bg-[rgba(42,41,50,0.5)] px-4 py-3 text-[#E4E1ED] focus:border-[#6554E7] focus:outline-none"
+            @change="onLanguageChange"
+          >
+            <option value="en">English</option>
+            <option value="it">Italiano</option>
+          </select>
         </div>
       </div>
 

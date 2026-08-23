@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 
 import { api } from '@/lib/api';
+import { normalizeLocale, setAppLocale, type Locale } from '@/i18n';
 import type { AuthUser } from '@/types/auth';
 
 type LoginPayload = {
@@ -9,6 +10,10 @@ type LoginPayload = {
 };
 
 const TOKEN_KEY = 'doschei.auth.token';
+
+const applyUserLanguage = (user: AuthUser | null | undefined): void => {
+  if (user?.language) setAppLocale(normalizeLocale(user.language));
+};
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -28,6 +33,7 @@ export const useAuthStore = defineStore('auth', {
         this.token = data.token;
         this.user = data.user;
         localStorage.setItem(TOKEN_KEY, data.token);
+        applyUserLanguage(this.user);
       } finally {
         this.isLoading = false;
       }
@@ -41,6 +47,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const { data } = await api.get<{ user: AuthUser }>('/auth/me');
         this.user = data.user;
+        applyUserLanguage(this.user);
         return data.user;
       } catch {
         this.logout();
@@ -63,6 +70,18 @@ export const useAuthStore = defineStore('auth', {
       try {
         const { data } = await api.patch<{ user: AuthUser }>('/auth/me', { displayName });
         this.user = data.user;
+        return data.user;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    async updateLanguage(language: Locale) {
+      this.isLoading = true;
+
+      try {
+        const { data } = await api.patch<{ user: AuthUser }>('/auth/me', { language });
+        this.user = data.user;
+        setAppLocale(language);
         return data.user;
       } finally {
         this.isLoading = false;
