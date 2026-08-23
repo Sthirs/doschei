@@ -647,28 +647,54 @@ onBeforeUnmount(() => {
                   class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
                   >{{ t('groupDetail.monthLabel') }}</span
                 >
-                <select
-                  v-model.number="exportMonthValue"
-                  class="rounded-xl border border-white/[0.05] bg-[#2A2932] px-4 py-3 text-sm text-[#E5E0ED] outline-none transition focus:border-brand-500/40"
+                <div class="relative">
+                  <select
+                    v-model.number="exportMonthValue"
+                    class="w-full appearance-none rounded-xl border border-white/[0.05] bg-[#2A2932] py-3 pl-4 pr-10 text-sm text-[#E5E0ED] outline-none transition focus:border-brand-500/40"
+                  >
+                    <option v-for="m in MONTH_OPTIONS" :key="m" :value="m">
+                      {{ monthName(m) }}
+                    </option>
+                  </select>
+            <svg
+                  viewBox="0 0 20 20"
+                  class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 fill-current text-[#C8C4D7]"
+                  aria-hidden="true"
                 >
-                  <option v-for="m in MONTH_OPTIONS" :key="m" :value="m">
-                    {{ monthName(m) }}
-                  </option>
-                </select>
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                </div>
               </label>
               <label class="flex-1 flex flex-col gap-1.5">
                 <span
                   class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
                   >{{ t('groupDetail.yearLabel') }}</span
                 >
-                <select
-                  v-model.number="exportYearValue"
-                  class="rounded-xl border border-white/[0.05] bg-[#2A2932] px-4 py-3 text-sm text-[#E5E0ED] outline-none transition focus:border-brand-500/40"
+                <div class="relative">
+                  <select
+                    v-model.number="exportYearValue"
+                    class="w-full appearance-none rounded-xl border border-white/[0.05] bg-[#2A2932] py-3 pl-4 pr-10 text-sm text-[#E5E0ED] outline-none transition focus:border-brand-500/40"
+                  >
+                    <option v-for="y in YEAR_OPTIONS" :key="y" :value="y">
+                      {{ y }}
+                    </option>
+                  </select>
+            <svg
+                  viewBox="0 0 20 20"
+                  class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 fill-current text-[#C8C4D7]"
+                  aria-hidden="true"
                 >
-                  <option v-for="y in YEAR_OPTIONS" :key="y" :value="y">
-                    {{ y }}
-                  </option>
-                </select>
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                </div>
               </label>
             </div>
             <p
