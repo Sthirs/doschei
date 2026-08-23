@@ -42,7 +42,7 @@ repos:
           - --ignore-words-list=expres,afterall
 
   - repo: https://github.com/kjanat/actionlint
-    rev: 671ad88fef5088961a20f3c598655bc9751f747f # frozen: v1.12.0
+    rev: 7c5b0a3880b3d29c51072b1e5e0730e5988f8b7d # frozen: v1.12.0
     hooks:
       - id: actionlint
 
