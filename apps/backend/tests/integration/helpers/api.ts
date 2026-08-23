@@ -80,18 +80,22 @@ export const createRawRequest = async (
 
 export const uniqueValue = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-export const createTestUserPayload = (prefix: string) => {
+export const createTestUserPayload = (prefix: string, options?: { language?: string }) => {
   const suffix = uniqueValue(prefix);
 
   return {
     email: `${suffix}@example.com`,
     password: 'password123',
     displayName: `User ${suffix}`,
+    ...(options?.language !== undefined ? { language: options.language } : {}),
   };
 };
 
 export const registerUser = async (prefix: string) =>
-  createJsonRequest<{ token: string; user: { id: string; email: string; displayName: string } }>('/api/auth/register', {
+  createJsonRequest<{
+    token: string;
+    user: { id: string; email: string; displayName: string; language: 'en' | 'it' };
+  }>('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify(createTestUserPayload(prefix)),
   });
