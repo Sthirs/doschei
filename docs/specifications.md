@@ -82,7 +82,8 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Every user in a group can view the group's expenses and balances, and can edit any expense regardless of who created it.
 - Activities are tracked.
 - Group expenses can be exported as a CSV file.
-- Users can view and edit their account profile. Users can change their display name; the name is editable even when it was originally provided by an OAuth provider. The user's email address cannot be changed. The profile picture is shown as the first letter of the display name (initials avatar); uploading or changing a profile picture is not supported.
+- Users can view their profile picture when one is set, shown in place of the initials avatar; users can upload or change their profile picture from the account screen using the device's standard file picker (gallery, camera, or other sources); JPEG/PNG/WebP up to 5 MB are accepted, normalized server-side, and returned embedded in API responses.
+- A member's profile picture, when set, is shown to other members of their groups wherever that member is represented (member lists, payer selection, split details, and similar views).
 - Users can select the interface language (English or Italian) in their account. The language defaults to the device/browser language captured at registration; the saved preference applies at sign-in and takes effect immediately when changed.
 
 ## Product Decisions
@@ -215,14 +216,15 @@ The CI pipeline includes the following steps:
   The email-keyed invitation system with accept/decline/cancel lifecycle is implemented
   (`apps/backend/src/entities/Invitation.ts`, `apps/backend/src/services/invitationService.ts`).
 
-- **§Features line 12 — "name and image that can be updated by its members": PARTIALLY IMPLEMENTED (NAME ONLY).**
+- **§Features line 12 — "name and image that can be updated by its members": IMPLEMENTED (2026-08).**
   The `Group` entity has an `imageUrl` column
   (`apps/backend/src/entities/Group.ts`) and it is rendered when set
-  (`apps/frontend/src/views/GroupsView.vue`), but `updateGroup`
+  (`apps/frontend/src/views/GroupsView.vue`). The `updateGroup` endpoint
   (`apps/backend/src/services/groupService.ts`,
-  `apps/backend/src/controllers/groupController.ts`) only accepts `name` and
-  there is **no endpoint, controller, or UI to set or upload a group image**. The
-  seed sets `imageUrl: null`.
+  `apps/backend/src/controllers/groupController.ts`) now accepts `image` uploads
+  via `multipart/form-data`; the frontend provides a file picker in the group
+  settings screen. See [`ADR-0019`](adr/0019-image-upload-architecture.md)
+  (proposed).
 
 - **§Features lines 72-76 — two-user group shortcuts ("You paid, split equally", "You are owed the full amount", etc., with the other options behind a "More options" action): NOT IMPLEMENTED.**
   The Add-Expense modal in `apps/frontend/src/views/GroupDetailView.vue` always
@@ -252,6 +254,17 @@ The CI pipeline includes the following steps:
   `apps/backend/src/app.ts` mounts only `/api/health`, `/api/auth`, `/api/auth/oauth`,
   `/api/groups`. No `Content-Disposition`, no `Blob`, no `createObjectURL`
   usage in the frontend.
+
+- **§Features line 85 — "Users can view their profile picture when one is set, shown in place of the initials avatar; users can upload or change their profile picture from the account screen using the device's standard file picker (gallery, camera, or other sources); JPEG/PNG/WebP up to 5 MB are accepted, normalized server-side, and returned embedded in API responses.": IMPLEMENTED (2026-08).**
+  The `User` entity has an `imageDataUrl` column
+  (`apps/backend/src/entities/User.ts`) storing a base64 data URL. The
+  `PATCH /api/auth/me/image` endpoint accepts `multipart/form-data` uploads
+  (`apps/backend/src/controllers/authController.ts`,
+  `apps/backend/src/services/authService.ts`), validates MIME type (JPEG/PNG/WebP)
+  and size (≤ 5 MB), normalizes via `sharp` to a standard data URL, and returns
+  the updated user object with the embedded image. The frontend account screen
+  provides a file picker and displays the image or falls back to the initials
+  avatar. See [`ADR-0019`](adr/0019-image-upload-architecture.md) (proposed).
 
 #### - Product Decisions
 

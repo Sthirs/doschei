@@ -12,6 +12,11 @@ export class GroupSettingsPage {
   private memberEmailInput = this.page.getByPlaceholder('user@example.com');
   private addButton = this.page.getByRole('button', { name: 'Add' });
 
+  // Group image upload locators
+  readonly imageEditButton = this.page.getByTestId('group-image-edit');
+  readonly imageInput = this.page.getByTestId('group-image-input');
+  readonly previewImage = this.page.getByTestId('group-image-preview');
+
   constructor(private page: Page) {}
 
   async rename(newName: string) {

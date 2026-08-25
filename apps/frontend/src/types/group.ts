@@ -2,6 +2,7 @@ export type GroupMember = {
   id: string;
   displayName: string;
   email: string;
+  imageUrl: string | null;
 };
 
 export type PendingInvitation = {

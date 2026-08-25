@@ -33,7 +33,7 @@ export class GroupsPage {
     await expect(this.page.getByRole('heading', { name, level: 2 })).not.toBeVisible();
   }
 
-  // -- New: Figma-aligned selectors (for T6 e2e) --
+  // -- New: UI-aligned selectors (for T6 e2e) --
 
   async expectBalanceChip(name: string, chipText: string) {
     // Find the group card containing name, then the balance chip within it

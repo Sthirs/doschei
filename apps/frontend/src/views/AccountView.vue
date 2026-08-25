@@ -16,6 +16,10 @@ const email = authStore.user?.email ?? '';
 const isSaving = ref(false);
 const errorMessage = ref('');
 
+// Avatar upload state
+const isUploading = ref(false);
+const uploadError = ref('');
+
 // The select shows endonyms (English / Italiano) which are intentionally
 // NOT translated — a user must be able to read them before switching.
 // The choice only persists when the user presses Save Changes.
@@ -59,6 +63,44 @@ const save = async () => {
   }
 };
 
+const validateImageFile = (file: File): string | null => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const maxSize = 5 * 1024 * 1024; // 5 MB
+
+  if (!allowedTypes.includes(file.type)) {
+    return t('account.changePhotoErrorInvalid');
+  }
+  if (file.size > maxSize) {
+    return t('account.changePhotoErrorTooLarge');
+  }
+  return null;
+};
+
+const handleFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  // Reset error and input value
+  uploadError.value = '';
+  input.value = '';
+
+  const validationError = validateImageFile(file);
+  if (validationError) {
+    uploadError.value = validationError;
+    return;
+  }
+
+  isUploading.value = true;
+  try {
+    await authStore.uploadImage(file);
+  } catch {
+    uploadError.value = t('account.changePhotoErrorGeneric');
+  } finally {
+    isUploading.value = false;
+  }
+};
+
 onMounted(() => {
   currentPageTitle.value = t('account.title');
 });
@@ -92,11 +134,47 @@ onBeforeUnmount(() => {
 
     <!-- Profile header -->
     <div class="flex flex-col items-center gap-4">
-      <div
-        data-testid="account-avatar"
-        class="flex sm:h-32 sm:w-32 h-28 w-28 items-center justify-center rounded-full border-2 border-[#C6BFFF]/20 bg-[#2A2932] sm:text-5xl text-4xl font-bold text-[#E4E1ED] shadow-lg"
-      >
-        {{ userInitial }}
+      <div class="relative" data-testid="account-avatar-wrapper">
+        <div
+          data-testid="account-avatar"
+          class="h-[112px] w-[112px] rounded-full overflow-hidden border-2 border-[#C6BFFF]/20 bg-[#2A2932] shadow-lg"
+        >
+          <img
+            v-if="authStore.user?.imageUrl"
+            :src="authStore.user.imageUrl"
+            alt=""
+            aria-hidden="true"
+            class="h-full w-full object-cover"
+          />
+          <div
+            v-else
+            class="flex h-full w-full items-center justify-center text-6xl font-bold text-[#E4E1ED]"
+          >
+            {{ userInitial }}
+          </div>
+        </div>
+
+        <!-- Edit badge -->
+        <label
+          for="avatar-upload"
+          data-testid="account-avatar-edit"
+          class="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-[#6654E7] text-[#F0EBFF] shadow-lg transition hover:bg-[#5a47d4] cursor-pointer"
+          :aria-label="t('account.changePhoto')"
+        >
+          <img src="/icons/edit.svg" alt="" aria-hidden="true" class="h-5 w-5" />
+        </label>
+
+        <!-- Hidden file input -->
+        <input
+          id="avatar-upload"
+          data-testid="account-avatar-input"
+          type="file"
+          accept="image/*"
+          class="absolute inset-0 opacity-0 pointer-events-none"
+          aria-hidden="true"
+          :disabled="isUploading"
+          @change="handleFileChange"
+        />
       </div>
 
       <h2
@@ -105,6 +183,16 @@ onBeforeUnmount(() => {
       >
         {{ name.trim() || '—' }}
       </h2>
+
+      <!-- Upload error -->
+      <p v-if="uploadError" data-testid="account-upload-error" class="text-sm text-[#FFB4AB] text-center">
+        {{ uploadError }}
+      </p>
+
+      <!-- Uploading indicator -->
+      <p v-if="isUploading" data-testid="account-uploading" class="text-sm text-[#C6BFFF] text-center">
+        {{ t('account.photoUploading') }}
+      </p>
     </div>
 
     <!-- Account Details -->

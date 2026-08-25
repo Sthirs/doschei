@@ -263,7 +263,7 @@ onUnmounted(() => {
         >
           <div class="flex items-center gap-4 px-4 py-4">
             <!-- Thumbnail: gradient + initials placeholder -->
-            <div v-if="group.imageUrl" class="h-14 w-14 rounded-xl shrink-0">
+            <div v-if="group.imageUrl" class="h-20 w-20 rounded-xl shrink-0">
               <img
                 :src="group.imageUrl"
                 :alt="t('groups.groupImageAria', { name: group.name })"
@@ -296,7 +296,14 @@ onUnmounted(() => {
                   :style="{ zIndex: 3 - i }"
                   :aria-label="member.displayName"
                 >
-                  {{ member.displayName.trim().charAt(0).toUpperCase() }}
+                  <img
+                    v-if="member.imageUrl"
+                    :src="member.imageUrl"
+                    alt=""
+                    aria-hidden="true"
+                    class="h-full w-full rounded-full object-cover"
+                  />
+                  <span v-else>{{ member.displayName.trim().charAt(0).toUpperCase() }}</span>
                 </div>
                 <div
                   v-if="group.members.length > 3"

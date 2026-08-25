@@ -280,6 +280,7 @@ describe('OAuthService', () => {
         email: TEST_EMAIL,
         displayName: TEST_DISPLAY_NAME,
         language: 'en',
+        imageUrl: null,
       });
 
       // Verify the issued JWT decodes to { userId, email }.

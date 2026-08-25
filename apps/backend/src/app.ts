@@ -1,10 +1,12 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
+import multer from 'multer';
 import { rateLimit } from 'express-rate-limit';
 
 import { env } from './config/env';
 import { apiRouter } from './routes';
+import { UnsupportedImageTypeError } from './services/imageService';
 
 const healthHandler = (_request: express.Request, response: express.Response) => {
   response.json({ status: 'ok' });
@@ -39,6 +41,24 @@ export const createApp = () => {
   app.use(apiRateLimiter);
 
   app.use('/api', apiRouter);
+
+  // Multer / image-service error handler — must be after routes
+  app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        response.status(413).json({ message: 'File too large. Maximum size is 5 MB.' });
+        return;
+      }
+      response.status(400).json({ message: error.message });
+      return;
+    }
+    if (error instanceof UnsupportedImageTypeError) {
+      response.status(415).json({ message: error.message });
+      return;
+    }
+    // Let Express default handler deal with everything else
+    _next(error);
+  });
 
   return app;
 };

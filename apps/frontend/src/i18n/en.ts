@@ -141,6 +141,11 @@ export const en = {
     cancelInvitationError: 'Could not cancel invitation for {email}.',
     removeMemberAria: 'Remove member',
     cancelInvitationAria: 'Cancel invitation',
+    changeImage: 'Change image',
+    changeImageErrorInvalid: 'Please select a valid image file (JPEG, PNG, or WebP).',
+    changeImageErrorTooLarge: 'Image must be 5 MB or smaller.',
+    changeImageErrorGeneric: 'Could not upload the image. Please try again.',
+    imageUploading: 'Uploading image…',
   },
 
   expenseForm: {
@@ -223,6 +228,11 @@ export const en = {
     signOut: 'Sign Out',
     signOutAria: 'Sign out',
     backToGroups: 'Back to groups',
+    changePhoto: 'Change photo',
+    changePhotoErrorInvalid: 'Please select a valid image file (JPEG, PNG, or WebP).',
+    changePhotoErrorTooLarge: 'Image must be 5 MB or smaller.',
+    changePhotoErrorGeneric: 'Could not upload the photo. Please try again.',
+    photoUploading: 'Uploading photo…',
   },
 
   categoryPicker: {

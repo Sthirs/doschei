@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/auth';
 import { GroupsPage } from '../pages';
 
-test('groups list matches Figma design: thumbnails, avatars, balance chips', async ({ authenticatedPage: page }) => {
+test('groups list matches UI design: thumbnails, avatars, balance chips', async ({ authenticatedPage: page }) => {
   const groupsPage = new GroupsPage(page);
 
   // 1. Login flow — authenticatedPage fixture handles this, so just navigate

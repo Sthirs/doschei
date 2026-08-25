@@ -41,7 +41,14 @@ const goToAccount = async () => {
         :aria-label="openAccountAria"
         @click="goToAccount"
       >
-        <span aria-hidden="true">{{ userInitial }}</span>
+        <img
+          v-if="authStore.user?.imageUrl"
+          :src="authStore.user.imageUrl"
+          alt=""
+          aria-hidden="true"
+          class="h-full w-full rounded-full object-cover"
+        />
+        <span v-else aria-hidden="true">{{ userInitial }}</span>
       </button>
     </div>
   </header>

@@ -36,6 +36,7 @@ describe('POST /api/groups', () => {
         id: registerResponse.body.user.id,
         email: registerResponse.body.user.email,
         displayName: registerResponse.body.user.displayName,
+        imageUrl: null,
       },
     ]);
   });

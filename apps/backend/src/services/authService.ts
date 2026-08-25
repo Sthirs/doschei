@@ -91,6 +91,7 @@ export const sanitizeUser = (user: User) => ({
   email: user.email,
   displayName: user.displayName,
   language: user.language,
+  imageUrl: user.imageUrl ?? null,
 });
 
 export class AuthService {
@@ -161,6 +162,35 @@ export class AuthService {
     if (language !== undefined) {
       user.language = language;
     }
+    return this.userRepository.save(user);
+  }
+
+  /**
+   * Update the authenticated user's avatar image.
+   * The imageUrl is expected to be a data URL (e.g., data:image/webp;base64,...).
+   */
+  async updateImage(userId: string, imageUrl: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new Error('User not found.');
+    }
+
+    user.imageUrl = imageUrl;
+    return this.userRepository.save(user);
+  }
+
+  /**
+   * Remove the authenticated user's avatar image.
+   */
+  async deleteImage(userId: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new Error('User not found.');
+    }
+
+    user.imageUrl = null;
     return this.userRepository.save(user);
   }
 }
