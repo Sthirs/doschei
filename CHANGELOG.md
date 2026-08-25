@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/Sthirs/doschei/compare/v1.4.0...v1.4.1) (2026-08-25)
+
+
+### Bug Fixes
+
+* preselect logged in user as pair of new expense ([#88](https://github.com/Sthirs/doschei/issues/88)) ([5baedbc](https://github.com/Sthirs/doschei/commit/5baedbc8b5ee8ee183ddacfc1bc04fddce17b757))
+
 ## [1.4.0](https://github.com/Sthirs/doschei/compare/v1.3.0...v1.4.0) (2026-08-25)
 
 
