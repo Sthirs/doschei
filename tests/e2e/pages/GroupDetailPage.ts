@@ -183,6 +183,16 @@ export class GroupDetailPage {
         .click();
   }
 
+  async expectPaidBySelected(displayName: string) {
+    const firstWord = displayName.trim().split(/\s+/)[0];
+    const chip = this.page
+        .getByText('Paid by', { exact: true })
+        .locator('..')
+        .getByRole('button', { name: new RegExp(firstWord) });
+    const cls = (await chip.getAttribute('class')) ?? '';
+    expect(cls.includes('ring-[#6554E7]'), `paid-by chip "${displayName}" should carry selection ring, got: ${cls}`).toBe(true);
+  }
+
   private splitMemberButton(displayName: string) {
     // ExpenseFormView.vue:424-459 — toggle chips under a "Split with" label.
     // The button label now shows only the first word of the display name
