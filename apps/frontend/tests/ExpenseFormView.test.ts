@@ -505,3 +505,115 @@ describe('ExpenseFormView category auto-selection', () => {
     expect(bobAvatar!.textContent).toContain('B');
   });
 });
+
+describe('ExpenseFormView payer default', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentPageTitle.value = null;
+    mocks.sharedGroup.value = makeGroup() as any;
+    (api.post as unknown as { mockResolvedValue: (v: unknown) => unknown }).mockResolvedValue({
+      data: {},
+    });
+    (api.patch as unknown as { mockResolvedValue: (v: unknown) => unknown }).mockResolvedValue({
+      data: {},
+    });
+    (api.delete as unknown as { mockResolvedValue: (v: unknown) => unknown }).mockResolvedValue({
+      data: {},
+    });
+  });
+
+  it('me-not-first: current user is not members[0] → their chip is selected and payload uses their id', async () => {
+    mocks.sharedGroup.value = makeGroup({
+      members: [makeMember('user-2', 'Bob'), makeMember('user-1', 'Alice')],
+      balance: { currentUserId: 'user-1', currentUserName: 'Alice', netForCurrentUser: 0, perUser: [] },
+    }) as any;
+
+    const { wrapper } = await mountAt('/groups/g1/expenses/new');
+
+    // Locate paid-by chips via 'Paid by' span → parentElement → buttons
+    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    expect(paidByLabel).toBeDefined();
+    const paidBySection = paidByLabel!.element.parentElement!;
+    const paidByButtons = Array.from(paidBySection.querySelectorAll('button'));
+    expect(paidByButtons.length).toBe(2);
+
+    // Alice (user-1) should have the ring class, Bob should not
+    const aliceButton = paidByButtons.find((b) => b.textContent?.includes('Alice'));
+    const bobButton = paidByButtons.find((b) => b.textContent?.includes('Bob'));
+    expect(aliceButton).toBeDefined();
+    expect(bobButton).toBeDefined();
+    expect(aliceButton!.classList.contains('ring-[#6554E7]')).toBe(true);
+    expect(bobButton!.classList.contains('ring-[#6554E7]')).toBe(false);
+
+    // Fill amount + description
+    const numberInputs = wrapper.findAll('input[type="number"]');
+    expect(numberInputs.length).toBeGreaterThan(0);
+    await numberInputs[0].setValue('100');
+    const textInputs = wrapper.findAll('input[type="text"]');
+    expect(textInputs.length).toBeGreaterThan(0);
+    await textInputs[0].setValue('Dinner');
+    await wrapper.vm.$nextTick();
+
+    // Toggle split for current user
+    const vm = wrapper.vm as unknown as {
+      split: { toggleSplitUser: (id: string) => void };
+    };
+    vm.split.toggleSplitUser('user-1');
+    await wrapper.vm.$nextTick();
+
+    // Submit
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+    await flushPromises();
+
+    // Assert api.post called with paidByUserId = 'user-1'
+    expect(api.post).toHaveBeenCalledWith(
+      '/groups/g1/expenses',
+      expect.objectContaining({
+        paidByUserId: 'user-1',
+      }),
+    );
+  });
+
+  it('fallback: currentUserId not in members → members[0] chip is selected (legacy default preserved)', async () => {
+    mocks.sharedGroup.value = makeGroup({
+      balance: { currentUserId: 'user-99', currentUserName: 'Unknown', netForCurrentUser: 0, perUser: [] },
+    }) as any;
+
+    const { wrapper } = await mountAt('/groups/g1/expenses/new');
+
+    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    expect(paidByLabel).toBeDefined();
+    const paidBySection = paidByLabel!.element.parentElement!;
+    const paidByButtons = Array.from(paidBySection.querySelectorAll('button'));
+    expect(paidByButtons.length).toBe(2);
+
+    // First member (Alice/user-1) should have the ring class
+    const aliceButton = paidByButtons[0];
+    expect(aliceButton.textContent).toContain('Alice');
+    expect(aliceButton.classList.contains('ring-[#6554E7]')).toBe(true);
+  });
+
+  it('edit regression: stored payer wins over signed-in user', async () => {
+    mocks.sharedGroup.value = makeGroup({
+      expenses: [makeExpense({ paidByUserId: 'user-2' })],
+    }) as any;
+
+    const { wrapper } = await mountAt('/groups/g1/expenses/e1/edit');
+
+    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    expect(paidByLabel).toBeDefined();
+    const paidBySection = paidByLabel!.element.parentElement!;
+    const paidByButtons = Array.from(paidBySection.querySelectorAll('button'));
+    expect(paidByButtons.length).toBe(2);
+
+    // Bob (user-2) should have the ring class, Alice should not
+    const aliceButton = paidByButtons.find((b) => b.textContent?.includes('Alice'));
+    const bobButton = paidByButtons.find((b) => b.textContent?.includes('Bob'));
+    expect(aliceButton).toBeDefined();
+    expect(bobButton).toBeDefined();
+    expect(bobButton!.classList.contains('ring-[#6554E7]')).toBe(true);
+    expect(aliceButton!.classList.contains('ring-[#6554E7]')).toBe(false);
+  });
+});

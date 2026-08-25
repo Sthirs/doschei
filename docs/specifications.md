@@ -67,6 +67,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Users can search categories by name within the category picker when choosing an expense category.
 - When creating or editing an expense, if no category has been selected yet, the application automatically selects the category whose past descriptions in the same group best match the entered description; when no past expense matches, it instead selects a category whose own name fully or partially matches the entered description.
 - Users can add an expense and choose who paid for it and how it is split among the users in the group.
+- When adding an expense, the payer field starts out preselected with the signed-in user.
 - Expenses can be split in one of the following ways:
   - Equal split: the expense is divided equally among all users in the group, or among a selected subset of users.
   - Exact split: the expense is divided according to the exact amount specified for each user in the group.

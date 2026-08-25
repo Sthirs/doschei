@@ -190,7 +190,12 @@ const initialise = () => {
     amount.value = '';
     date.value = todayDateValue();
     category.value = DEFAULT_CATEGORY_KEY;
-    paidByUserId.value = group.value?.members[0]?.id ?? '';
+    const currentUserId = group.value?.balance.currentUserId;
+    paidByUserId.value =
+      currentUserId &&
+      group.value?.members.some((member) => member.id === currentUserId)
+        ? currentUserId
+        : group.value?.members[0]?.id ?? '';
   }
 };
 
