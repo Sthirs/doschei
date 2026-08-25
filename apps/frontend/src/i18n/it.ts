@@ -142,6 +142,11 @@ export const it = {
     cancelInvitationError: "Impossibile annullare l'invito per {email}.",
     removeMemberAria: 'Rimuovi membro',
     cancelInvitationAria: "Annulla l'invito",
+    changeImage: 'Cambia immagine',
+    changeImageErrorInvalid: 'Seleziona un file immagine valido (JPEG, PNG o WebP).',
+    changeImageErrorTooLarge: "L'immagine deve essere di 5 MB o inferiore.",
+    changeImageErrorGeneric: 'Impossibile caricare l\'immagine. Riprova.',
+    imageUploading: 'Caricamento immagine…',
   },
 
   expenseForm: {
@@ -225,6 +230,11 @@ export const it = {
     signOut: 'Esci',
     signOutAria: 'Esci',
     backToGroups: 'Torna ai gruppi',
+    changePhoto: 'Cambia foto',
+    changePhotoErrorInvalid: 'Seleziona un file immagine valido (JPEG, PNG o WebP).',
+    changePhotoErrorTooLarge: 'L\'immagine deve essere di 5 MB o inferiore.',
+    changePhotoErrorGeneric: 'Impossibile caricare la foto. Riprova.',
+    photoUploading: 'Caricamento foto…',
   },
 
   categoryPicker: {

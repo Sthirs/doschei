@@ -76,5 +76,18 @@ export const useAuthStore = defineStore('auth', {
         this.isLoading = false;
       }
     },
+    async uploadImage(file: File) {
+      this.isLoading = true;
+
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        const { data } = await api.post<{ user: AuthUser }>('/auth/me/image', formData);
+        this.user = data.user;
+        return data.user;
+      } finally {
+        this.isLoading = false;
+      }
+    },
   },
 });

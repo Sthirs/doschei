@@ -485,8 +485,16 @@ onBeforeUnmount(() => {
                   <span
                     class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
                     style="color: #c6bfff"
-                    >{{ member.displayName.charAt(0).toUpperCase() }}</span
                   >
+                    <img
+                      v-if="member.imageUrl"
+                      :src="member.imageUrl"
+                      alt=""
+                      aria-hidden="true"
+                      class="h-full w-full rounded-full object-cover"
+                    />
+                    <span v-else>{{ member.displayName.charAt(0).toUpperCase() }}</span>
+                  </span>
                   <span class="max-w-full truncate text-xs" style="color: #e5e0ed">{{
                     shortName(member.displayName)
                   }}</span>
@@ -525,8 +533,16 @@ onBeforeUnmount(() => {
                   <span
                     class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
                     style="color: #c6bfff"
-                    >{{ member.displayName.charAt(0).toUpperCase() }}</span
                   >
+                    <img
+                      v-if="member.imageUrl"
+                      :src="member.imageUrl"
+                      alt=""
+                      aria-hidden="true"
+                      class="h-full w-full rounded-full object-cover"
+                    />
+                    <span v-else>{{ member.displayName.charAt(0).toUpperCase() }}</span>
+                  </span>
                   <span class="max-w-full truncate text-xs" style="color: #e5e0ed">{{
                     shortName(member.displayName)
                   }}</span>
@@ -611,13 +627,23 @@ onBeforeUnmount(() => {
                   <span
                     class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
                     style="color: #c6bfff"
-                    >{{
-                      group.members
-                        .find((m) => m.id === userId)
-                        ?.displayName.charAt(0)
-                        .toUpperCase()
-                    }}</span
                   >
+                    <img
+                      v-if="group.members.find((m) => m.id === userId)?.imageUrl"
+                      :src="group.members.find((m) => m.id === userId)!.imageUrl ?? undefined"
+                      alt=""
+                      aria-hidden="true"
+                      class="h-full w-full rounded-full object-cover"
+                    />
+                    <span v-else>
+                      {{
+                        group.members
+                          .find((m) => m.id === userId)
+                          ?.displayName.charAt(0)
+                          .toUpperCase()
+                      }}
+                    </span>
+                  </span>
                   <span
                     class="flex-1 truncate text-sm"
                     style="color: #e5e0ed"
@@ -659,13 +685,23 @@ onBeforeUnmount(() => {
                   <span
                     class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold"
                     style="color: #c6bfff"
-                    >{{
-                      group.members
-                        .find((m) => m.id === userId)
-                        ?.displayName.charAt(0)
-                        .toUpperCase()
-                    }}</span
                   >
+                    <img
+                      v-if="group.members.find((m) => m.id === userId)?.imageUrl"
+                      :src="group.members.find((m) => m.id === userId)!.imageUrl ?? undefined"
+                      alt=""
+                      aria-hidden="true"
+                      class="h-full w-full rounded-full object-cover"
+                    />
+                    <span v-else>
+                      {{
+                        group.members
+                          .find((m) => m.id === userId)
+                          ?.displayName.charAt(0)
+                          .toUpperCase()
+                      }}
+                    </span>
+                  </span>
                   <span
                     class="flex-1 truncate text-sm"
                     style="color: #e5e0ed"

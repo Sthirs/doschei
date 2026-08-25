@@ -54,8 +54,8 @@ function getDefaultGroup(): GroupDetail {
     imageUrl: null,
     memberCount: 2,
     members: [
-      { id: 'user-1', displayName: 'Alice', email: 'alice@test.com' },
-      { id: 'user-2', displayName: 'Bob', email: 'bob@test.com' },
+      { id: 'user-1', displayName: 'Alice', email: 'alice@test.com', imageUrl: null },
+      { id: 'user-2', displayName: 'Bob', email: 'bob@test.com', imageUrl: null },
     ],
     netForCurrentUser: 800,
     expenses: [],

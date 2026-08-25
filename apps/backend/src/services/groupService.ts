@@ -89,6 +89,7 @@ export class GroupService {
         id: member.id,
         displayName: member.displayName,
         email: member.email,
+        imageUrl: member.imageUrl ?? null,
       })),
       netForCurrentUser,
     };
@@ -301,6 +302,24 @@ export class GroupService {
     }
 
     group.name = name;
+    const savedGroup = await this.groupRepository.save(group);
+
+    return this.serializeGroup(savedGroup);
+  }
+
+  async updateGroupImage(groupId: string, imageUrl: string, userId: string) {
+    const group = await this.groupRepository
+      .createQueryBuilder('group')
+      .innerJoin('group.members', 'membership', 'membership.id = :userId', { userId })
+      .leftJoinAndSelect('group.members', 'member')
+      .where('group.id = :groupId', { groupId })
+      .getOne();
+
+    if (!group) {
+      throw new Error('Group not found or you are not a member.');
+    }
+
+    group.imageUrl = imageUrl;
     const savedGroup = await this.groupRepository.save(group);
 
     return this.serializeGroup(savedGroup);

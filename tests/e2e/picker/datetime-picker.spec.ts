@@ -1,4 +1,4 @@
-// T8 of the datetime-picker-figma plan — DateTimePicker bottom-sheet e2e:
+// DateTimePicker bottom-sheet e2e:
 // open, navigate, select+apply, cancel reverts, selected cell highlight.
 // Uses the authenticatedPage fixture (no UI login). One test, five scenarios
 // (happy-A through happy-E) — they share state sequentially (happy-D depends

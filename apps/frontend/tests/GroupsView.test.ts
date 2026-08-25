@@ -45,8 +45,8 @@ const makeGroup = (overrides: Partial<Group> = {}): Group => ({
   imageUrl: null,
   memberCount: 2,
   members: [
-    { id: 'user-1', displayName: 'Alice', email: 'alice@test.com' },
-    { id: 'user-2', displayName: 'Bob', email: 'bob@test.com' },
+    { id: 'user-1', displayName: 'Alice', email: 'alice@test.com', imageUrl: null },
+    { id: 'user-2', displayName: 'Bob', email: 'bob@test.com', imageUrl: null },
   ],
   netForCurrentUser: 0,
   ...overrides,
@@ -111,8 +111,8 @@ describe('GroupsView', () => {
     const wrapper = await mountComponent([
       makeGroup({
         members: [
-          { id: 'user-1', displayName: 'Alice', email: 'alice@test.com' },
-          { id: 'user-2', displayName: 'Bob', email: 'bob@test.com' },
+          { id: 'user-1', displayName: 'Alice', email: 'alice@test.com', imageUrl: null },
+          { id: 'user-2', displayName: 'Bob', email: 'bob@test.com', imageUrl: null },
         ],
       }),
     ]);
@@ -124,11 +124,11 @@ describe('GroupsView', () => {
 
   it('renders 3 avatars + "+2" badge for a group with 5 members', async () => {
     const members = [
-      { id: 'u1', displayName: 'Alice', email: 'a@test.com' },
-      { id: 'u2', displayName: 'Bob', email: 'b@test.com' },
-      { id: 'u3', displayName: 'Charlie', email: 'c@test.com' },
-      { id: 'u4', displayName: 'Dave', email: 'd@test.com' },
-      { id: 'u5', displayName: 'Eve', email: 'e@test.com' },
+      { id: 'u1', displayName: 'Alice', email: 'a@test.com', imageUrl: null },
+      { id: 'u2', displayName: 'Bob', email: 'b@test.com', imageUrl: null },
+      { id: 'u3', displayName: 'Charlie', email: 'c@test.com', imageUrl: null },
+      { id: 'u4', displayName: 'Dave', email: 'd@test.com', imageUrl: null },
+      { id: 'u5', displayName: 'Eve', email: 'e@test.com', imageUrl: null },
     ];
     const wrapper = await mountComponent([makeGroup({ members, memberCount: 5 })]);
     // First 3 avatars visible
@@ -161,6 +161,20 @@ describe('GroupsView', () => {
     const img = wrapper.find('img');
     expect(img.exists()).toBe(true);
     expect(img.attributes('src')).toBe('https://example.com/photo.jpg');
+  });
+
+  it('img-branch wrapper has h-20 w-20 when imageUrl is set', async () => {
+    const wrapper = await mountComponent([
+      makeGroup({ imageUrl: 'https://example.com/photo.jpg', name: 'Venice Trip' }),
+    ]);
+    // Find the wrapper div that contains the img (the one with h-20 w-20 classes)
+    const img = wrapper.find('img');
+    const wrapperDiv = img.element.parentElement;
+    expect(wrapperDiv).toBeTruthy();
+    expect(wrapperDiv!.classList.contains('h-20')).toBe(true);
+    expect(wrapperDiv!.classList.contains('w-20')).toBe(true);
+    expect(wrapperDiv!.classList.contains('rounded-xl')).toBe(true);
+    expect(wrapperDiv!.classList.contains('shrink-0')).toBe(true);
   });
 
   it('sets currentPageTitle to "Do Schèi" on mount', async () => {
@@ -200,5 +214,53 @@ describe('GroupsView', () => {
     await vi.dynamicImportSettled();
 
     expect(wrapper.html()).toContain('Could not decline the invitation');
+  });
+
+  it('renders member avatar with image when member has imageUrl', async () => {
+    const wrapper = await mountComponent([
+      makeGroup({
+        members: [
+          { id: 'user-1', displayName: 'Alice', email: 'alice@test.com', imageUrl: 'https://example.com/alice.jpg' },
+          { id: 'user-2', displayName: 'Bob', email: 'bob@test.com', imageUrl: null },
+        ],
+      }),
+    ]);
+    // First member has imageUrl - should render <img>
+    const aliceAvatar = wrapper.find('[aria-label="Alice"]');
+    expect(aliceAvatar.exists()).toBe(true);
+    const img = aliceAvatar.find('img');
+    expect(img.exists()).toBe(true);
+    expect(img.attributes('src')).toBe('https://example.com/alice.jpg');
+    expect(img.attributes('alt')).toBe('');
+    expect(img.attributes('aria-hidden')).toBe('true');
+    expect(img.classes()).toContain('h-full');
+    expect(img.classes()).toContain('w-full');
+    expect(img.classes()).toContain('rounded-full');
+    expect(img.classes()).toContain('object-cover');
+    // Second member has no imageUrl - should render initials
+    const bobAvatar = wrapper.find('[aria-label="Bob"]');
+    expect(bobAvatar.exists()).toBe(true);
+    expect(bobAvatar.find('img').exists()).toBe(false);
+    expect(bobAvatar.text()).toContain('B');
+  });
+
+  it('renders member avatar initials when member has no imageUrl', async () => {
+    const wrapper = await mountComponent([
+      makeGroup({
+        members: [
+          { id: 'user-1', displayName: 'Alice', email: 'alice@test.com', imageUrl: null },
+          { id: 'user-2', displayName: 'Bob', email: 'bob@test.com', imageUrl: null },
+        ],
+      }),
+    ]);
+    const aliceAvatar = wrapper.find('[aria-label="Alice"]');
+    expect(aliceAvatar.exists()).toBe(true);
+    expect(aliceAvatar.find('img').exists()).toBe(false);
+    expect(aliceAvatar.text()).toContain('A');
+
+    const bobAvatar = wrapper.find('[aria-label="Bob"]');
+    expect(bobAvatar.exists()).toBe(true);
+    expect(bobAvatar.find('img').exists()).toBe(false);
+    expect(bobAvatar.text()).toContain('B');
   });
 });

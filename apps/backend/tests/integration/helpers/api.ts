@@ -57,6 +57,32 @@ export const createJsonRequest = async <T>(
 };
 
 /**
+ * Creates a multipart/form-data request for file uploads.
+ * Does NOT set a content-type header — fetch will set it with the correct boundary.
+ */
+export const createMultipartRequest = async <T>(
+  path: string,
+  formData: FormData,
+  token?: string,
+): Promise<JsonResponse<T>> => {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: 'POST',
+    body: formData,
+    headers,
+  });
+
+  return {
+    status: response.status,
+    body: (response.status === 204 ? {} : (await response.json())) as T,
+  };
+};
+
+/**
  * Performs a raw fetch against the backend and returns the response text
  * without JSON parsing, for non-JSON responses such as CSV.
  */

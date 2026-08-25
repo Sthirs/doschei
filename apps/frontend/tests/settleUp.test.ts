@@ -11,6 +11,7 @@ const member = (id: string, displayName: string): GroupMember => ({
   id,
   displayName,
   email: `${id}@example.com`,
+  imageUrl: null,
 });
 
 const balance = (

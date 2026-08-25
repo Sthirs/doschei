@@ -134,10 +134,11 @@ const makeGroupWithBusTrainHistory = () =>
     ],
   });
 
-const makeMember = (id: string, name: string) => ({
+const makeMember = (id: string, name: string, imageUrl: string | null = null) => ({
   id,
   displayName: name,
   email: `${id}@test.com`,
+  imageUrl,
 });
 
 const makeGroup = (overrides: Record<string, unknown> = {}) => ({
@@ -146,6 +147,25 @@ const makeGroup = (overrides: Record<string, unknown> = {}) => ({
   imageUrl: null,
   memberCount: 2,
   members: [makeMember('user-1', 'Alice'), makeMember('user-2', 'Bob')],
+  expenses: [],
+  balance: {
+    currentUserId: 'user-1',
+    currentUserName: 'Alice',
+    netForCurrentUser: 0,
+    perUser: [],
+  },
+  ...overrides,
+});
+
+const makeGroupWithAvatars = (overrides: Record<string, unknown> = {}) => ({
+  id: 'g1',
+  name: 'Test Group',
+  imageUrl: null,
+  memberCount: 2,
+  members: [
+    makeMember('user-1', 'Alice', 'https://example.com/alice.jpg'),
+    makeMember('user-2', 'Bob', null),
+  ],
   expenses: [],
   balance: {
     currentUserId: 'user-1',
@@ -450,5 +470,38 @@ describe('ExpenseFormView category auto-selection', () => {
       warnSpy.mockRestore();
       errorSpy.mockRestore();
     }
+  });
+
+  it('renders paid-by chip with image when member has imageUrl', async () => {
+    mocks.sharedGroup.value = makeGroupWithAvatars() as any;
+    const { wrapper } = await mountAt('/groups/g1/expenses/new');
+
+    // Paid-by section renders a button per group member
+    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    expect(paidByLabel).toBeDefined();
+    const paidBySection = paidByLabel!.element.parentElement!;
+    const paidByButtons = Array.from(paidBySection.querySelectorAll('button'));
+    expect(paidByButtons.length).toBe(2);
+
+    // First member (Alice) has imageUrl - should render <img> in the h-6 w-6 circle
+    const aliceButton = paidByButtons[0];
+    const aliceAvatar = aliceButton.querySelector('.flex.h-6.w-6');
+    expect(aliceAvatar).toBeTruthy();
+    const aliceImg = aliceAvatar!.querySelector('img');
+    expect(aliceImg).toBeTruthy();
+    expect(aliceImg!.getAttribute('src')).toBe('https://example.com/alice.jpg');
+    expect(aliceImg!.getAttribute('alt')).toBe('');
+    expect(aliceImg!.getAttribute('aria-hidden')).toBe('true');
+    expect(aliceImg!.classList.contains('h-full')).toBe(true);
+    expect(aliceImg!.classList.contains('w-full')).toBe(true);
+    expect(aliceImg!.classList.contains('rounded-full')).toBe(true);
+    expect(aliceImg!.classList.contains('object-cover')).toBe(true);
+
+    // Second member (Bob) has no imageUrl - should render initials
+    const bobButton = paidByButtons[1];
+    const bobAvatar = bobButton.querySelector('.flex.h-6.w-6');
+    expect(bobAvatar).toBeTruthy();
+    expect(bobAvatar!.querySelector('img')).toBeNull();
+    expect(bobAvatar!.textContent).toContain('B');
   });
 });

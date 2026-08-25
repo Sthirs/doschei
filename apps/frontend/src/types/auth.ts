@@ -3,4 +3,5 @@ export type AuthUser = {
   email: string;
   displayName: string;
   language: string;
+  imageUrl: string | null;
 };

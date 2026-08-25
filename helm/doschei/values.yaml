@@ -62,7 +62,8 @@ ingress:
   enabled: true
   className: nginx
   host: doschei.example.com
-  annotations: {}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   tls:
     enabled: false
     host: ""

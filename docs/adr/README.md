@@ -47,3 +47,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0016](0016-api-rate-limiting.md) | Global API rate limiting with express-rate-limit | 🟢 accepted |
 | [ADR-0017](0017-category-suggestions-client-side-learning.md) | Category suggestions — client-side, group-scoped learning; no server suggestion role | 🟢 accepted |
 | [ADR-0018](0018-internationalization-en-it.md) | Internationalization — vue-i18n, EN/IT, per-user language | 🟢 accepted |
+| [ADR-0019](0019-image-upload-architecture.md) | Image upload architecture — DB-resident data URLs, multer+sharp, replace-only | 🟢 accepted |

@@ -91,7 +91,14 @@ onBeforeUnmount(() => {
         v-if="selected"
         class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/20 text-xs font-semibold text-[#6554E7]"
       >
-        {{ initial(selected.displayName) }}
+        <img
+          v-if="selected.imageUrl"
+          :src="selected.imageUrl"
+          alt=""
+          aria-hidden="true"
+          class="h-full w-full rounded-full object-cover"
+        />
+        <span v-else>{{ initial(selected.displayName) }}</span>
       </span>
       <span class="min-w-0 flex-1 truncate text-left">
         {{ selected?.displayName ?? t('userPicker.selectPlaceholder') }}
@@ -127,7 +134,14 @@ onBeforeUnmount(() => {
           <span
             class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/20 text-xs font-semibold text-[#6554E7]"
           >
-            {{ initial(member.displayName) }}
+            <img
+              v-if="member.imageUrl"
+              :src="member.imageUrl"
+              alt=""
+              aria-hidden="true"
+              class="h-full w-full rounded-full object-cover"
+            />
+            <span v-else>{{ initial(member.displayName) }}</span>
           </span>
           <span class="min-w-0 flex-1 truncate">{{ member.displayName }}</span>
           <svg
@@ -189,7 +203,14 @@ onBeforeUnmount(() => {
               <span
                 class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/20 text-xs font-semibold text-[#6554E7]"
               >
-                {{ initial(member.displayName) }}
+                <img
+                  v-if="member.imageUrl"
+                  :src="member.imageUrl"
+                  alt=""
+                  aria-hidden="true"
+                  class="h-full w-full rounded-full object-cover"
+                />
+                <span v-else>{{ initial(member.displayName) }}</span>
               </span>
               <span class="min-w-0 flex-1 truncate">{{ member.displayName }}</span>
               <svg

@@ -26,6 +26,9 @@ export class User {
   @Column({ type: 'varchar', length: 8, default: 'en' })
   language!: string;
 
+  @Column({ type: 'text', name: 'image_url', nullable: true })
+  imageUrl!: string | null;
+
   @ManyToMany(() => Group, (group) => group.members)
   groups!: Group[];
 

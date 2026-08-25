@@ -38,11 +38,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const mountView = async () => {
+const mountView = async (userOverrides: Partial<{ id: string; email: string; displayName: string; language: string; imageUrl: string | null }> = {}) => {
   const pinia = createPinia();
   setActivePinia(pinia);
   const store = useAuthStore();
-  store.user = { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'en' };
+  store.user = {
+    id: 'u1',
+    email: 'demo@doschei.local',
+    displayName: 'Demo User',
+    language: 'en',
+    imageUrl: null,
+    ...userOverrides,
+  };
   const wrapper = mount(AccountView, {
     global: {
       plugins: [pinia, i18n],
@@ -61,7 +68,7 @@ describe('AccountView language selector', () => {
   });
 
   it('does not PATCH while selecting; persists only when Save is pressed and applies the locale then', async () => {
-    const patchUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'it' };
+    const patchUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'it', imageUrl: null };
     vi.mocked(api.patch).mockResolvedValue({ data: { user: patchUser } });
     const wrapper = await mountView();
 
@@ -78,7 +85,7 @@ describe('AccountView language selector', () => {
   });
 
   it('sends displayName and language together when both changed', async () => {
-    const patchUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Nuovo Nome', language: 'it' };
+    const patchUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Nuovo Nome', language: 'it', imageUrl: null };
     vi.mocked(api.patch).mockResolvedValue({ data: { user: patchUser } });
     const wrapper = await mountView();
 
@@ -112,5 +119,125 @@ describe('AccountView language selector', () => {
 
     await wrapper.find('[data-testid="account-language"]').setValue('it');
     expect(wrapper.find('[data-testid="account-save"]').attributes('disabled')).toBeUndefined();
+  });
+});
+
+describe('AccountView avatar picker', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setAppLocale('en');
+    globalThis.localStorage?.clear();
+  });
+
+  it('renders edit badge with edit.svg and correct aria-label', async () => {
+    const wrapper = await mountView();
+    const editBadge = wrapper.find('[data-testid="account-avatar-wrapper"] label');
+    expect(editBadge.exists()).toBe(true);
+    expect(editBadge.attributes('aria-label')).toBe('Change photo');
+    const img = editBadge.find('img');
+    const src = img.attributes('src');
+    expect(src).toBeDefined();
+    // Vite may inline SVG as data URL or serve as /icons/edit.svg
+    expect(src === '/icons/edit.svg' || src?.startsWith('data:image/svg+xml')).toBe(true);
+  });
+
+  it('shows user initial when no imageUrl', async () => {
+    const wrapper = await mountView({ displayName: 'Demo User', imageUrl: null });
+    const avatar = wrapper.find('[data-testid="account-avatar"]');
+    expect(avatar.text()).toContain('D');
+    expect(avatar.find('img').exists()).toBe(false);
+  });
+
+  it('shows image when imageUrl is present', async () => {
+    const wrapper = await mountView({ displayName: 'Demo User', imageUrl: 'https://example.com/avatar.png' });
+    const avatar = wrapper.find('[data-testid="account-avatar"]');
+    const img = avatar.find('img');
+    expect(img.exists()).toBe(true);
+    expect(img.attributes('src')).toBe('https://example.com/avatar.png');
+    expect(img.classes()).toContain('object-cover');
+  });
+
+  it('dispatches change on hidden input and posts FormData to /auth/me/image', async () => {
+    const updatedUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'en', imageUrl: 'https://example.com/new-avatar.png' };
+    vi.mocked(api.post).mockResolvedValue({ data: { user: updatedUser } });
+
+    const wrapper = await mountView();
+    const fileInput = wrapper.find('#avatar-upload');
+    expect(fileInput.exists()).toBe(true);
+    expect(fileInput.attributes('accept')).toBe('image/*');
+    expect(fileInput.attributes('capture')).toBeUndefined();
+
+    const file = new File(['test'], 'avatar.png', { type: 'image/png' });
+    Object.defineProperty(fileInput.element, 'files', { value: [file] });
+
+    await fileInput.trigger('change');
+    await flushPromises();
+
+    expect(api.post).toHaveBeenCalledTimes(1);
+    const callArgs = vi.mocked(api.post).mock.calls[0];
+    expect(callArgs[0]).toBe('/auth/me/image');
+    expect(callArgs[1]).toBeInstanceOf(FormData);
+    const formData = callArgs[1] as FormData;
+    expect(formData.get('image')).toBe(file);
+  });
+
+  it('shows error for invalid file type', async () => {
+    const wrapper = await mountView();
+    const fileInput = wrapper.find('#avatar-upload');
+    const file = new File(['test'], 'avatar.txt', { type: 'text/plain' });
+    Object.defineProperty(fileInput.element, 'files', { value: [file] });
+
+    await fileInput.trigger('change');
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="account-upload-error"]').text()).toContain('Please select a valid image file');
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('shows error for file too large', async () => {
+    const wrapper = await mountView();
+    const fileInput = wrapper.find('#avatar-upload');
+    const largeFile = new File(['x'.repeat(6 * 1024 * 1024)], 'large.png', { type: 'image/png' });
+    Object.defineProperty(fileInput.element, 'files', { value: [largeFile] });
+
+    await fileInput.trigger('change');
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="account-upload-error"]').text()).toContain('5 MB or smaller');
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('shows generic error on upload failure', async () => {
+    vi.mocked(api.post).mockRejectedValue(new Error('network error'));
+    const wrapper = await mountView();
+    const fileInput = wrapper.find('#avatar-upload');
+    const file = new File(['test'], 'avatar.png', { type: 'image/png' });
+    Object.defineProperty(fileInput.element, 'files', { value: [file] });
+
+    await fileInput.trigger('change');
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="account-upload-error"]').text()).toContain('Could not upload the photo');
+  });
+
+  it('shows uploading state during upload', async () => {
+    let resolveUpload: (value: unknown) => void;
+    const uploadPromise = new Promise((resolve) => { resolveUpload = resolve; });
+    vi.mocked(api.post).mockReturnValue(uploadPromise as any);
+
+    const wrapper = await mountView();
+    const fileInput = wrapper.find('#avatar-upload');
+    const file = new File(['test'], 'avatar.png', { type: 'image/png' });
+    Object.defineProperty(fileInput.element, 'files', { value: [file] });
+
+    await fileInput.trigger('change');
+
+    expect(wrapper.find('[data-testid="account-uploading"]').text()).toContain('Uploading photo');
+    expect(wrapper.find('[data-testid="account-upload-error"]').exists()).toBe(false);
+
+    resolveUpload!({ data: { user: { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'en', imageUrl: 'https://example.com/new.png' } } });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="account-uploading"]').exists()).toBe(false);
   });
 });

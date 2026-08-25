@@ -8,6 +8,8 @@ export class AccountPage {
   readonly saveButton = this.page.getByTestId('account-save');
   readonly topbarAvatar = this.page.getByRole('button', { name: /Open account page|Apri la pagina account/ });
   readonly languageSelect = this.page.getByTestId('account-language');
+  readonly avatarEditBadge = this.page.getByTestId('account-avatar-edit');
+  readonly avatarInput = this.page.getByTestId('account-avatar-input');
 
   constructor(private page: Page) {}
 

@@ -1,7 +1,8 @@
 import { Router } from 'express';
 
-import { authConfig, login, me, register, updateName } from '../controllers/authController';
+import { authConfig, deleteImage, login, me, register, updateImage, updateName } from '../controllers/authController';
 import { requireAuth, requireLocalAuthEnabled } from '../middleware/auth';
+import { uploadSingleImage } from '../middleware/upload';
 import { env } from '../config/env';
 
 export const authRouter = Router();
@@ -11,3 +12,5 @@ authRouter.post('/login', requireLocalAuthEnabled(env.localLoginEnabled, 'Local 
 authRouter.get('/config', authConfig);
 authRouter.get('/me', requireAuth, me);
 authRouter.patch('/me', requireAuth, updateName);
+authRouter.post('/me/image', requireAuth, uploadSingleImage, updateImage);
+authRouter.delete('/me/image', requireAuth, deleteImage);

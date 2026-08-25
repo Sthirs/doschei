@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Login UI — visual fidelity', () => {
-  test('renders the single-column Figma layout with prefilled demo credentials', async ({ page }) => {
+  test('renders the single-column UI layout with prefilled demo credentials', async ({ page }) => {
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
 

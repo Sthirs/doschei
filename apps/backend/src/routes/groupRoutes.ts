@@ -1,7 +1,8 @@
 import { Router } from 'express';
 
-import { acceptInvitation, cancelInvitation, createGroup, declineInvitation, getGroup, listGroups, updateGroup, addMember, removeMember, createExpense, updateExpense, deleteExpense, createSettlement, updateSettlement, deleteSettlement, exportExpenses } from '../controllers/groupController';
+import { acceptInvitation, cancelInvitation, createGroup, declineInvitation, getGroup, listGroups, updateGroup, addMember, removeMember, createExpense, updateExpense, deleteExpense, createSettlement, updateSettlement, deleteSettlement, exportExpenses, updateGroupImage } from '../controllers/groupController';
 import { requireAuth } from '../middleware/auth';
+import { uploadSingleImage } from '../middleware/upload';
 
 export const groupRouter = Router();
 
@@ -9,6 +10,7 @@ groupRouter.get('/', requireAuth, listGroups);
 groupRouter.get('/:id', requireAuth, getGroup);
 groupRouter.post('/', requireAuth, createGroup);
 groupRouter.patch('/:id', requireAuth, updateGroup);
+groupRouter.post('/:id/image', requireAuth, uploadSingleImage, updateGroupImage);
 groupRouter.post('/:id/members', requireAuth, addMember);
 groupRouter.delete('/:id/members/:userId', requireAuth, removeMember);
 groupRouter.post('/:id/invitations/:invitationId/accept', requireAuth, acceptInvitation);

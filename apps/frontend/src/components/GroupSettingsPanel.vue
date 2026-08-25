@@ -42,6 +42,51 @@ const memberError = ref('');
 const removingMemberId = ref<string | null>(null);
 const cancellingInvitationId = ref<string | null>(null);
 
+// Image upload state
+const isUploading = ref(false);
+const uploadError = ref('');
+
+const validateImageFile = (file: File): string | null => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const maxSize = 5 * 1024 * 1024; // 5 MB
+
+  if (!allowedTypes.includes(file.type)) {
+    return t('groupSettings.changeImageErrorInvalid');
+  }
+  if (file.size > maxSize) {
+    return t('groupSettings.changeImageErrorTooLarge');
+  }
+  return null;
+};
+
+const handleFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  // Reset error and input value
+  uploadError.value = '';
+  input.value = '';
+
+  const validationError = validateImageFile(file);
+  if (validationError) {
+    uploadError.value = validationError;
+    return;
+  }
+
+  isUploading.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+    await api.post(`/groups/${props.group.id}/image`, formData);
+    emit('updated');
+  } catch {
+    uploadError.value = t('groupSettings.changeImageErrorGeneric');
+  } finally {
+    isUploading.value = false;
+  }
+};
+
 const saveName = async () => {
   if (!groupName.value.trim()) {
     nameError.value = t('groupSettings.groupNameEmpty');
@@ -113,16 +158,64 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
 
 <template>
   <section class="flex flex-col gap-6 px-4 py-5 sm:px-6">
-    <!-- 1. Group picture (read-only, only when imageUrl set) -->
-    <div
-      v-if="props.group.imageUrl"
-      class="flex justify-center"
-    >
-      <img
-        :src="props.group.imageUrl"
-        :alt="t('groups.groupImageAria', { name: props.group.name })"
-        class="h-24 w-24 rounded-full object-cover"
+    <!-- 1. Group image picker -->
+    <div class="relative w-full" data-testid="group-image-picker">
+      <!-- Image banner: ~16:10 aspect ratio, rounded-xl -->
+      <div class="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-[#201F27]">
+        <!-- Image or placeholder -->
+        <div
+          v-if="props.group.imageUrl"
+          class="absolute inset-0"
+        >
+          <img
+            :src="props.group.imageUrl"
+            :alt="t('groups.groupImageAria', { name: props.group.name })"
+            class="h-full w-full object-cover"
+            data-testid="group-image-preview"
+          />
+        </div>
+        <div
+          v-else
+          class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-white font-semibold text-4xl"
+          :aria-label="t('groups.thumbnailAria', { name: props.group.name })"
+        >
+          {{ initialsOf(props.group.name) }}
+        </div>
+
+        <!-- Camera button bottom-right -->
+        <label
+          for="group-image-upload"
+          data-testid="group-image-edit"
+          class="absolute bottom-4 right-4 flex w-10 h-10 items-center justify-center rounded-full bg-[#6554E7] text-[#F0EBFF] shadow-lg transition hover:bg-[#5a44cf] cursor-pointer"
+          :aria-label="t('groupSettings.changeImage')"
+          :class="{ 'opacity-60 pointer-events-none': isUploading }"
+        >
+          <img src="/icons/camera.svg" alt="" aria-hidden="true" class="h-5 w-5" />
+        </label>
+
+        <!-- Uploading overlay -->
+        <div
+          v-if="isUploading"
+          class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl"
+        >
+          <p class="text-sm text-[#C8C4D7]">{{ t('groupSettings.imageUploading') }}</p>
+        </div>
+      </div>
+
+      <!-- Hidden file input -->
+      <input
+        id="group-image-upload"
+        data-testid="group-image-input"
+        type="file"
+        accept="image/*"
+        class="absolute inset-0 opacity-0 pointer-events-none"
+        aria-hidden="true"
+        :disabled="isUploading"
+        @change="handleFileChange"
       />
+
+      <!-- Upload error -->
+      <p v-if="uploadError" data-testid="image-upload-error" class="mt-2 text-sm text-[#FFB4AB] text-center">{{ uploadError }}</p>
     </div>
 
     <!-- 2. GROUP NAME -->
@@ -196,7 +289,14 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
           <div
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#6554E7] to-[#4a485d] text-sm font-semibold text-white"
           >
-            {{ initialsOf(member.displayName) }}
+            <img
+              v-if="member.imageUrl"
+              :src="member.imageUrl"
+              alt=""
+              aria-hidden="true"
+              class="h-full w-full rounded-full object-cover"
+            />
+            <span v-else>{{ initialsOf(member.displayName) }}</span>
           </div>
           <!-- Name + email -->
           <div class="min-w-0 flex-1">
