@@ -1,7 +1,6 @@
-import { test, expect } from '../fixtures/auth';
+import { expect, registerUserViaApi, test } from '../fixtures/auth';
 import { AccountPage } from '../pages/AccountPage';
 import { resolve } from 'node:path';
-import { uniqueValue, registerUserViaApi } from '../fixtures/auth';
 
 const FIXTURE_PATH = resolve('tests/e2e/fixtures/test-image.png');
 
