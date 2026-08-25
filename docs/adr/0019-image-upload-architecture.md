@@ -1,6 +1,6 @@
 # ADR-0019: Image upload architecture — DB-resident data URLs, multer+sharp, replace-only
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-08-24
 - **Deciders:** Backend team, Frontend team
 
