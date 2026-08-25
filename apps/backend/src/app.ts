@@ -46,7 +46,7 @@ export const createApp = () => {
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
     if (error instanceof multer.MulterError) {
       if (error.code === 'LIMIT_FILE_SIZE') {
-        response.status(413).json({ message: 'File too large. Maximum size is 5 MB.' });
+        response.status(413).json({ message: 'File too large.' });
         return;
       }
       response.status(400).json({ message: error.message });

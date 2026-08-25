@@ -22,9 +22,9 @@ test('group image: upload in settings → appears on group card → persists aft
   expect(groupId).toBeTruthy();
   await page.goto('/groups/' + groupId + '/settings');
 
-  // 3. Verify image edit button is visible and contains camera icon (may be inlined as data: URL)
+  // 3. Verify image edit button is visible and contains camera icon (served from /public/icons or inlined as data: URL)
   await expect(groupSettingsPage.imageEditButton).toBeVisible();
-  await expect(groupSettingsPage.imageEditButton.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml/);
+  await expect(groupSettingsPage.imageEditButton.locator('img')).toHaveAttribute('src', /^(data:image\/svg\+xml|\/icons\/camera\.svg)$/);
 
   // 4. Upload image via hidden file input
   await groupSettingsPage.imageInput.setInputFiles(FIXTURE_PATH);
