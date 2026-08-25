@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/Sthirs/doschei/compare/v1.3.0...v1.4.0) (2026-08-25)
+
+
+### Features
+
+* add profile and group image uploads ([#84](https://github.com/Sthirs/doschei/issues/84)) ([2e6ab76](https://github.com/Sthirs/doschei/commit/2e6ab76a20e02c199943574233839544aabff6bd))
+
 ## [1.3.0](https://github.com/Sthirs/doschei/compare/v1.2.0...v1.3.0) (2026-08-23)
 
 
