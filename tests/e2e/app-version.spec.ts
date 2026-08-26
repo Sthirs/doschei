@@ -79,45 +79,54 @@ test.describe('App version and cache behavior', () => {
 
   // Spec C: Redeploy simulation / cache invalidation
   test.describe('Redeploy simulation / cache invalidation', () => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
 
     test('buildId change triggers exactly one reload, clears stale cache, preserves auth', async ({
       authenticatedPage: page,
     }) => {
-      // STRICT ORDER: addInitScript FIRST (runs before EVERY page load)
-      await page.addInitScript('window.__loads = (window.__loads ?? 0) + 1');
+      // Seed the prior build so the first load does not itself reload (a
+      // first-time visitor hits the null→A path). Guarded so it is not
+      // re-applied after the app's own reload during the test.
+      await page.addInitScript(
+        "const __k='doschei.e2e.loads'; localStorage.setItem(__k, String((Number(localStorage.getItem(__k) ?? '0')) + 1)); if (localStorage.getItem('doschei.app.buildId') === null) { localStorage.setItem('doschei.app.buildId', 'e2e-build-A'); }",
+      );
 
-      // THEN route interception for initial version
+      // A single route handler driven by a mutable build id. Re-registering
+      // page.route does NOT override the first handler in Playwright, so a
+      // mutable variable is required to change the served build.
+      let currentBuildId = 'e2e-build-A';
       await page.route('**/app-version.json', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ version: '9.9.9-test', buildId: 'e2e-build-A' }),
+          body: JSON.stringify({ version: '9.9.9-test', buildId: currentBuildId }),
         });
       });
 
-      // THEN goto
       await page.goto('/');
       await page.waitForLoadState('networkidle');
+      const loadsBefore = await page.evaluate(() =>
+        Number(localStorage.getItem('doschei.e2e.loads') ?? '0'),
+      );
 
-      // Seed marker cache and capture token
+      // Cache Storage only exists in secure contexts; over plain HTTP dev
+      // deployments caches is undefined and the production purge is a no-op
+      // there too, so guard every caches access.
       const capturedToken = await page.evaluate(async () => {
-        const cache = await caches.open('doschei-e2e-stale-marker');
-        await cache.put('/__marker', new Response('x'));
+        if (typeof caches !== 'undefined') {
+          const cache = await caches.open('doschei-e2e-stale-marker');
+          await cache.put('/__marker', new Response('x'));
+        }
         return localStorage.getItem('doschei.auth.token');
       });
       expect(capturedToken).toBeTruthy();
 
-      // Re-route the endpoint to new buildId
-      await page.route('**/app-version.json', async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ version: '9.9.9-test', buildId: 'e2e-build-B' }),
-        });
-      });
+      currentBuildId = 'e2e-build-B';
 
-      // Override visibilityState and dispatch visibilitychange
+      // The probe is throttled to one check per 30s and the boot probe already
+      // ran on load, so wait past the window before foregrounding the tab.
+      await page.waitForTimeout(31_000);
+
       await page.evaluate(() => {
         Object.defineProperty(document, 'visibilityState', {
           value: 'visible',
@@ -126,35 +135,40 @@ test.describe('App version and cache behavior', () => {
         document.dispatchEvent(new Event('visibilitychange'));
       });
 
-      // Wait for load and poll until buildId matches
-      await page.waitForLoadState('load');
       await expect.poll(
         async () => {
-          return await page.evaluate(() => localStorage.getItem('doschei.app.buildId'));
+          try {
+            return await page.evaluate(
+              () => localStorage.getItem('doschei.app.buildId'),
+            );
+          } catch {
+            // The reload navigation can destroy the execution context mid-poll;
+            // return null so the poll retries against the reloaded page.
+            return null;
+          }
         },
         { timeout: 30_000, intervals: [500, 1000, 2000] },
       ).toBe('e2e-build-B');
 
-      // Assertions
-      // 1. window.__loads === 2 (initial + EXACTLY ONE reload)
-      const loadCount = await page.evaluate(() => window.__loads);
-      expect(loadCount).toBe(2);
+      const loadCount = await page.evaluate(() =>
+        Number(localStorage.getItem('doschei.e2e.loads') ?? '0'),
+      );
+      expect(loadCount).toBe(loadsBefore + 1);
 
-      // 2. caches.has('doschei-e2e-stale-marker') === false (invalidation proof)
-      const markerCacheExists = await page.evaluate(async () => {
-        return await caches.has('doschei-e2e-stale-marker');
-      });
-      expect(markerCacheExists).toBe(false);
+      const cachesAvailable = await page.evaluate(() => typeof caches !== 'undefined');
+      if (cachesAvailable) {
+        const markerCacheExists = await page.evaluate(async () =>
+          caches.has('doschei-e2e-stale-marker'),
+        );
+        expect(markerCacheExists).toBe(false);
+      }
 
-      // 3. captured token === current token AND authenticated UI still accessible
       const currentToken = await page.evaluate(() => localStorage.getItem('doschei.auth.token'));
       expect(currentToken).toBe(capturedToken);
 
-      // Verify /groups is reachable (no login redirect)
       const groupsResponse = await page.context().request.get(`${baseURL}/groups`);
       expect(groupsResponse.status()).toBe(200);
 
-      // 4. sessionStorage guard key absent after settle
       const sessionGuard = await page.evaluate(() => sessionStorage.getItem('doschei.app.reloadGuard'));
       expect(sessionGuard).toBeNull();
     });
