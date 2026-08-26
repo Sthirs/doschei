@@ -140,6 +140,8 @@ It is designed to be responsive and to work well on both mobile and desktop devi
 It is designed to be accessible and to follow WCAG guidelines.
 It is designed to be performant and uses lazy loading and code splitting to reduce the initial load time.
 It uses PWA features to allow users to install the application on their devices and use it offline.
+When a new application version is detected, the client automatically clears all cached assets and service workers and reloads once, keeping the user signed in.
+The Account screen displays the version of the deployed application.
 It uses Vite as the build tool to provide a fast development experience and an optimized production build.
 It uses ESLint and Prettier to maintain a consistent code style and catch potential issues early in the development process.
 It uses Vitest and Vue Test Utils for unit testing, and Playwright for end-to-end testing to ensure the quality of the code and the functionality of the application.

@@ -48,3 +48,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0017](0017-category-suggestions-client-side-learning.md) | Category suggestions — client-side, group-scoped learning; no server suggestion role | 🟢 accepted |
 | [ADR-0018](0018-internationalization-en-it.md) | Internationalization — vue-i18n, EN/IT, per-user language | 🟢 accepted |
 | [ADR-0019](0019-image-upload-architecture.md) | Image upload architecture — DB-resident data URLs, multer+sharp, replace-only | 🟢 accepted |
+| [ADR-0020](0020-client-cache-lifecycle-on-deploy.md) | Client cache lifecycle on deploy — build-stamped probe, silent purge-and-reload | 🟢 accepted |

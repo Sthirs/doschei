@@ -235,6 +235,7 @@ export const it = {
     changePhotoErrorTooLarge: 'L\'immagine deve essere di 5 MB o inferiore.',
     changePhotoErrorGeneric: 'Impossibile caricare la foto. Riprova.',
     photoUploading: 'Caricamento foto…',
+    versionLabel: 'Versione',
   },
 
   categoryPicker: {

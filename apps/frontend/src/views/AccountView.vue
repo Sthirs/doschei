@@ -11,6 +11,8 @@ const router = useRouter();
 const authStore = useAuthStore();
 const { t } = useI18n();
 
+const appVersion: string = import.meta.env.VITE_APP_VERSION ?? 'dev';
+
 const name = ref(authStore.user?.displayName ?? '');
 const email = authStore.user?.email ?? '';
 const isSaving = ref(false);
@@ -306,5 +308,8 @@ onBeforeUnmount(() => {
       </svg>
       {{ t('account.signOut') }}
     </button>
+
+    <!-- App Version -->
+    <p data-testid="account-version" class="mt-8 text-center text-xs text-[#C8C4D7]/70">{{ t('account.versionLabel') }} {{ appVersion }}</p>
   </main>
 </template>

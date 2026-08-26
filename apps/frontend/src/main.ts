@@ -1,6 +1,7 @@
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import { registerSW } from 'virtual:pwa-register';
+import { createBrowserPorts, checkForNewBuild, shouldRunCheck } from '@/lib/appVersion';
 
 import App from './App.vue';
 import { i18n, setAppLocale, type Locale } from './i18n';
@@ -27,3 +28,20 @@ app.mount('#app');
 setAppLocale(i18n.global.locale.value as Locale);
 
 registerSW({ immediate: true });
+
+// Version check probe — runs at boot and on visibility change, throttled to 30s
+const ports = createBrowserPorts();
+let lastCheckMs: number | undefined;
+
+const probe = () => {
+  const now = Date.now();
+  if (!shouldRunCheck(now, lastCheckMs)) return;
+  lastCheckMs = now;
+  void checkForNewBuild(ports).catch(() => undefined);
+};
+
+probe();
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') probe();
+});
