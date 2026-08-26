@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/Sthirs/doschei/compare/v1.4.1...v1.5.0) (2026-08-26)
+
+
+### Features
+
+* refresh app when new version is available ([#90](https://github.com/Sthirs/doschei/issues/90)) ([0861e26](https://github.com/Sthirs/doschei/commit/0861e262cba752f0df9882d09f609d8f9fdef640))
+
 ## [1.4.1](https://github.com/Sthirs/doschei/compare/v1.4.0...v1.4.1) (2026-08-25)
 
 
