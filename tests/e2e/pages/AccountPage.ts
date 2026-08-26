@@ -10,6 +10,7 @@ export class AccountPage {
   readonly languageSelect = this.page.getByTestId('account-language');
   readonly avatarEditBadge = this.page.getByTestId('account-avatar-edit');
   readonly avatarInput = this.page.getByTestId('account-avatar-input');
+  readonly versionLine = this.page.getByTestId('account-version');
 
   constructor(private page: Page) {}
 

@@ -1,6 +1,9 @@
 FROM node:26.7.0-alpine3.23@sha256:ce3cc39fe3b8b2602d3b1c4d63d301e46b48c550ecb627869853ddcdda418b63 AS build
 WORKDIR /app
 
+ARG APP_VERSION=dev
+ENV VITE_APP_VERSION=$APP_VERSION
+
 COPY package.json package-lock.json* ./
 COPY apps/backend/package.json ./apps/backend/package.json
 COPY apps/frontend/package.json ./apps/frontend/package.json

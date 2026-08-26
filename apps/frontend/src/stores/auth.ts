@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import axios from 'axios';
 
 import { api } from '@/lib/api';
 import { normalizeLocale, setAppLocale, type Locale } from '@/i18n';
@@ -49,8 +50,13 @@ export const useAuthStore = defineStore('auth', {
         this.user = data.user;
         applyUserLanguage(this.user);
         return data.user;
-      } catch {
-        this.logout();
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          const status = err.response?.status;
+          if (status === 401 || status === 403) {
+            this.logout();
+          }
+        }
         return null;
       }
     },

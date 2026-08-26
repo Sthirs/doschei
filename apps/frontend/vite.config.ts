@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url';
+import type { Plugin } from 'vite';
 
 import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vitest/config';
@@ -8,8 +9,24 @@ const devPort = Number(process.env.FRONTEND_PORT ?? 5173);
 const devHost = process.env.DOSCHEI_DEV_HOST;
 const hmrClientPort = Number(process.env.VITE_HMR_CLIENT_PORT ?? devPort);
 
+const version = process.env.VITE_APP_VERSION ?? 'dev';
+const buildId = `${version}+${new Date().toISOString()}`;
+
+const appVersionStampPlugin: Plugin = {
+  name: 'doschei-app-version-stamp',
+  apply: 'build',
+  generateBundle() {
+    this.emitFile({
+      type: 'asset',
+      fileName: 'app-version.json',
+      source: JSON.stringify({ version, buildId }),
+    });
+  },
+};
+
 export default defineConfig({
   plugins: [
+    appVersionStampPlugin,
     vue(),
     VitePWA({
       registerType: 'autoUpdate',

@@ -241,3 +241,27 @@ describe('AccountView avatar picker', () => {
     expect(wrapper.find('[data-testid="account-uploading"]').exists()).toBe(false);
   });
 });
+
+describe('AccountView version display', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setAppLocale('en');
+    globalThis.localStorage?.clear();
+  });
+
+  it('renders version from VITE_APP_VERSION env var', async () => {
+    vi.stubEnv('VITE_APP_VERSION', '9.9.9');
+    const wrapper = await mountView();
+    const versionLine = wrapper.find('[data-testid="account-version"]');
+    expect(versionLine.exists()).toBe(true);
+    expect(versionLine.text()).toMatch(/Version 9\.9\.9/);
+  });
+
+  it('renders dev fallback when VITE_APP_VERSION is not set', async () => {
+    vi.unstubAllEnvs();
+    const wrapper = await mountView();
+    const versionLine = wrapper.find('[data-testid="account-version"]');
+    expect(versionLine.exists()).toBe(true);
+    expect(versionLine.text()).toMatch(/Version dev/);
+  });
+});

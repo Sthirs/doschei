@@ -233,6 +233,7 @@ export const en = {
     changePhotoErrorTooLarge: 'Image must be 5 MB or smaller.',
     changePhotoErrorGeneric: 'Could not upload the photo. Please try again.',
     photoUploading: 'Uploading photo…',
+    versionLabel: 'Version',
   },
 
   categoryPicker: {
