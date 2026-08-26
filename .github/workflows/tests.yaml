@@ -104,7 +104,7 @@ jobs:
             run: minikube image build -f apps/backend/Dockerfile -t doschei/backend:dev .
 
           - name: Build frontend image in minikube
-            run: minikube image build -f apps/frontend/Dockerfile -t doschei/frontend:dev --build-arg APP_VERSION=dev .
+            run: minikube image build -f apps/frontend/Dockerfile -t doschei/frontend:dev .
 
       - name: Deploy with Helm
         run: |
