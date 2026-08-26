@@ -1,6 +1,6 @@
 # ADR-0020: Client cache lifecycle on deploy — build-stamped freshness probe, silent purge-and-reload, image-tag version display
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-08-25
 - **Deciders:** Sthirs
 
