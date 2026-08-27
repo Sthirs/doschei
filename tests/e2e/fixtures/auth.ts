@@ -12,10 +12,10 @@
  * an arbitrary user. Each call logs in via the API, writes a fresh storageState
  * under tests/e2e/.auth/<sanitized-email>.json, and returns a new Page with that
  * storageState applied. All pages created by the factory are closed after the
- * test. Used by the 2-user invitation spec (invitations.spec.ts) so two browser
- * contexts run inside the single-worker Playwright config (playwright.config.ts:7).
+ * test. Used by the 2-user invitation spec (invitations.spec.ts) so
+ * browser contexts run inside the single-worker Playwright config (playwright.config.ts:7) or cross-worker in CI (2 workers).
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 import { test as base, type Page } from '@playwright/test';
@@ -72,7 +72,9 @@ async function loginAndCacheStorageState(
   };
 
   mkdirSync(dirname(storagePath), { recursive: true });
-  writeFileSync(storagePath, JSON.stringify(storageState, null, 2), 'utf8');
+  const tmpPath = `${storagePath}.tmp-${process.pid}-${Date.now()}`;
+  writeFileSync(tmpPath, JSON.stringify(storageState, null, 2), 'utf8');
+  renameSync(tmpPath, storagePath);
 
   return storagePath;
 }
