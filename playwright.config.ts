@@ -6,7 +6,7 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
-  workers: 1,
+  workers: 2, // always 2 so local runs surface parallel-conflict flakes the same way CI does
   timeout: 120000,
   retries: process.env.CI ? 0 : 1,
   reporter: [['html', { open: 'never' }], ['list']],

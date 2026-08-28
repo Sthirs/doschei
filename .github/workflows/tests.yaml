@@ -83,7 +83,9 @@ jobs:
       # Browsers are cached between runs; keyed on the lockfile because the
       # Playwright version is pinned in devDependencies. The install step still
       # runs so OS-level deps (--with-deps) stay correct on cache hits.
+      # On cache hits the apt pass is skipped; on misses --with-deps runs fully.
       - name: Cache Playwright browsers
+        id: pw-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
@@ -91,9 +93,18 @@ jobs:
 
       # Browser download overlaps the image builds, Helm deploy, and
       # integration tests below; joined just before the e2e step.
+      # On a browser-cache hit we skip --with-deps: the apt pass costs
+      # ~40-60s of dpkg CPU DURING the parallel image builds. OS packages
+      # can only drift while package-lock.json stays unchanged; the miss
+      # branch restores full --with-deps correctness on lockfile bumps.
       - name: Install Playwright browsers
         id: pw-install
-        run: npx playwright install --with-deps chromium
+        run: |
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = "true" ]; then
+            npx playwright install chromium
+          else
+            npx playwright install --with-deps chromium
+          fi
         background: true
 
       # Backend and frontend images are independent; build them concurrently
