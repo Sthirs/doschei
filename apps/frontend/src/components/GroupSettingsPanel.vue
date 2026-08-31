@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import axios from 'axios';
 import { useI18n } from 'vue-i18n';
-import { ref } from 'vue';
 
-import { api } from '@/lib/api';
-import { useAuthStore } from '@/stores/auth';
-import type { GroupDetail, GroupMember, PendingInvitation } from '@/types/group';
+import { useGroupSettings } from '@/composables/useGroupSettings';
+import type { GroupDetail } from '@/types/group';
 
 const props = defineProps<{
   group: GroupDetail;
@@ -15,149 +12,42 @@ const emit = defineEmits<{
   updated: [];
 }>();
 
-const authStore = useAuthStore();
-
-const initialsOf = (name: string): string => {
-  if (!name || !name.trim()) return '';
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  return words
-    .slice(0, 2)
-    .map((w) => w.charAt(0).toUpperCase())
-    .join('');
-};
-
-const isCurrentUser = (memberId: string): boolean => {
-  return authStore.user?.id === memberId;
-};
-
 const { t } = useI18n();
 
-const groupName = ref(props.group.name);
-const isSubmittingName = ref(false);
-const nameError = ref('');
-
-const memberEmail = ref('');
-const isSubmittingMember = ref(false);
-const memberError = ref('');
-
-const removingMemberId = ref<string | null>(null);
-const cancellingInvitationId = ref<string | null>(null);
-
-// Image upload state
-const isUploading = ref(false);
-const uploadError = ref('');
-
-const validateImageFile = (file: File): string | null => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  const maxSize = 5 * 1024 * 1024; // 5 MB
-
-  if (!allowedTypes.includes(file.type)) {
-    return t('groupSettings.changeImageErrorInvalid');
-  }
-  if (file.size > maxSize) {
-    return t('groupSettings.changeImageErrorTooLarge');
-  }
-  return null;
-};
-
-const handleFileChange = async (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  // Reset error and input value
-  uploadError.value = '';
-  input.value = '';
-
-  const validationError = validateImageFile(file);
-  if (validationError) {
-    uploadError.value = validationError;
-    return;
-  }
-
-  isUploading.value = true;
-  try {
-    const formData = new FormData();
-    formData.append('image', file);
-    await api.post(`/groups/${props.group.id}/image`, formData);
-    emit('updated');
-  } catch {
-    uploadError.value = t('groupSettings.changeImageErrorGeneric');
-  } finally {
-    isUploading.value = false;
-  }
-};
-
-const saveName = async () => {
-  if (!groupName.value.trim()) {
-    nameError.value = t('groupSettings.groupNameEmpty');
-    return;
-  }
-
-  isSubmittingName.value = true;
-  nameError.value = '';
-
-  try {
-    await api.patch(`/groups/${props.group.id}`, { name: groupName.value.trim() });
-    emit('updated');
-  } catch {
-    nameError.value = t('groupSettings.updateNameError');
-  } finally {
-    isSubmittingName.value = false;
-  }
-};
-
-const addMember = async () => {
-  if (!memberEmail.value.trim()) {
-    memberError.value = t('groupSettings.addMemberEmailEmpty');
-    return;
-  }
-
-  isSubmittingMember.value = true;
-  memberError.value = '';
-
-  try {
-    await api.post(`/groups/${props.group.id}/members`, {
-      email: memberEmail.value.trim().toLowerCase(),
-    });
-    memberEmail.value = '';
-    emit('updated');
-  } catch (error: unknown) {
-    const msg =
-      axios.isAxiosError<{ message?: string }>(error) && typeof error.response?.data?.message === 'string'
-        ? error.response.data.message
-        : undefined;
-    memberError.value = msg || t('groupSettings.addMemberError');
-  } finally {
-    isSubmittingMember.value = false;
-  }
-};
-
-const removeMember = async (member: GroupMember) => {
-  removingMemberId.value = member.id;
-
-  try {
-    await api.delete(`/groups/${props.group.id}/members/${member.id}`);
-    emit('updated');
-  } catch {
-    memberError.value = t('groupSettings.removeMemberError', { name: member.displayName });
-  } finally {
-    removingMemberId.value = null;
-  }
-};
-
-const cancelInvitation = async (invitation: PendingInvitation) => {
-  cancellingInvitationId.value = invitation.id;
-
-  try {
-    await api.delete(`/groups/${props.group.id}/invitations/${invitation.id}`);
-    emit('updated');
-  } catch {
-    memberError.value = t('groupSettings.cancelInvitationError', { email: invitation.email });
-  } finally {
-    cancellingInvitationId.value = null;
-  }
-};
+const {
+  initialsOf,
+  isCurrentUser,
+  groupName,
+  nameError,
+  isSubmittingName,
+  memberEmail,
+  memberError,
+  isSubmittingMember,
+  removingMemberId,
+  cancellingInvitationId,
+  isUploading,
+  uploadError,
+  handleFileChange,
+  saveName,
+  addMember,
+  removeMember,
+  cancelInvitation,
+} = useGroupSettings(
+  () => props.group,
+  () => emit('updated'),
+  {
+    groupNameEmpty: () => t('groupSettings.groupNameEmpty'),
+    updateNameError: () => t('groupSettings.updateNameError'),
+    addMemberEmailEmpty: () => t('groupSettings.addMemberEmailEmpty'),
+    addMemberError: () => t('groupSettings.addMemberError'),
+    removeMemberError: (name) => t('groupSettings.removeMemberError', { name }),
+    cancelInvitationError: (email) =>
+      t('groupSettings.cancelInvitationError', { email }),
+    imageInvalidType: () => t('groupSettings.changeImageErrorInvalid'),
+    imageTooLarge: () => t('groupSettings.changeImageErrorTooLarge'),
+    imageUploadFailed: () => t('groupSettings.changeImageErrorGeneric'),
+  },
+);
 </script>
 
 <template>

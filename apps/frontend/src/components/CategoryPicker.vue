@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import { CATEGORIES_GROUPED, getCategory } from '@/lib/categories';
-import type { CategoryFamily } from '@/lib/categories';
+import { useCategoryPicker } from '@/composables/useCategoryPicker';
+import { getCategory, type CategoryFamily } from '@/lib/categories';
 
 const { t } = useI18n();
 
@@ -17,33 +17,11 @@ const props = withDefaults(
 
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
-const isOpen = ref(false);
-const triggerRef = ref<HTMLButtonElement | null>(null);
-const panelRef = ref<HTMLDivElement | null>(null);
-const desktopSearchInputRef = ref<HTMLInputElement | null>(null);
-const mobileSearchInputRef = ref<HTMLInputElement | null>(null);
-const searchQuery = ref('');
-
 const current = computed(() => getCategory(props.modelValue));
 
 const familyLabel = (family: CategoryFamily): string =>
   t(`categories.families.${family}`);
 const itemLabel = (key: string): string => t(`categories.items.${key}`);
-
-const filteredGroups = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase();
-  if (!q) return CATEGORIES_GROUPED;
-  return CATEGORIES_GROUPED
-    .map((group) => {
-      const famLabel = familyLabel(group.family).toLowerCase();
-      const familyMatches = famLabel.includes(q);
-      const entries = familyMatches
-        ? [...group.entries]
-        : group.entries.filter((e) => itemLabel(e.key).toLowerCase().includes(q));
-      return { ...group, entries };
-    })
-    .filter((group) => group.entries.length > 0);
-});
 
 const sizeClasses = computed(() =>
   props.size === 'sm'
@@ -51,71 +29,22 @@ const sizeClasses = computed(() =>
     : 'h-10 w-10 text-lg',
 );
 
-const open = () => {
-  searchQuery.value = '';
-  isOpen.value = true;
-  nextTick(() => {
-    desktopSearchInputRef.value?.focus();
-    mobileSearchInputRef.value?.focus();
-  });
-};
-
-const close = () => {
-  isOpen.value = false;
-  triggerRef.value?.focus();
-};
-
-const select = (key: string) => {
-  emit('update:modelValue', key);
-  close();
-};
-
-const onKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    if (searchQuery.value) {
-      searchQuery.value = '';
-      return;
-    }
-    close();
-    return;
-  }
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    const q = searchQuery.value.trim();
-    if (!q) return;
-    const firstGroup = filteredGroups.value[0];
-    if (firstGroup && firstGroup.entries.length > 0) {
-      select(firstGroup.entries[0].key);
-    }
-  }
-};
-
-const onBackdropClick = (event: MouseEvent) => {
-  if (event.target === event.currentTarget) {
-    close();
-  }
-};
-
-const onDocumentClick = (event: MouseEvent) => {
-  if (
-    isOpen.value &&
-    triggerRef.value &&
-    panelRef.value &&
-    !triggerRef.value.contains(event.target as Node) &&
-    !panelRef.value.contains(event.target as Node)
-  ) {
-    close();
-  }
-};
-
-onMounted(() => {
-  document.addEventListener('click', onDocumentClick, true);
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', onDocumentClick, true);
-});
+const {
+  isOpen,
+  triggerRef,
+  panelRef,
+  desktopSearchInputRef,
+  mobileSearchInputRef,
+  searchQuery,
+  filteredGroups,
+  open,
+  close,
+  select,
+  onKeydown,
+  onBackdropClick,
+} = useCategoryPicker({ family: familyLabel, item: itemLabel }, (key) =>
+  emit('update:modelValue', key),
+);
 </script>
 
 <template>

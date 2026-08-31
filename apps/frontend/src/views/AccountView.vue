@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
-import { normalizeLocale, type Locale } from '@/i18n';
+import { useAccountProfile } from '@/composables/useAccountProfile';
+import { useImageUpload } from '@/composables/useImageUpload';
 import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -13,32 +14,25 @@ const { t } = useI18n();
 
 const appVersion: string = import.meta.env.VITE_APP_VERSION ?? 'dev';
 
-const name = ref(authStore.user?.displayName ?? '');
-const email = authStore.user?.email ?? '';
-const isSaving = ref(false);
-const errorMessage = ref('');
+const {
+  name,
+  email,
+  selectedLanguage,
+  userInitial,
+  canSave,
+  isSaving,
+  errorMessage,
+  save,
+} = useAccountProfile({ saveError: () => t('account.saveError') });
 
-// Avatar upload state
-const isUploading = ref(false);
-const uploadError = ref('');
-
-// The select shows endonyms (English / Italiano) which are intentionally
-// NOT translated — a user must be able to read them before switching.
-// The choice only persists when the user presses Save Changes.
-const selectedLanguage = ref<Locale>(normalizeLocale(authStore.user?.language));
-const savedLanguage = computed(() => normalizeLocale(authStore.user?.language));
-
-const userInitial = computed(
-  () => name.value.trim().charAt(0).toUpperCase() || 'U',
+const { isUploading, uploadError, handleFileChange } = useImageUpload(
+  (file) => authStore.uploadImage(file),
+  {
+    invalidType: () => t('account.changePhotoErrorInvalid'),
+    tooLarge: () => t('account.changePhotoErrorTooLarge'),
+    uploadFailed: () => t('account.changePhotoErrorGeneric'),
+  },
 );
-const isNameDirty = computed(
-  () =>
-    name.value.trim() !== (authStore.user?.displayName ?? '') &&
-    name.value.trim().length > 0,
-);
-const isLanguageDirty = computed(() => selectedLanguage.value !== savedLanguage.value);
-const isDirty = computed(() => isNameDirty.value || isLanguageDirty.value);
-const canSave = computed(() => isDirty.value && !isSaving.value);
 
 const goBack = () => {
   router.push('/groups');
@@ -47,60 +41,6 @@ const goBack = () => {
 const logout = async () => {
   authStore.logout();
   await router.push('/login');
-};
-
-const save = async () => {
-  if (!canSave.value) return;
-  isSaving.value = true;
-  errorMessage.value = '';
-  const changes: { displayName?: string; language?: Locale } = {};
-  if (isNameDirty.value) changes.displayName = name.value.trim();
-  if (isLanguageDirty.value) changes.language = selectedLanguage.value;
-  try {
-    await authStore.updateProfile(changes);
-  } catch {
-    errorMessage.value = t('account.saveError');
-  } finally {
-    isSaving.value = false;
-  }
-};
-
-const validateImageFile = (file: File): string | null => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  const maxSize = 5 * 1024 * 1024; // 5 MB
-
-  if (!allowedTypes.includes(file.type)) {
-    return t('account.changePhotoErrorInvalid');
-  }
-  if (file.size > maxSize) {
-    return t('account.changePhotoErrorTooLarge');
-  }
-  return null;
-};
-
-const handleFileChange = async (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  // Reset error and input value
-  uploadError.value = '';
-  input.value = '';
-
-  const validationError = validateImageFile(file);
-  if (validationError) {
-    uploadError.value = validationError;
-    return;
-  }
-
-  isUploading.value = true;
-  try {
-    await authStore.uploadImage(file);
-  } catch {
-    uploadError.value = t('account.changePhotoErrorGeneric');
-  } finally {
-    isUploading.value = false;
-  }
 };
 
 onMounted(() => {
