@@ -96,7 +96,7 @@ export const createGroup = async (request: AuthenticatedRequest, response: Respo
     const group = await groupService.createGroupForUser(request.auth!.userId, name.trim());
 
     response.status(201).json({ group });
-  } catch (error) {
+  } catch (error: unknown) {
     response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to create group.' });
   }
 };
@@ -158,7 +158,7 @@ export const createExpense = async (request: AuthenticatedRequest, response: Res
     );
 
     response.status(201).json({ expense });
-  } catch (error) {
+  } catch (error: unknown) {
     response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to create expense.' });
   }
 };
@@ -222,7 +222,7 @@ export const updateExpense = async (request: AuthenticatedRequest, response: Res
     );
 
     response.status(200).json({ expense });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && (error.message.includes('not found') || error.message.includes('own expenses'))) {
       response.status(404).json({ message: error.message });
       return;
@@ -239,7 +239,7 @@ export const deleteExpense = async (request: AuthenticatedRequest, response: Res
     await groupService.deleteExpenseForGroup(groupId, expenseId, request.auth!.userId);
 
     response.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && (error.message.includes('not found') || error.message.includes('own expenses'))) {
       response.status(404).json({ message: error.message });
       return;
@@ -270,7 +270,7 @@ export const createSettlement = async (request: AuthenticatedRequest, response: 
     );
 
     response.status(201).json({ expense });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -303,7 +303,7 @@ export const updateSettlement = async (request: AuthenticatedRequest, response: 
     );
 
     response.status(200).json({ expense });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -320,7 +320,7 @@ export const deleteSettlement = async (request: AuthenticatedRequest, response: 
     await groupService.deleteSettlementForGroup(groupId, settlementId, request.auth!.userId);
 
     response.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -341,7 +341,7 @@ export const exportExpenses = async (request: AuthenticatedRequest, response: Re
   let stream: CsvExportStream;
   try {
     stream = await groupService.startExpensesCsv(groupId, request.auth!.userId, month);
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('Group not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -364,7 +364,7 @@ export const exportExpenses = async (request: AuthenticatedRequest, response: Re
       response.write(row); // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write — CSV file download, fields pre-escaped via csvEscapeField; not HTML
     }
     response.end();
-  } catch (error) {
+  } catch (error: unknown) {
     response.destroy(error instanceof Error ? error : new Error('Unable to export expenses.'));
   }
 };
@@ -382,7 +382,7 @@ export const updateGroup = async (request: AuthenticatedRequest, response: Respo
     const group = await groupService.updateGroup(groupId, name.trim(), request.auth!.userId);
 
     response.json({ group });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -404,7 +404,7 @@ export const addMember = async (request: AuthenticatedRequest, response: Respons
     const invitation = await groupService.addMemberByEmail(groupId, email.trim().toLowerCase(), request.auth!.userId);
 
     response.status(201).json({ invitation });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -421,7 +421,7 @@ export const removeMember = async (request: AuthenticatedRequest, response: Resp
     await groupService.removeMember(groupId, memberUserId, request.auth!.userId);
 
     response.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -441,7 +441,7 @@ export const acceptInvitation = async (request: AuthenticatedRequest, response: 
     const invitation = await invitationService.acceptInvitation(invitationId, request.auth!.userId);
 
     response.status(200).json({ invitation });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -461,7 +461,7 @@ export const declineInvitation = async (request: AuthenticatedRequest, response:
     const invitation = await invitationService.declineInvitation(invitationId, request.auth!.userId);
 
     response.status(200).json({ invitation });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -481,7 +481,7 @@ export const cancelInvitation = async (request: AuthenticatedRequest, response: 
     await invitationService.cancelInvitation(invitationId, request.auth!.userId);
 
     response.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('not found')) {
       response.status(404).json({ message: error.message });
       return;
@@ -519,7 +519,7 @@ export const updateGroupImage = async (request: AuthenticatedRequest, response: 
 
     const group = await groupService.updateGroupImage(groupId, dataUrl, request.auth!.userId);
     response.json({ group });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof UnsupportedImageTypeError) {
       response.status(415).json({ message: error.message });
       return;

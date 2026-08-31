@@ -48,7 +48,7 @@ export const register = async (request: Request, response: Response): Promise<vo
     const token = signAuthToken({ userId: user.id, email: user.email });
 
     response.status(201).json({ token, user: sanitizeUser(user) });
-  } catch (error) {
+  } catch (error: unknown) {
     response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to register.' });
   }
 };
@@ -59,7 +59,7 @@ export const login = async (request: Request, response: Response): Promise<void>
     const token = signAuthToken({ userId: user.id, email: user.email });
 
     response.json({ token, user: sanitizeUser(user) });
-  } catch (error) {
+  } catch (error: unknown) {
     response.status(401).json({ message: error instanceof Error ? error.message : 'Unable to login.' });
   }
 };
@@ -127,7 +127,7 @@ export const updateName = async (request: AuthenticatedRequest, response: Respon
       validatedLanguage,
     );
     response.json({ user: sanitizeUser(user) });
-  } catch (error) {
+  } catch (error: unknown) {
     response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to update profile.' });
   }
 };
@@ -162,7 +162,7 @@ export const updateImage = async (request: AuthenticatedRequest, response: Respo
 
     const user = await authService.updateImage(request.auth!.userId, dataUrl);
     response.json({ user: sanitizeUser(user) });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof UnsupportedImageTypeError) {
       response.status(415).json({ message: error.message });
       return;
@@ -182,7 +182,7 @@ export const deleteImage = async (request: AuthenticatedRequest, response: Respo
   try {
     const user = await authService.deleteImage(request.auth!.userId);
     response.json({ user: sanitizeUser(user) });
-  } catch (error) {
+  } catch (error: unknown) {
     response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to delete image.' });
   }
 };

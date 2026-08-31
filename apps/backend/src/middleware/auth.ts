@@ -36,7 +36,15 @@ export const requireAuth = async (
     request.auth = { userId: user.id };
     response.locals.user = sanitizeUser(user);
     next();
-  } catch {
+  } catch (error: unknown) {
+    // Intentionally broad: this trust boundary must return 401 for ANY
+    // failure while resolving the bearer token (malformed/expired JWT from
+    // verifyAuthToken, or a lookup failure from authService.findById) —
+    // narrowing to e.g. only JsonWebTokenError would let an unrelated
+    // failure (a DB error) escape to Express's default error handler and
+    // change the response from 401 to a 500, which is a behavior change
+    // this task must not make.
+    void error;
     response.status(401).json({ message: 'Invalid authentication token.' });
   }
 };

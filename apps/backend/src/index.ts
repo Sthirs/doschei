@@ -12,7 +12,7 @@ const bootstrap = async () => {
   // /api/auth/oauth/* routes will return 503 until restart. Defense-in-depth
   // .catch() — initOAuthProviders already swallows internally, but a stray
   // throw would otherwise become an unhandled promise rejection.
-  await initOAuthProviders().catch((error) => {
+  await initOAuthProviders().catch((error: unknown) => {
     console.error('[oauth] Failed to initialize OAuth providers', error);
   });
 
@@ -27,7 +27,11 @@ const bootstrap = async () => {
   });
 };
 
-bootstrap().catch((error) => {
+// Top-level boundary catch-all: intentionally broad — any unexpected
+// startup failure (DB unreachable, port in use, etc.) must still log and
+// exit non-zero rather than crash silently or leave a half-started
+// process. Do not narrow this to a specific error type.
+bootstrap().catch((error: unknown) => {
   console.error('Failed to start backend', error);
   process.exit(1);
 });

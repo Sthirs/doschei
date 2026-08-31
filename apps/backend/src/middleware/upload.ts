@@ -11,7 +11,7 @@ const upload = multer({
     try {
       assertAllowedMimeType(file.mimetype);
       callback(null, true);
-    } catch (error) {
+    } catch (error: unknown) {
       callback(error instanceof Error ? error : new Error('Invalid file type'));
     }
   },

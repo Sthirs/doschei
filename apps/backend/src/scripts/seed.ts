@@ -8,7 +8,7 @@ const run = async () => {
   process.exit(0);
 };
 
-run().catch((error) => {
+run().catch((error: unknown) => {
   console.error('Seed failed.', error);
   process.exit(1);
 });
