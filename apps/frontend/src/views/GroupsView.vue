@@ -1,147 +1,20 @@
 <script setup lang="ts">
-import axios from 'axios';
-import { onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
-import { api } from '@/lib/api';
-import {
-  balanceChipKind,
-  balanceColorClass,
-  formatEur,
-  groupInitials,
-} from '@/lib/format';
-import { currentPageTitle } from '@/router';
-import type {
-  Group,
-  GroupsListResponse,
-  InvitationListItem,
-} from '@/types/group';
+import { useGroupsView } from '@/composables/useGroupsView';
+import { balanceChipKind, balanceColorClass, groupInitials } from '@/lib/format';
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const router = useRouter();
-const groups = ref<Group[]>([]);
-const invitations = ref<InvitationListItem[]>([]);
-const isLoading = ref(true);
-const errorMessage = ref('');
-const newGroupName = ref('');
-const isCreateFormVisible = ref(false);
-const isCreating = ref(false);
-const createErrorMessage = ref('');
 
-const loadGroups = async () => {
-  isLoading.value = true;
-  errorMessage.value = '';
-
-  try {
-    const { data } = await api.get<GroupsListResponse>('/groups');
-    groups.value = data.groups;
-    invitations.value = data.invitations ?? [];
-  } catch {
-    errorMessage.value = t('groups.loadFailed');
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const acceptingInvitationId = ref<string | null>(null);
-const decliningInvitationId = ref<string | null>(null);
-const invitationErrorMessage = ref('');
-const failingInvitationId = ref<string | null>(null);
-
-const acceptInvitation = async (invitation: InvitationListItem) => {
-  invitationErrorMessage.value = '';
-  failingInvitationId.value = null;
-  acceptingInvitationId.value = invitation.id;
-  try {
-    await api.post(
-      `/groups/${invitation.groupId}/invitations/${invitation.id}/accept`,
-    );
-    await loadGroups();
-  } catch {
-    invitationErrorMessage.value = t('groups.acceptError');
-    failingInvitationId.value = invitation.id;
-  } finally {
-    acceptingInvitationId.value = null;
-  }
-};
-
-const declineInvitation = async (invitation: InvitationListItem) => {
-  invitationErrorMessage.value = '';
-  failingInvitationId.value = null;
-  decliningInvitationId.value = invitation.id;
-  try {
-    await api.post(
-      `/groups/${invitation.groupId}/invitations/${invitation.id}/decline`,
-    );
-    await loadGroups();
-  } catch {
-    invitationErrorMessage.value = t('groups.declineError');
-    failingInvitationId.value = invitation.id;
-  } finally {
-    decliningInvitationId.value = null;
-  }
-};
-
-const openCreateForm = () => {
-  isCreateFormVisible.value = true;
-  createErrorMessage.value = '';
-};
-
-const closeCreateForm = () => {
-  isCreateFormVisible.value = false;
-  isCreating.value = false;
-  newGroupName.value = '';
-  createErrorMessage.value = '';
-};
-
-const createGroup = async () => {
-  const name = newGroupName.value.trim();
-
-  if (!name) {
-    createErrorMessage.value = t('groups.enterGroupName');
-    return;
-  }
-
-  isCreating.value = true;
-  createErrorMessage.value = '';
-
-  try {
-    await api.post('/groups', { name });
-    closeCreateForm();
-    await loadGroups();
-  } catch (error: unknown) {
-    if (
-      axios.isAxiosError(error) &&
-      typeof error.response?.data?.message === 'string'
-    ) {
-      createErrorMessage.value = error.response.data.message;
-    } else {
-      createErrorMessage.value = t('groups.createFailed');
-    }
-  } finally {
-    isCreating.value = false;
-  }
-};
-
-// Compose the per-row balance label inline (was `balanceChipLabel` in format.ts
-// before Task 2 extracted the sentence into the message catalog).
-const balanceChipLabel = (netForCurrentUser: number): string => {
-  const kind = balanceChipKind(netForCurrentUser);
-  const amount = formatEur(Math.abs(netForCurrentUser), locale.value);
-  if (kind === 'owed') return t('common.balanceOwed', { amount });
-  if (kind === 'owe') return t('common.balanceOwe', { amount });
-  return t('common.balanceSettled');
-};
-
-onMounted(() => {
-  currentPageTitle.value = t('groups.title');
-  loadGroups();
-});
-
-onUnmounted(() => {
-  currentPageTitle.value = null;
-});
+const {
+  groups, invitations, isLoading, errorMessage, balanceChipLabel,
+  acceptingInvitationId, decliningInvitationId, invitationErrorMessage,
+  failingInvitationId, acceptInvitation, declineInvitation,
+  newGroupName, isCreateFormVisible, isCreating, createErrorMessage,
+  openCreateForm, closeCreateForm, createGroup,
+} = useGroupsView();
 </script>
 
 <template>
