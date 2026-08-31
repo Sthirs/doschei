@@ -1,4 +1,12 @@
-import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
+import {
+  computed,
+  ref,
+  watch,
+  type ComputedRef,
+  type InjectionKey,
+  type Ref,
+  type UnwrapNestedRefs,
+} from 'vue';
 
 import { splitModeFromExistingSplits } from '@/lib/splitMath';
 import type { ExpenseSplit, GroupMember, ShareType } from '@/types/group';
@@ -45,6 +53,22 @@ export type UseExpenseSplitReturn = {
   toggleSplitUser: (userId: string) => void;
   buildSplitPayload: () => ExpenseSplit[];
 };
+
+/**
+ * `ExpenseFormView` keeps this composable's return inside a `reactive()` proxy
+ * so it can be (re-)assigned once the group has loaded. Reading through that
+ * proxy unwraps every `Ref`, which is the shape the view's child components
+ * and validation helpers receive.
+ */
+export type ExpenseSplitState = UnwrapNestedRefs<UseExpenseSplitReturn>;
+
+/**
+ * `ExpenseSplitState` is a single mutable store shared by the whole expense-form
+ * subtree — the split-mode tabs and the percent/fixed rows write into it. It is
+ * provided rather than passed as a prop so those writes are not prop mutations.
+ */
+export const expenseSplitKey: InjectionKey<ExpenseSplitState> =
+  Symbol('expenseSplit');
 
 const sumSelectedValues = (
   userIds: ReadonlyArray<string>,
