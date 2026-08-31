@@ -110,7 +110,7 @@ const createGroup = async () => {
     await api.post('/groups', { name });
     closeCreateForm();
     await loadGroups();
-  } catch (error) {
+  } catch (error: unknown) {
     if (
       axios.isAxiosError(error) &&
       typeof error.response?.data?.message === 'string'

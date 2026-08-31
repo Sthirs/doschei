@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import axios from 'axios';
 import { useI18n } from 'vue-i18n';
 import { ref } from 'vue';
 
@@ -122,7 +123,10 @@ const addMember = async () => {
     memberEmail.value = '';
     emit('updated');
   } catch (error: unknown) {
-    const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    const msg =
+      axios.isAxiosError<{ message?: string }>(error) && typeof error.response?.data?.message === 'string'
+        ? error.response.data.message
+        : undefined;
     memberError.value = msg || t('groupSettings.addMemberError');
   } finally {
     isSubmittingMember.value = false;
