@@ -480,3 +480,118 @@ describe('GroupDetailView', () => {
     expect(mockRouterPush).toHaveBeenCalledWith({ name: 'groups' });
   });
 });
+
+// --- DOM-invariance lock ---
+//
+// GroupDetailView's <template> (lines 221-763) is the second-largest in the
+// app and is slated for child-component extraction later in this plan (todos
+// 23-24). This test freezes its rendered DOM for the default-mount state
+// against a committed inline snapshot so any structural drift during that
+// extraction is caught as an explicit, reviewable diff rather than
+// discovered at e2e time or in production. It is NOT a substitute for the
+// targeted e2e runs in todos 23-24 — those cover interaction/behaviour; this
+// covers DOM structure only.
+describe('GroupDetailView DOM-invariance snapshot', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    Object.defineProperty(window, 'history', {
+      value: { state: {} },
+      writable: true,
+      configurable: true,
+    });
+    // Freeze "now" so the export-modal's default month/year (derived from
+    // `new Date()`) can never vary the snapshot between runs.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-20T12:00:00.000Z'));
+    // Force locale to 'en' regardless of the environment's navigator/storage
+    // state so translated + toLocaleDateString-derived strings never vary
+    // the snapshot.
+    i18n.global.locale.value = 'en';
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('renders the exact committed DOM structure on default mount', async () => {
+    const wrapper = mountGroupDetailView();
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.html()).toMatchInlineSnapshot(`
+      "<!-- Topbar: back arrow -->
+      <teleport-stub to="#topbar-leading"><button type="button" class="flex h-9 w-9 items-center justify-center rounded-full text-[#C8C4D7] transition hover:bg-white/10 hover:text-[#E5E0ED]" aria-label="Back to groups"><svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
+            <path fill-rule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clip-rule="evenodd"></path>
+          </svg></button></teleport-stub>
+      <!-- Topbar: actions -->
+      <teleport-stub to="#topbar-actions"><button type="button" class="hidden rounded-md border border-white/10 px-3 py-1.5 text-sm font-medium text-[#E5E0ED] transition hover:border-white/20 hover:bg-white/5 sm:inline-flex">Settings</button><button type="button" class="flex h-9 w-9 items-center justify-center rounded-full text-[#C8C4D7] transition hover:bg-white/10 hover:text-[#E5E0ED] sm:hidden" aria-label="Toggle settings"><svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
+            <path fill-rule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd"></path>
+          </svg></button></teleport-stub>
+      <main class="flex flex-col flex-1 min-h-0 text-[#E5E0ED]">
+        <div class="mx-auto w-full max-w-5xl flex flex-col flex-1 min-h-0">
+          <!-- Loading -->
+          <!-- Sticky header: balance + actions -->
+          <div class="shrink-0 px-4 pt-3 pb-3 flex flex-col gap-3">
+            <!-- Balance summary card -->
+            <section class="balance-card sm:p-4 p-3">
+              <div class="flex justify-between">
+                <div class="">
+                  <p class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7] sm:block hidden">Your Balance</p>
+                  <div class="sm:mt-2 mt-0 flex items-center justify-between">
+                    <p class="font-display text-2xl font-normal text-[#C8C4D7]" style="line-height: 30px;">Settled</p>
+                  </div>
+                </div><!-- Arrow icon -->
+                <!--v-if-->
+              </div><!-- Breakdown toggle -->
+              <!--v-if-->
+              <!-- Breakdown list -->
+              <!--v-if-->
+            </section><!-- Action row -->
+            <div class="flex gap-2"><button type="button" class="rounded-xl bg-[#6554E7] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-white transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-40" title="Record a payment between members">Settle Up</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Export</button></div>
+          </div><!-- Scrollable: expenses list -->
+          <div class="flex-1 overflow-y-auto px-4">
+            <!-- Month header -->
+            <p class="mt-2 text-xs font-semibold uppercase tracking-wide text-[#C8C4D7]">January 2026</p><!-- Expenses for this month -->
+            <ul class="flex flex-col gap-2 py-2">
+              <li data-testid="expense-row" class="expense-row-card cursor-pointer transition hover:bg-white/5 p-[10px] sm:p-4">
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <!-- Date badge -->
+                  <div class="flex w-8 h-10 shrink-0 flex-col items-center justify-center text-center"><span class="text-[18px] font-normal text-[#E5E0ED]" style="line-height: 18px;">15</span><span class="font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[#C8C4D7]" style="line-height: 15px;">JAN</span></div><!-- Category icon -->
+                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style="background-color: rgba(101, 84, 231, 0.2); border: 1px solid rgba(101, 84, 231, 0.3);" title="Settlement"><span aria-hidden="true" class="text-lg">🤝</span></div><!-- Title + paid-by -->
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-base font-normal text-[#E5E0ED]" style="line-height: 20px;">Settlement</p>
+                    <p class="text-xs font-normal text-[#C8C4D7]" style="line-height: 18px;">Alice paid Bob</p>
+                  </div><!-- Amount + badge -->
+                  <div class="flex shrink-0 flex-col items-end gap-0.5"><span class="text-base font-normal text-[#E5E0ED]" style="line-height: 24px;">€10.00</span><!-- YOU OWE / YOU LENT badge (only for EXPENSE, not SETTLEMENT) -->
+                    <!--v-if-->
+                  </div>
+                </div>
+              </li>
+              <li data-testid="expense-row" class="expense-row-card cursor-pointer transition hover:bg-white/5 p-[10px] sm:p-4">
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <!-- Date badge -->
+                  <div class="flex w-8 h-10 shrink-0 flex-col items-center justify-center text-center"><span class="text-[18px] font-normal text-[#E5E0ED]" style="line-height: 18px;">15</span><span class="font-display text-[10px] font-bold uppercase tracking-[0.1em] text-[#C8C4D7]" style="line-height: 15px;">JAN</span></div><!-- Category icon -->
+                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style="background-color: #a3a3a333; border: 1px solid #a3a3a34D;" title="General"><img src="/icons/expenses/uncategorized/general.svg" alt="General" class="h-5 w-5" aria-hidden="true"></div><!-- Title + paid-by -->
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-base font-normal text-[#E5E0ED]" style="line-height: 20px;">Dinner</p>
+                    <p class="text-xs font-normal text-[#C8C4D7]" style="line-height: 18px;">Paid by Alice</p>
+                  </div><!-- Amount + badge -->
+                  <div class="flex shrink-0 flex-col items-end gap-0.5"><span class="text-base font-normal text-[#E5E0ED]" style="line-height: 24px;">€50.00</span><!-- YOU OWE / YOU LENT badge (only for EXPENSE, not SETTLEMENT) --><span class="font-display text-[10px] font-semibold uppercase tracking-[-0.025em] text-[#4BDDB7]" style="line-height: 15px;">You lent €25.00</span></div>
+                </div>
+              </li>
+            </ul>
+          </div><!-- Sticky bottom: + Add expense button -->
+          <div class="relative shrink-0 px-4">
+            <!-- Gradient fade overlay above button -->
+            <div class="absolute inset-x-0 bottom-full h-4 bg-gradient-to-t from-[#13121B] via-[#13121B]/50 to-transparent pointer-events-none"></div><button type="button" class="w-full mb-4 rounded-xl bg-[#6554E7] py-4 text-[18px] font-normal text-[#F0EBFF] transition hover:bg-[#5a44cf] active:scale-[0.98]" style="line-height: 27px;">+ Add expense</button>
+          </div><!-- Export modal -->
+          <!--v-if-->
+          <!-- Error -->
+          <!--v-if-->
+        </div>
+      </main>"
+    `);
+  });
+});
