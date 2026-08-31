@@ -47,13 +47,12 @@ export class GroupDetailPage {
   // the locator works on both layouts.
   private categoryDialog = this.page.getByRole('dialog', { name: 'Select category' });
 
-  // SettleUpView.vue:278, :285 — the UserPicker instances are identified by
-  // their trigger aria-label "Select who paid" (UserPicker.vue:84). There are
-  // two of them on the settle-up page (payer + payee), so .first() / .nth(1)
-  // distinguish them. No dialog scope is needed: the form is the page, not an
-  // overlay.
-  private settleUpPayerTrigger = this.page.getByRole('button', { name: 'Select who paid' }).first();
-  private settleUpPayeeTrigger = this.page.getByRole('button', { name: 'Select who paid' }).nth(1);
+  // SettleUpView.vue:317, :324 — the UserPicker instances each carry a
+  // distinct data-testid ("payer-picker" / "payee-picker", passed via the
+  // testId prop on UserPicker.vue), so payer and payee are looked up
+  // unambiguously instead of relying on DOM order via .first()/.nth(1).
+  private settleUpPayerTrigger = this.page.getByTestId('payer-picker');
+  private settleUpPayeeTrigger = this.page.getByTestId('payee-picker');
   // SettleUpView.vue:313-321 — submit button reads "+ Record Payment" (or
   // "Saving..." while the request is in flight).
   private settleUpSaveButton = this.page.getByRole('button', { name: 'Record Payment' });
@@ -171,14 +170,13 @@ export class GroupDetailPage {
   }
 
   async setPaidBy(displayName: string) {
-    // ExpenseFormView.vue:386-419 — member chips under a "Paid by" label.
-    // Scope to that section so the identically-shaped "Split with" chips
-    // are not matched. The button label now shows only the first word of
-    // the display name (plus the avatar letter), so match on the first word.
+    // ExpenseFormView.vue:468-508 — member chips inside the "Paid by"
+    // section, anchored by data-testid="paid-by-section". The button label
+    // shows only the first word of the display name (plus the avatar
+    // letter), so match on the first word.
     const firstWord = displayName.trim().split(/\s+/)[0];
     await this.page
-        .getByText('Paid by', { exact: true })
-        .locator('..')
+        .getByTestId('paid-by-section')
         .getByRole('button', { name: new RegExp(firstWord) })
         .click();
   }
@@ -186,21 +184,20 @@ export class GroupDetailPage {
   async expectPaidBySelected(displayName: string) {
     const firstWord = displayName.trim().split(/\s+/)[0];
     const chip = this.page
-        .getByText('Paid by', { exact: true })
-        .locator('..')
+        .getByTestId('paid-by-section')
         .getByRole('button', { name: new RegExp(firstWord) });
     const cls = (await chip.getAttribute('class')) ?? '';
     expect(cls.includes('ring-[#6554E7]'), `paid-by chip "${displayName}" should carry selection ring, got: ${cls}`).toBe(true);
   }
 
   private splitMemberButton(displayName: string) {
-    // ExpenseFormView.vue:424-459 — toggle chips under a "Split with" label.
-    // The button label now shows only the first word of the display name
-    // (plus the avatar letter), so match on the first word.
+    // ExpenseFormView.vue:514-... — toggle chips inside the "Split with"
+    // section, anchored by data-testid="split-with-section". The button
+    // label shows only the first word of the display name (plus the avatar
+    // letter), so match on the first word.
     const firstWord = displayName.trim().split(/\s+/)[0];
     return this.page
-        .getByText('Split with', { exact: true })
-        .locator('..')
+        .getByTestId('split-with-section')
         .getByRole('button', { name: new RegExp(firstWord) });
   }
 
@@ -311,20 +308,12 @@ export class GroupDetailPage {
   }
 
   async expectExpenseRowVisible(opts: { description: string; amount: string; paidByName: string }) {
-    // GroupDetailView.vue — the expense row structure:
-    // <li><div class="flex items-center justify-between gap-3 ...">
-    //   <div class="w-10...">...</div>             <!-- date -->
-    //   <div class="h-8 w-8...">...</div>          <!-- category icon -->
-    //   <div class="min-w-0 flex-1">
-    //     <p>{{expense.description}}</p>           ← getByText finds this
-    //     <p>Paid by {{expense.paidByName}}</p>
-    //   </div>
-    //   <span>€{{expense.amount.toFixed(2)}}</span> ← SIBLING of min-w-0, needs parent-of-parent
-    // </div></li>
-    const descriptionEl = this.page.getByText(opts.description, { exact: true });
-    const flexContainer = descriptionEl.locator('..').locator('..');
-    await expect(flexContainer.getByText(`Paid by ${opts.paidByName}`)).toBeVisible();
-    await expect(flexContainer.getByText(`\u20AC${parseFloat(opts.amount).toFixed(2)}`)).toBeVisible();
+    // GroupDetailView.vue:466 — each expense row <li> carries
+    // data-testid="expense-row"; scope within it by description text so the
+    // "Paid by" line and amount are read from the matching row, not siblings.
+    const row = this.page.getByTestId('expense-row').filter({ hasText: opts.description });
+    await expect(row.getByText(`Paid by ${opts.paidByName}`)).toBeVisible();
+    await expect(row.getByText(`\u20AC${parseFloat(opts.amount).toFixed(2)}`)).toBeVisible();
   }
 
   async deleteCurrentExpense() {
@@ -387,13 +376,12 @@ export class GroupDetailPage {
   }
 
   async expectSettlementRowVisible(opts: { payerName: string; payeeName: string; amount: string }) {
-    // GroupDetailView.vue — the settlement row is the same shape as expense
-    // rows but the description is the literal "Settlement" and the subtitle
-    // is `«payer» paid «payee»`.
-    const descriptionEl = this.page.getByText('Settlement', { exact: true });
-    const flexContainer = descriptionEl.locator('..').locator('..');
-    await expect(flexContainer.getByText(`${opts.payerName} paid ${opts.payeeName}`)).toBeVisible();
-    await expect(flexContainer.getByText(`\u20AC${parseFloat(opts.amount).toFixed(2)}`)).toBeVisible();
+    // GroupDetailView.vue:466 — settlement rows share the same expense-row
+    // <li> (data-testid="expense-row") but the description is the literal
+    // "Settlement" and the subtitle is `«payer» paid «payee»`.
+    const row = this.page.getByTestId('expense-row').filter({ hasText: 'Settlement' });
+    await expect(row.getByText(`${opts.payerName} paid ${opts.payeeName}`)).toBeVisible();
+    await expect(row.getByText(`\u20AC${parseFloat(opts.amount).toFixed(2)}`)).toBeVisible();
   }
 
   async deleteCurrentSettlement() {

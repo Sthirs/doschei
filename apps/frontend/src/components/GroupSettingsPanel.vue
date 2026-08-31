@@ -226,6 +226,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
       <input
         v-model="groupName"
         type="text"
+        data-testid="group-name-input"
         class="w-full rounded-xl border border-transparent bg-[#201F27] px-4 py-3 text-base text-[#E5E0ED] outline-none transition placeholder:text-[#C8C4D7] focus:border-[#6554E7]/40"
         style="height: 48px"
       />
@@ -331,6 +332,7 @@ const cancelInvitation = async (invitation: PendingInvitation) => {
     <!-- 5. {{ t('groupSettings.pendingInvitationsLabel') }} -->
     <div
       v-if="props.group.pendingInvitations && props.group.pendingInvitations.length > 0"
+      data-testid="pending-invitations-section"
       class="flex flex-col gap-2"
     >
       <label class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]">

@@ -466,6 +466,7 @@ onBeforeUnmount(() => {
                 <li
                   v-for="expense in monthGroup.expenses"
                   :key="expense.id"
+                  data-testid="expense-row"
                   class="expense-row-card cursor-pointer transition hover:bg-white/5 p-[10px] sm:p-4"
                   @click="
                     expense.kind === 'SETTLEMENT'

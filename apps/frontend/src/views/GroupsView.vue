@@ -252,6 +252,7 @@ onUnmounted(() => {
         <li
           v-for="group in groups"
           :key="group.id"
+          data-testid="group-card"
           class="bg-[#1E1E26] border border-white/[0.08] rounded-xl cursor-pointer transition hover:bg-white/5"
           @click="
             router.push({
@@ -292,6 +293,7 @@ onUnmounted(() => {
                 <div
                   v-for="(member, i) in group.members.slice(0, 3)"
                   :key="member.id"
+                  data-testid="member-avatar"
                   class="h-6 w-6 rounded-full flex items-center justify-center bg-gradient-to-br from-[#6554E7]/60 to-[#4a485d]/60 text-white text-[11px] font-semibold ring-2 ring-[#13121B]"
                   :style="{ zIndex: 3 - i }"
                   :aria-label="member.displayName"
@@ -316,6 +318,7 @@ onUnmounted(() => {
               <!-- Balance chip -->
               <p
                 class="mt-1 text-xs"
+                data-testid="balance-chip"
                 :class="
                   balanceColorClass(balanceChipKind(group.netForCurrentUser))
                 "

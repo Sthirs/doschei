@@ -36,23 +36,24 @@ export class GroupsPage {
   // -- New: UI-aligned selectors (for T6 e2e) --
 
   async expectBalanceChip(name: string, chipText: string) {
-    // Find the group card containing name, then the balance chip within it
-    const groupCard = this.page.locator('li', { has: this.page.getByRole('heading', { name, level: 2 }) });
-    await expect(
-      groupCard.locator('.space-y-3\\:last-child, p').filter({ hasText: /You are owed|You owe|Settled/ }),
-    ).toContainText(chipText);
+    // Find the group card (data-testid="group-card", GroupsView.vue:252)
+    // containing name, then the balance chip within it
+    // (data-testid="balance-chip", GroupsView.vue:317).
+    const groupCard = this.page.getByTestId('group-card').filter({ has: this.page.getByRole('heading', { name, level: 2 }) });
+    await expect(groupCard.getByTestId('balance-chip')).toContainText(chipText);
   }
 
   async expectGradientThumbnail(name: string) {
-    const groupCard = this.page.locator('li', { has: this.page.getByRole('heading', { name, level: 2 }) });
+    const groupCard = this.page.getByTestId('group-card').filter({ has: this.page.getByRole('heading', { name, level: 2 }) });
     // The thumbnail is a gradient div (no <img>) when imageUrl is null
     await expect(groupCard.locator('div[aria-label*="thumbnail"]')).toBeVisible();
     await expect(groupCard.locator('img').first()).not.toBeVisible();
   }
 
   async expectMemberAvatars(name: string, count: number, overflowBadge?: string) {
-    const groupCard = this.page.locator('li', { has: this.page.getByRole('heading', { name, level: 2 }) });
-    const avatarDivs = groupCard.locator('.flex.items-center.-space-x-2 > div');
+    // GroupsView.vue:292 — member avatars carry data-testid="member-avatar".
+    const groupCard = this.page.getByTestId('group-card').filter({ has: this.page.getByRole('heading', { name, level: 2 }) });
+    const avatarDivs = groupCard.getByTestId('member-avatar');
     await expect(avatarDivs.first()).toBeVisible();
     if (overflowBadge) {
       await expect(groupCard.getByText(overflowBadge)).toBeVisible();

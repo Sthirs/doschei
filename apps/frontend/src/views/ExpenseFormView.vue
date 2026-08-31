@@ -465,7 +465,7 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Paid by -->
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-col gap-2" data-testid="paid-by-section">
               <span
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
                 style="color: #c8c4d7"
@@ -511,7 +511,7 @@ onBeforeUnmount(() => {
             <DateTimePicker v-model="date" />
 
             <!-- Split between -->
-            <div class="flex flex-col gap-2">
+            <div class="flex flex-col gap-2" data-testid="split-with-section">
               <span
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em]"
                 style="color: #c8c4d7"

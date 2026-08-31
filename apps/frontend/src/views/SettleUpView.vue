@@ -314,14 +314,14 @@ const deleteSettlement = async () => {
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
                 >{{ t('settleUp.whoPaid') }}</span
               >
-              <UserPicker v-model="payerId" :members="group.members" />
+              <UserPicker v-model="payerId" :members="group.members" test-id="payer-picker" />
             </label>
             <label class="flex-1 flex flex-col gap-1.5">
               <span
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
                 >{{ t('settleUp.toWhom') }}</span
               >
-              <UserPicker v-model="payeeId" :members="group.members" />
+              <UserPicker v-model="payeeId" :members="group.members" test-id="payee-picker" />
             </label>
           </div>
 
