@@ -1,6 +1,6 @@
 import { Response } from 'express';
 
-import { AuthenticatedRequest } from '../../middleware/auth';
+import { AuthedRequest, AuthenticatedRequest } from '../../middleware/auth';
 import { groupService } from './groupServiceInstance';
 
 type SettlementBody = {
@@ -14,6 +14,7 @@ export const createSettlement = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const { paidByUserId, paidToUserId, amount, date } =
     request.body as SettlementBody;
@@ -21,7 +22,7 @@ export const createSettlement = async (
   try {
     const expense = await groupService.createSettlementForGroup(
       groupId,
-      request.auth!.userId,
+      auth.userId,
       {
         paidByUserId,
         paidToUserId,
@@ -47,6 +48,7 @@ export const updateSettlement = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const settlementId = request.params.settlementId as string;
   const { paidByUserId, paidToUserId, amount, date } =
@@ -62,7 +64,7 @@ export const updateSettlement = async (
         amount,
         date,
       },
-      request.auth!.userId,
+      auth.userId,
     );
 
     response.status(200).json({ expense });
@@ -82,6 +84,7 @@ export const deleteSettlement = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const settlementId = request.params.settlementId as string;
 
@@ -89,7 +92,7 @@ export const deleteSettlement = async (
     await groupService.deleteSettlementForGroup(
       groupId,
       settlementId,
-      request.auth!.userId,
+      auth.userId,
     );
 
     response.status(204).send();

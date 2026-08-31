@@ -1,18 +1,19 @@
 import { Response } from 'express';
 
-import { AuthenticatedRequest } from '../../middleware/auth';
+import { AuthedRequest, AuthenticatedRequest } from '../../middleware/auth';
 import { invitationService } from '../../services/invitationService';
 
 export const acceptInvitation = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const invitationId = request.params.invitationId as string;
 
   try {
     const invitation = await invitationService.acceptInvitation(
       invitationId,
-      request.auth!.userId,
+      auth.userId,
     );
 
     response.status(200).json({ invitation });
@@ -36,12 +37,13 @@ export const declineInvitation = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const invitationId = request.params.invitationId as string;
 
   try {
     const invitation = await invitationService.declineInvitation(
       invitationId,
-      request.auth!.userId,
+      auth.userId,
     );
 
     response.status(200).json({ invitation });
@@ -67,13 +69,11 @@ export const cancelInvitation = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const invitationId = request.params.invitationId as string;
 
   try {
-    await invitationService.cancelInvitation(
-      invitationId,
-      request.auth!.userId,
-    );
+    await invitationService.cancelInvitation(invitationId, auth.userId);
 
     response.status(204).send();
   } catch (error: unknown) {

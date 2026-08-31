@@ -11,6 +11,27 @@ export type AuthenticatedRequest = Request & {
   };
 };
 
+// Narrowed request type for handlers mounted exclusively behind `requireAuth`.
+// `requireAuth` always sets `request.auth` before calling `next()`, so any
+// handler that only runs after that middleware can rely on `auth` being
+// present without a non-null assertion at each call site. Handlers reachable
+// from a mixed public/guarded route file (e.g. authRoutes.ts, oauthRoutes.ts)
+// must keep using the optional `AuthenticatedRequest` above.
+//
+// Express's overloads for `router.get/post/...(path, ...handlers)` require
+// every handler in the array to accept a Request type that is a supertype
+// of the framework's own `Request<P, ...>` (so ANY incoming request can be
+// passed to it); a handler parameter requiring `auth` would be a subtype
+// instead, which fails that check. So `AuthedRequest` is applied via a
+// single local narrowing at the top of the handler body — `const { auth } =
+// request as AuthedRequest;` — rather than as the handler's declared
+// parameter type.
+export type AuthedRequest = Request & {
+  auth: {
+    userId: string;
+  };
+};
+
 export const requireAuth = async (
   request: AuthenticatedRequest,
   response: Response,
@@ -49,11 +70,8 @@ export const requireAuth = async (
   }
 };
 
-export const requireLocalAuthEnabled = (
-  enabled: boolean,
-  message: string,
-  code: string,
-): RequestHandler =>
+export const requireLocalAuthEnabled =
+  (enabled: boolean, message: string, code: string): RequestHandler =>
   (_request, response, next): void => {
     if (!enabled) {
       response.status(403).json({ message, code });

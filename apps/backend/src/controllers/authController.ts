@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 
 import { env } from '../config/env';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthedRequest, AuthenticatedRequest } from '../middleware/auth';
 import {
   AuthService,
   normalizeRequestedLanguage,
@@ -9,12 +9,18 @@ import {
   sanitizeUser,
   type SupportedLanguage,
 } from '../services/authService';
-import { normalizeToDataUrl, UnsupportedImageTypeError } from '../services/imageService';
+import {
+  normalizeToDataUrl,
+  UnsupportedImageTypeError,
+} from '../services/imageService';
 import { signAuthToken } from '../utils/jwt';
 
 const authService = new AuthService();
 
-export const register = async (request: Request, response: Response): Promise<void> => {
+export const register = async (
+  request: Request,
+  response: Response,
+): Promise<void> => {
   // ADR-0013 whitelist pattern: destructure ONLY the expected fields
   // from the body. Anything else in the payload is ignored by
   // construction (no zod / express-validator for request bodies — the
@@ -26,8 +32,14 @@ export const register = async (request: Request, response: Response): Promise<vo
     language?: unknown;
   };
 
-  if (typeof body.email !== 'string' || typeof body.password !== 'string' || typeof body.displayName !== 'string') {
-    response.status(400).json({ message: 'Email, password, and display name are required.' });
+  if (
+    typeof body.email !== 'string' ||
+    typeof body.password !== 'string' ||
+    typeof body.displayName !== 'string'
+  ) {
+    response
+      .status(400)
+      .json({ message: 'Email, password, and display name are required.' });
     return;
   }
 
@@ -36,7 +48,9 @@ export const register = async (request: Request, response: Response): Promise<vo
   // fall back to the browser's Accept-Language header (mirrors the
   // OAuth callback path).
   const headerAcceptLanguage = request.headers['accept-language'];
-  const language = normalizeRequestedLanguage(body.language ?? headerAcceptLanguage);
+  const language = normalizeRequestedLanguage(
+    body.language ?? headerAcceptLanguage,
+  );
 
   try {
     const user = await authService.register({
@@ -49,22 +63,32 @@ export const register = async (request: Request, response: Response): Promise<vo
 
     response.status(201).json({ token, user: sanitizeUser(user) });
   } catch (error: unknown) {
-    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to register.' });
+    response.status(400).json({
+      message: error instanceof Error ? error.message : 'Unable to register.',
+    });
   }
 };
 
-export const login = async (request: Request, response: Response): Promise<void> => {
+export const login = async (
+  request: Request,
+  response: Response,
+): Promise<void> => {
   try {
     const user = await authService.login(request.body);
     const token = signAuthToken({ userId: user.id, email: user.email });
 
     response.json({ token, user: sanitizeUser(user) });
   } catch (error: unknown) {
-    response.status(401).json({ message: error instanceof Error ? error.message : 'Unable to login.' });
+    response.status(401).json({
+      message: error instanceof Error ? error.message : 'Unable to login.',
+    });
   }
 };
 
-export const me = async (_request: Request, response: Response): Promise<void> => {
+export const me = async (
+  _request: Request,
+  response: Response,
+): Promise<void> => {
   response.json({ user: response.locals.user });
 };
 
@@ -79,7 +103,11 @@ export const me = async (_request: Request, response: Response): Promise<void> =
  * present — a PATCH with neither is rejected with 400 (the alternative
  * would be a silent 200 no-op, which is the worst-of-both outcomes).
  */
-export const updateName = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+export const updateName = async (
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const body = (request.body ?? {}) as {
     displayName?: unknown;
     language?: unknown;
@@ -90,7 +118,9 @@ export const updateName = async (request: AuthenticatedRequest, response: Respon
   const hasLanguage = language !== undefined;
 
   if (!hasDisplayName && !hasLanguage) {
-    response.status(400).json({ message: 'At least one of displayName or language must be provided.' });
+    response.status(400).json({
+      message: 'At least one of displayName or language must be provided.',
+    });
     return;
   }
 
@@ -101,7 +131,9 @@ export const updateName = async (request: AuthenticatedRequest, response: Respon
       return;
     }
     if (displayName.trim().length > 100) {
-      response.status(400).json({ message: 'Display name must be 100 characters or fewer.' });
+      response
+        .status(400)
+        .json({ message: 'Display name must be 100 characters or fewer.' });
       return;
     }
     validatedDisplayName = displayName.trim();
@@ -122,13 +154,16 @@ export const updateName = async (request: AuthenticatedRequest, response: Respon
 
   try {
     const user = await authService.updateName(
-      request.auth!.userId,
+      auth.userId,
       validatedDisplayName,
       validatedLanguage,
     );
     response.json({ user: sanitizeUser(user) });
   } catch (error: unknown) {
-    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to update profile.' });
+    response.status(400).json({
+      message:
+        error instanceof Error ? error.message : 'Unable to update profile.',
+    });
   }
 };
 
@@ -151,38 +186,59 @@ export const authConfig = (_request: Request, response: Response): void => {
  *   - sharp decode error → 422
  *   - UnsupportedImageTypeError (defense in depth) → 415
  */
-export const updateImage = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+export const updateImage = async (
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   if (!request.file) {
     response.status(400).json({ message: 'Image file is required.' });
     return;
   }
 
   try {
-    const dataUrl = await normalizeToDataUrl(request.file.buffer, request.file.mimetype);
+    const dataUrl = await normalizeToDataUrl(
+      request.file.buffer,
+      request.file.mimetype,
+    );
 
-    const user = await authService.updateImage(request.auth!.userId, dataUrl);
+    const user = await authService.updateImage(auth.userId, dataUrl);
     response.json({ user: sanitizeUser(user) });
   } catch (error: unknown) {
     if (error instanceof UnsupportedImageTypeError) {
       response.status(415).json({ message: error.message });
       return;
     }
-    if (error instanceof Error && error.name === 'Error' && error.message.includes('Input buffer contains unsupported image format')) {
+    if (
+      error instanceof Error &&
+      error.name === 'Error' &&
+      error.message.includes('Input buffer contains unsupported image format')
+    ) {
       response.status(422).json({ message: 'Invalid image file.' });
       return;
     }
-    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to upload image.' });
+    response.status(400).json({
+      message:
+        error instanceof Error ? error.message : 'Unable to upload image.',
+    });
   }
 };
 
 /**
  * DELETE /api/auth/me/image — remove the authenticated user's avatar image.
  */
-export const deleteImage = async (request: AuthenticatedRequest, response: Response): Promise<void> => {
+export const deleteImage = async (
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   try {
-    const user = await authService.deleteImage(request.auth!.userId);
+    const user = await authService.deleteImage(auth.userId);
     response.json({ user: sanitizeUser(user) });
   } catch (error: unknown) {
-    response.status(400).json({ message: error instanceof Error ? error.message : 'Unable to delete image.' });
+    response.status(400).json({
+      message:
+        error instanceof Error ? error.message : 'Unable to delete image.',
+    });
   }
 };

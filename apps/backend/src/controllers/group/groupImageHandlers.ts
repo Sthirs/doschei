@@ -1,6 +1,6 @@
 import { Response } from 'express';
 
-import { AuthenticatedRequest } from '../../middleware/auth';
+import { AuthedRequest, AuthenticatedRequest } from '../../middleware/auth';
 import {
   normalizeToDataUrl,
   UnsupportedImageTypeError,
@@ -23,6 +23,7 @@ export const updateGroupImage = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
 
   if (!request.file) {
@@ -39,7 +40,7 @@ export const updateGroupImage = async (
     const group = await groupService.updateGroupImage(
       groupId,
       dataUrl,
-      request.auth!.userId,
+      auth.userId,
     );
     response.json({ group });
   } catch (error: unknown) {

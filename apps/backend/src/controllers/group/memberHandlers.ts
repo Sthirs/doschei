@@ -1,6 +1,6 @@
 import { Response } from 'express';
 
-import { AuthenticatedRequest } from '../../middleware/auth';
+import { AuthedRequest, AuthenticatedRequest } from '../../middleware/auth';
 import { isValidEmail } from '../../utils/emailValidation';
 import { groupService } from './groupServiceInstance';
 
@@ -8,6 +8,7 @@ export const addMember = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const { email } = request.body as { email?: unknown };
 
@@ -20,7 +21,7 @@ export const addMember = async (
     const invitation = await groupService.addMemberByEmail(
       groupId,
       email.trim().toLowerCase(),
-      request.auth!.userId,
+      auth.userId,
     );
 
     response.status(201).json({ invitation });
@@ -39,15 +40,12 @@ export const removeMember = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const memberUserId = request.params.userId as string;
 
   try {
-    await groupService.removeMember(
-      groupId,
-      memberUserId,
-      request.auth!.userId,
-    );
+    await groupService.removeMember(groupId, memberUserId, auth.userId);
 
     response.status(204).send();
   } catch (error: unknown) {

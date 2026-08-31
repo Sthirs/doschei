@@ -1,6 +1,6 @@
 import { Response } from 'express';
 
-import { AuthenticatedRequest } from '../../middleware/auth';
+import { AuthedRequest, AuthenticatedRequest } from '../../middleware/auth';
 import { invitationService } from '../../services/invitationService';
 import { groupService } from './groupServiceInstance';
 
@@ -8,9 +8,10 @@ export const listGroups = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
-  const groups = await groupService.getGroupsForUser(request.auth!.userId);
+  const { auth } = request as AuthedRequest;
+  const groups = await groupService.getGroupsForUser(auth.userId);
   const invitations = await invitationService.listPendingForInvitee(
-    request.auth!.userId,
+    auth.userId,
   );
 
   response.json({ groups, invitations });
@@ -20,12 +21,10 @@ export const getGroup = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const id = request.params.id as string;
 
-  const group = await groupService.getGroupByIdForUser(
-    id,
-    request.auth!.userId,
-  );
+  const group = await groupService.getGroupByIdForUser(id, auth.userId);
 
   if (!group) {
     response.status(404).json({ message: 'Group not found.' });
@@ -39,6 +38,7 @@ export const createGroup = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const { name } = request.body as { name?: unknown };
 
   if (typeof name !== 'string' || name.trim().length === 0) {
@@ -48,7 +48,7 @@ export const createGroup = async (
 
   try {
     const group = await groupService.createGroupForUser(
-      request.auth!.userId,
+      auth.userId,
       name.trim(),
     );
 
@@ -65,6 +65,7 @@ export const updateGroup = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const { name } = request.body as { name?: unknown };
 
@@ -77,7 +78,7 @@ export const updateGroup = async (
     const group = await groupService.updateGroup(
       groupId,
       name.trim(),
-      request.auth!.userId,
+      auth.userId,
     );
 
     response.json({ group });

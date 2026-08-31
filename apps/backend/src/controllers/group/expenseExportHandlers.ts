@@ -1,6 +1,6 @@
 import { Response } from 'express';
 
-import { AuthenticatedRequest } from '../../middleware/auth';
+import { AuthedRequest, AuthenticatedRequest } from '../../middleware/auth';
 import type { CsvExportStream } from '../../services/csvExport';
 import { groupService } from './groupServiceInstance';
 
@@ -8,6 +8,7 @@ export const exportExpenses = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const month = request.query.month;
 
@@ -20,11 +21,7 @@ export const exportExpenses = async (
 
   let stream: CsvExportStream;
   try {
-    stream = await groupService.startExpensesCsv(
-      groupId,
-      request.auth!.userId,
-      month,
-    );
+    stream = await groupService.startExpensesCsv(groupId, auth.userId, month);
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('Group not found')) {
       response.status(404).json({ message: error.message });

@@ -1,6 +1,6 @@
 import { Response } from 'express';
 
-import { AuthenticatedRequest } from '../../middleware/auth';
+import { AuthedRequest, AuthenticatedRequest } from '../../middleware/auth';
 import {
   isValidExpenseDate,
   VALID_EXPENSE_CATEGORIES,
@@ -20,6 +20,7 @@ export const createExpense = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const { description, amount, date, category, paidByUserId, splits } =
     request.body as ExpenseBody;
@@ -70,7 +71,7 @@ export const createExpense = async (
   const resolvedPaidByUserId =
     typeof paidByUserId === 'string' && paidByUserId.trim().length > 0
       ? paidByUserId.trim()
-      : request.auth!.userId;
+      : auth.userId;
 
   try {
     const expense = await groupService.createExpenseForGroup(
@@ -81,7 +82,7 @@ export const createExpense = async (
       normalizedCategory && normalizedCategory.length > 0
         ? normalizedCategory
         : undefined,
-      request.auth!.userId,
+      auth.userId,
       resolvedPaidByUserId,
       splits,
     );
@@ -99,6 +100,7 @@ export const updateExpense = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const expenseId = request.params.expenseId as string;
   const { description, amount, date, category, paidByUserId, splits } =
@@ -171,7 +173,7 @@ export const updateExpense = async (
             : undefined,
         splits,
       },
-      request.auth!.userId,
+      auth.userId,
     );
 
     response.status(200).json({ expense });
@@ -195,15 +197,12 @@ export const deleteExpense = async (
   request: AuthenticatedRequest,
   response: Response,
 ): Promise<void> => {
+  const { auth } = request as AuthedRequest;
   const groupId = request.params.id as string;
   const expenseId = request.params.expenseId as string;
 
   try {
-    await groupService.deleteExpenseForGroup(
-      groupId,
-      expenseId,
-      request.auth!.userId,
-    );
+    await groupService.deleteExpenseForGroup(groupId, expenseId, auth.userId);
 
     response.status(204).send();
   } catch (error: unknown) {
