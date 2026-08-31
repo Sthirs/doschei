@@ -57,7 +57,6 @@ const group = ref<GroupDetail | null>(null);
 const notFound = ref(false);
 const loadError = ref(false);
 
-// --- Group fetch (deep-link fallback) ---
 const loadGroup = async () => {
   try {
     const { data } = await api.get<{ group: GroupDetail }>(
@@ -69,7 +68,6 @@ const loadGroup = async () => {
   }
 };
 
-// --- Date helpers ---
 const padDatePart = (value: number) => String(value).padStart(2, '0');
 
 const todayDateValue = () => {
@@ -81,7 +79,6 @@ const getExpenseDateValue = (expense: Expense) => {
   return expense.date || expense.createdAt.slice(0, 10);
 };
 
-// --- Form state ---
 const description = ref('');
 const amount = ref<number | ''>('');
 const date = ref('');
@@ -127,7 +124,6 @@ const scheduleSuggestion = () => {
   suggestTimer = setTimeout(applySuggestion, DESCRIPTION_SUGGEST_DEBOUNCE_MS);
 };
 
-// --- Split composable ---
 // The composable must be called once the group is loaded so it sees the real
 // `members` and (in edit mode) the existing splits. We store its return in a
 // `reactive` proxy and assign the properties after the fetch, so the template
@@ -147,7 +143,6 @@ const splitMessages = {
     t('expenseForm.splitFixedMustSum', { current, total }),
 };
 
-// --- Initialization (after data load) ---
 const initialise = () => {
   showDeleteConfirm.value = false;
   errorMessage.value = '';
@@ -199,7 +194,6 @@ const initialise = () => {
   }
 };
 
-// --- Validation ---
 const numericAmount = computed(() => Number(amount.value));
 
 const isFormValid = computed(() => {
@@ -235,7 +229,6 @@ const pageTitle = computed(() =>
   mode.value === 'edit' ? t('expenseForm.editTitle') : t('expenseForm.addTitle'),
 );
 
-// --- Navigation ---
 const goBack = () => {
   router.push({
     name: 'group-detail',
@@ -244,7 +237,6 @@ const goBack = () => {
   });
 };
 
-// --- Submit ---
 const submit = async () => {
   if (
     !description.value ||
@@ -311,7 +303,6 @@ const submit = async () => {
   }
 };
 
-// --- Delete (edit mode only) ---
 const startDelete = () => {
   showDeleteConfirm.value = true;
 };
@@ -334,7 +325,6 @@ const confirmDelete = async () => {
   }
 };
 
-// --- Lifecycle ---
 onMounted(async () => {
   // Set the topbar title synchronously so AppTopbar renders the right label on
   // first paint.

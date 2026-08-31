@@ -25,7 +25,6 @@ const group = ref<GroupDetail | null>(null);
 const notFound = ref(false);
 const loadError = ref(false);
 
-// --- Group fetch (deep-link fallback) ---
 const loadGroup = async () => {
   try {
     const { data } = await api.get<{ group: GroupDetail }>(

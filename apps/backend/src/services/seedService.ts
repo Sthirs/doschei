@@ -50,7 +50,6 @@ export type SeedExpenseSpec = {
 // Personal Spending and Office Lunch are intentionally left without seed expenses.
 // All amounts divide evenly across the split count so computedAmounts are clean.
 export const SEED_EXPENSES: SeedExpenseSpec[] = [
-  // --- Weekend in Venice (2 members, EQUAL splits) ---
   {
     description: 'Venice train tickets',
     amount: 50,
@@ -101,7 +100,6 @@ export const SEED_EXPENSES: SeedExpenseSpec[] = [
     splitEmails: [DEMO_EMAIL, 'alice@doschei.local'],
     shareType: 'EQUAL',
   },
-  // --- Holiday in Palermo (3 members, EQUAL splits) ---
   {
     description: 'Palermo airport taxi',
     amount: 90,
