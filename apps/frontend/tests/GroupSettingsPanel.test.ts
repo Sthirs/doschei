@@ -401,4 +401,35 @@ describe('GroupSettingsPanel', () => {
     expect(bobAvatar.find('img').exists()).toBe(false);
     expect(bobAvatar.text()).toContain('BS'); // Bob Smith initials
   });
+
+  it('shows server-supplied message when addMember fails with a response message', async () => {
+    mockApiPost.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { data: { message: 'Custom server error' } },
+    });
+
+    const wrapper = mountComponent();
+    await wrapper.find('input[type="email"]').setValue('carol@test.com');
+    await wrapper.find('form').trigger('submit');
+
+    await vi.waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledTimes(1);
+    });
+
+    expect(wrapper.text()).toContain('Custom server error');
+  });
+
+  it('shows generic error message when addMember fails without a response message', async () => {
+    mockApiPost.mockRejectedValueOnce(new Error('Network error'));
+
+    const wrapper = mountComponent();
+    await wrapper.find('input[type="email"]').setValue('carol@test.com');
+    await wrapper.find('form').trigger('submit');
+
+    await vi.waitFor(() => {
+      expect(mockApiPost).toHaveBeenCalledTimes(1);
+    });
+
+    expect(wrapper.text()).toContain(i18n.global.t('groupSettings.addMemberError'));
+  });
 });

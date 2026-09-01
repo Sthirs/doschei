@@ -3,11 +3,9 @@ import { expect, type Page } from '@playwright/test';
 const TOKEN_KEY = 'doschei.auth.token';
 
 export class GroupSettingsPage {
-  // GroupSettingsPanel.vue:126-137 — the redesigned panel uses a sibling
-  // <label>GROUP NAME</label> (no `for`/`id`, no wrapping), so getByLabel
-  // cannot associate the label with the input. Scope via the label text to
-  // its parent <div>, then locate the <input> within.
-  private nameInput = this.page.getByText('GROUP NAME', { exact: true }).locator('..').locator('input');
+  // GroupSettingsPanel.vue — the redesigned panel's group-name input carries
+  // data-testid="group-name-input".
+  private nameInput = this.page.getByTestId('group-name-input');
   private saveButton = this.page.getByRole('button', { name: 'Save' });
   private memberEmailInput = this.page.getByPlaceholder('user@example.com');
   private addButton = this.page.getByRole('button', { name: 'Add' });
@@ -52,14 +50,12 @@ export class GroupSettingsPage {
   // -- Pending invitation selectors (GroupSettingsPanel.vue:228-266) --
 
   /**
-   * The PENDING INVITATIONS section is a <div> containing a <label> with the
-   * text "PENDING INVITATIONS" and a <ul> of pending rows. Each row renders the
-   * invitee email only (no displayName, no avatar).
+   * The PENDING INVITATIONS section carries data-testid="pending-invitations-section"
+   * (GroupSettingsPanel.vue:332) and contains a <ul> of pending rows. Each row
+   * renders the invitee email only (no displayName, no avatar).
    */
   private pendingInvitationsSection() {
-    // GroupSettingsPanel.vue:233-235 — <label>PENDING INVITATIONS</label>; its
-    // parent <div> wraps the whole section.
-    return this.page.getByText('PENDING INVITATIONS', { exact: true }).locator('..');
+    return this.page.getByTestId('pending-invitations-section');
   }
 
   async expectPendingInvitationVisible(email: string) {

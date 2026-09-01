@@ -39,7 +39,7 @@ export const oauthInitiate = async (req: Request, res: Response): Promise<void> 
       path: '/',
     });
     res.redirect(url);
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof OAuthNotConfiguredError) {
       res.status(503).json({ message: error.message });
     } else {
@@ -91,7 +91,7 @@ export const oauthCallback = async (req: Request, res: Response): Promise<void> 
     );
     res.clearCookie('doschei.oauth.state', { path: '/' });
     res.redirect(`${loggedFrontendUrl}/auth/callback?token=${encodeURIComponent(token)}`);
-  } catch (error) {
+  } catch (error: unknown) {
     res.clearCookie('doschei.oauth.state', { path: '/' });
     if (error instanceof StateMismatchError) {
       res.status(400).json({ message: error.message, code: 'state_mismatch' });

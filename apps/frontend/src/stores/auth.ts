@@ -50,7 +50,7 @@ export const useAuthStore = defineStore('auth', {
         this.user = data.user;
         applyUserLanguage(this.user);
         return data.user;
-      } catch (err) {
+      } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
           const status = err.response?.status;
           if (status === 401 || status === 403) {

@@ -9,6 +9,7 @@ const { t } = useI18n();
 const props = defineProps<{
   modelValue: string;
   members: GroupMember[];
+  testId?: string;
 }>();
 
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
@@ -85,6 +86,7 @@ onBeforeUnmount(() => {
       type="button"
       class="flex w-full items-center gap-3 rounded-xl border border-[rgba(71,69,84,0.3)] bg-[#201F27] px-4 py-3 text-sm text-[#E5E0ED] outline-none transition focus:border-[#6554E7]/40 focus:bg-[#2a2933]"
       :aria-label="t('userPicker.triggerAriaLabel')"
+      :data-testid="props.testId"
       @click.stop="open"
     >
       <span

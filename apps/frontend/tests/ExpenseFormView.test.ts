@@ -617,3 +617,87 @@ describe('ExpenseFormView payer default', () => {
     expect(aliceButton!.classList.contains('ring-[#6554E7]')).toBe(false);
   });
 });
+
+// --- DOM-invariance lock ---
+//
+// ExpenseFormView's <template> (lines 364-843) is the largest in the app and
+// is slated for child-component extraction later in this plan (todos 23-24).
+// This test freezes its rendered DOM for the create-mode happy path against a
+// committed string so any structural drift during that extraction is caught
+// as an explicit, reviewable diff rather than discovered at e2e time or in
+// production. It is NOT a substitute for the targeted e2e runs in todos
+// 23-24 — those cover interaction/behaviour; this covers DOM structure only.
+describe('ExpenseFormView DOM-invariance snapshot', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentPageTitle.value = null;
+    mocks.sharedGroup.value = makeGroup() as unknown as GroupDetail;
+    (
+      api.post as unknown as { mockResolvedValue: (v: unknown) => unknown }
+    ).mockResolvedValue({
+      data: {},
+    });
+    // Freeze "now" so `todayDateValue()` (used as the default date in create
+    // mode) can never vary the snapshot between runs.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-20T12:00:00.000Z'));
+    // Force locale to 'en' regardless of the environment's navigator/storage
+    // state so translated strings never vary the snapshot.
+    i18n.global.locale.value = 'en';
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('create mode renders the exact committed DOM structure', async () => {
+    const { wrapper } = await mountAt('/groups/g1/expenses/new');
+
+    expect(wrapper.html()).toMatchInlineSnapshot(`
+      "<!-- Topbar: back arrow -->
+      <teleport-stub to="#topbar-leading"><button type="button" class="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-slate-100" aria-label="Back to group"><svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
+            <path fill-rule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clip-rule="evenodd"></path>
+          </svg></button></teleport-stub>
+      <!-- Loading state -->
+      <!-- Form -->
+      <main class="mx-auto w-full max-w-5xl flex flex-col flex-1 overflow-hidden">
+        <div class="flex-1 overflow-y-auto px-4 py-6">
+          <div class="flex flex-col gap-4">
+            <form id="expense-form" class="flex flex-col gap-4">
+              <!-- Amount (Figma-aligned) -->
+              <div class="flex flex-col gap-2"><label for="expense-amount" class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]">Amount</label>
+                <div class="relative"><input id="expense-amount" type="number" step="0.01" min="0.01" placeholder="0.00" autofocus="" class="w-full rounded-lg bg-[#201F27] border border-[rgba(71,69,84,0.3)] py-3 pl-4 pr-12 text-base text-left text-[#E5E0ED] outline-none placeholder-[#C8C4D7] [appearance:textfield] [&amp;::-webkit-outer-spin-button]:appearance-none [&amp;::-webkit-inner-spin-button]:appearance-none"><span class="absolute right-4 top-1/2 -translate-y-1/2 text-xl text-[#E5E0ED] font-semibold select-none">€</span></div>
+              </div><!-- Description + Category -->
+              <div class="flex gap-2">
+                <category-picker-stub modelvalue="general" size="md"></category-picker-stub><input type="text" placeholder="Description" class="flex-1 rounded-xl px-4 py-3 text-sm outline-none" style="background: #201f27; border: 1px solid rgba(71, 69, 84, 0.3); color: #e5e0ed;">
+              </div><!-- Paid by -->
+              <div class="flex flex-col gap-2" data-testid="paid-by-section"><span class="font-display text-[10px] font-medium uppercase tracking-[0.05em]" style="color: #c8c4d7;">Paid by</span>
+                <div class="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap"><button type="button" class="flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-2 transition sm:w-20 sm:shrink-0 bg-[#6554E7]/20 ring-1 ring-[#6554E7]" style=""><span class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold" style="color: #c6bfff;"><span>A</span></span><span class="max-w-full truncate text-xs" style="color: #e5e0ed;">Alice</span></button><button type="button" class="flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-2 transition sm:w-20 sm:shrink-0 hover:bg-[#2A2932]" style="background: #201F27;"><span class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold" style="color: #c6bfff;"><span>B</span></span><span class="max-w-full truncate text-xs" style="color: #e5e0ed;">Bob</span></button></div>
+              </div><!-- Date -->
+              <date-time-picker-stub modelvalue="2026-01-20"></date-time-picker-stub><!-- Split between -->
+              <div class="flex flex-col gap-2" data-testid="split-with-section"><span class="font-display text-[10px] font-medium uppercase tracking-[0.05em]" style="color: #c8c4d7;">Split with</span>
+                <div class="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap"><button type="button" class="flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-2 transition sm:w-20 sm:shrink-0 bg-[#6554E7]/20 ring-1 ring-[#6554E7]" style=""><span class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold" style="color: #c6bfff;"><span>A</span></span><span class="max-w-full truncate text-xs" style="color: #e5e0ed;">Alice</span></button><button type="button" class="flex min-w-0 flex-col items-center gap-2 rounded-xl px-2 py-2 transition sm:w-20 sm:shrink-0 bg-[#6554E7]/20 ring-1 ring-[#6554E7]" style=""><span class="flex h-6 w-6 items-center justify-center rounded-full bg-[#6554E7]/30 text-[10px] font-semibold" style="color: #c6bfff;"><span>B</span></span><span class="max-w-full truncate text-xs" style="color: #e5e0ed;">Bob</span></button></div>
+              </div><!-- Split mode tabs -->
+              <div class="flex flex-col gap-3">
+                <div class="flex rounded-xl p-1" style="background: #201f27; border: 1px solid rgba(255, 255, 255, 0.08);"><button type="button" class="flex-1 rounded-lg py-2 text-xs font-medium transition bg-[#35343D] text-white" style="">Equally</button><button type="button" class="flex-1 rounded-lg py-2 text-xs font-medium transition hover:text-[#E5E0ED]" style="color: #C8C4D7;">Percentage</button><button type="button" class="flex-1 rounded-lg py-2 text-xs font-medium transition hover:text-[#E5E0ED]" style="color: #C8C4D7;">Fixed</button></div><!-- Equal hint -->
+                <!--v-if-->
+                <!-- Percentage rows -->
+                <!--v-if-->
+                <!-- Fixed rows -->
+                <!--v-if-->
+                <p class="text-sm" style="color: #ffb4ab;">Please provide a valid description and an amount greater than 0.</p>
+              </div><!-- Error -->
+              <!--v-if-->
+            </form>
+          </div>
+        </div>
+        <div class="relative shrink-0 px-4">
+          <div class="absolute inset-x-0 bottom-full h-4 bg-gradient-to-t from-[#13121B] pointer-events-none"></div>
+          <div class="flex flex-col gap-2 pb-4"><button type="submit" form="expense-form" class="w-full rounded-xl py-4 text-base font-semibold transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:bg-[#474554]" style="background: #6554e7; color: #f0ebff;" disabled="">Save</button>
+            <!--v-if-->
+          </div>
+        </div>
+      </main>"
+    `);
+  });
+});

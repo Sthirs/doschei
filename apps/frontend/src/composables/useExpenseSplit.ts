@@ -1,4 +1,12 @@
-import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
+import {
+  computed,
+  ref,
+  watch,
+  type ComputedRef,
+  type InjectionKey,
+  type Ref,
+  type UnwrapNestedRefs,
+} from 'vue';
 
 import { splitModeFromExistingSplits } from '@/lib/splitMath';
 import type { ExpenseSplit, GroupMember, ShareType } from '@/types/group';
@@ -45,6 +53,22 @@ export type UseExpenseSplitReturn = {
   toggleSplitUser: (userId: string) => void;
   buildSplitPayload: () => ExpenseSplit[];
 };
+
+/**
+ * `ExpenseFormView` keeps this composable's return inside a `reactive()` proxy
+ * so it can be (re-)assigned once the group has loaded. Reading through that
+ * proxy unwraps every `Ref`, which is the shape the view's child components
+ * and validation helpers receive.
+ */
+export type ExpenseSplitState = UnwrapNestedRefs<UseExpenseSplitReturn>;
+
+/**
+ * `ExpenseSplitState` is a single mutable store shared by the whole expense-form
+ * subtree — the split-mode tabs and the percent/fixed rows write into it. It is
+ * provided rather than passed as a prop so those writes are not prop mutations.
+ */
+export const expenseSplitKey: InjectionKey<ExpenseSplitState> =
+  Symbol('expenseSplit');
 
 const sumSelectedValues = (
   userIds: ReadonlyArray<string>,
@@ -113,7 +137,11 @@ export const useExpenseSplit = (
   // Re-initialize when the source splits change (e.g., edit modal reopened
   // for a different expense) so we don't carry stale state across opens.
   if (initialSplits) {
-    watch(() => initialSplits, () => initialize(), { deep: true });
+    watch(
+      () => initialSplits,
+      () => initialize(),
+      { deep: true },
+    );
   }
 
   const percentSum = computed(() =>
@@ -132,35 +160,39 @@ export const useExpenseSplit = (
 
   const isSplitValid = (amount: number): boolean => {
     if (selectedSplitUserIds.value.length === 0) return false;
-    if (splitMode.value === 'PERCENT') {
-      return Math.abs(percentSum.value - 100) <= 0.01;
+    switch (splitMode.value) {
+      case 'PERCENT':
+        return Math.abs(percentSum.value - 100) <= 0.01;
+      case 'FIXED':
+        if (!amount || amount <= 0) return false;
+        return Math.abs(fixedSum.value - amount) <= 0.01;
+      case 'EQUAL':
+        // EQUAL is always valid with at least one user selected
+        return true;
     }
-    if (splitMode.value === 'FIXED') {
-      if (!amount || amount <= 0) return false;
-      return Math.abs(fixedSum.value - amount) <= 0.01;
-    }
-    // EQUAL is always valid with at least one user selected
-    return true;
   };
 
   const splitErrorMessage = (amount: number): string => {
     if (selectedSplitUserIds.value.length === 0) {
       return messages.noMembersSelected;
     }
-    if (splitMode.value === 'PERCENT') {
-      if (Math.abs(percentSum.value - 100) > 0.01) {
-        return messages.percentagesMustSum(percentSum.value.toFixed(2));
-      }
+    switch (splitMode.value) {
+      case 'PERCENT':
+        if (Math.abs(percentSum.value - 100) > 0.01) {
+          return messages.percentagesMustSum(percentSum.value.toFixed(2));
+        }
+        return '';
+      case 'FIXED':
+        if (amount && amount > 0 && Math.abs(fixedSum.value - amount) > 0.01) {
+          return messages.fixedMustSum(
+            fixedSum.value.toFixed(2),
+            amount.toFixed(2),
+          );
+        }
+        return '';
+      case 'EQUAL':
+        return '';
     }
-    if (splitMode.value === 'FIXED') {
-      if (amount && amount > 0 && Math.abs(fixedSum.value - amount) > 0.01) {
-        return messages.fixedMustSum(
-          fixedSum.value.toFixed(2),
-          amount.toFixed(2),
-        );
-      }
-    }
-    return '';
   };
 
   const toggleSplitUser = (userId: string): void => {
@@ -180,35 +212,35 @@ export const useExpenseSplit = (
     const userIds = selectedSplitUserIds.value;
     const mode = splitMode.value;
 
-    if (mode === 'EQUAL') {
-      return userIds.map((userId) => ({
-        userId,
-        displayName: findDisplayName(memberLookup, userId),
-        shareType: 'EQUAL' as const,
-        shareValue: 0,
-        computedAmount: 0,
-      }));
+    switch (mode) {
+      case 'EQUAL':
+        return userIds.map((userId) => ({
+          userId,
+          displayName: findDisplayName(memberLookup, userId),
+          shareType: 'EQUAL' as const,
+          shareValue: 0,
+          computedAmount: 0,
+        }));
+      case 'PERCENT':
+        return userIds.map((userId) => ({
+          userId,
+          displayName: findDisplayName(memberLookup, userId),
+          shareType: 'PERCENT' as const,
+          shareValue: numberOrZero(percentValues.value, userId),
+          computedAmount: 0,
+        }));
+      case 'FIXED':
+        return userIds.map((userId) => {
+          const fixed = numberOrZero(fixedValues.value, userId);
+          return {
+            userId,
+            displayName: findDisplayName(memberLookup, userId),
+            shareType: 'FIXED' as const,
+            shareValue: fixed,
+            computedAmount: fixed,
+          };
+        });
     }
-    if (mode === 'PERCENT') {
-      return userIds.map((userId) => ({
-        userId,
-        displayName: findDisplayName(memberLookup, userId),
-        shareType: 'PERCENT' as const,
-        shareValue: numberOrZero(percentValues.value, userId),
-        computedAmount: 0,
-      }));
-    }
-    // FIXED
-    return userIds.map((userId) => {
-      const fixed = numberOrZero(fixedValues.value, userId);
-      return {
-        userId,
-        displayName: findDisplayName(memberLookup, userId),
-        shareType: 'FIXED' as const,
-        shareValue: fixed,
-        computedAmount: fixed,
-      };
-    });
   };
 
   return {
