@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.1](https://github.com/Sthirs/doschei/compare/v1.5.0...v1.5.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* **deps:** update minor and patch updates ([#95](https://github.com/Sthirs/doschei/issues/95)) ([28b3742](https://github.com/Sthirs/doschei/commit/28b3742ef154a56cdc6473813b26821713c1fc09))
+
 ## [1.5.0](https://github.com/Sthirs/doschei/compare/v1.4.1...v1.5.0) (2026-08-26)
 
 
