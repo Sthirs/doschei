@@ -1,6 +1,6 @@
 # ADR-0021: Module size ceiling of 250 pure LOC and the responsibility-split convention
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-08-31
 - **Deciders:** Sthirs
 

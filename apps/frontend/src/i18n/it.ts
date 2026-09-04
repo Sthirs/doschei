@@ -121,6 +121,16 @@ export const it = {
     exporting: 'Esportazione...',
     exportFailed: 'Esportazione non riuscita.',
     exportFailedTryAgain: "Esportazione non riuscita. Riprova.",
+    totals: 'Totali',
+    totalsModalTitle: 'Totali',
+    totalsComparisonLabel: 'Confronto 3 mesi',
+    totalsChartSubtitle: 'Spesa del gruppo e tua',
+    totalsLegendYou: 'Tu',
+    totalsLegendGroup: 'Gruppo',
+    totalsPeriodTotal: 'Totale periodo selezionato',
+    totalsPreviousPeriod: 'Periodo precedente',
+    totalsNextPeriod: 'Periodo successivo',
+    totalsClose: 'Chiudi totali',
   },
 
   groupSettings: {

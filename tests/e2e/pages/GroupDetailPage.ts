@@ -74,6 +74,15 @@ export class GroupDetailPage {
   private exportYearSelect = this.exportDialog.getByLabel('Year');
   private exportActionButton = this.exportDialog.getByRole('button', { name: 'Export Expenses' });
 
+  // Totals controls (GroupDetailView.vue → ActionRow.vue — the "Totals" button
+  // next to "Export" opens the TotalsModal bottom sheet, a teleported
+  // role="dialog" holding the three-month stacked chart and a period stepper).
+  private totalsTriggerButton = this.page.getByRole('button', { name: /^Totals$/, exact: true });
+  private totalsDialog = this.page.getByRole('dialog', { name: 'Totals' });
+  private totalsRange = this.totalsDialog.getByTestId('totals-range');
+  private totalsPreviousButton = this.totalsDialog.getByRole('button', { name: 'Previous period' });
+  private totalsNextButton = this.totalsDialog.getByRole('button', { name: 'Next period' });
+
   constructor(private page: Page) {}
 
   // ---------------------------------------------------------------------------
@@ -410,6 +419,52 @@ export class GroupDetailPage {
     await this.exportYearSelect.selectOption({ label: String(year) });
   }
 
+  // ---------------------------------------------------------------------------
+  // Totals modal
+  // ---------------------------------------------------------------------------
+
+  async openTotalsModal(): Promise<void> {
+    await this.totalsTriggerButton.click();
+    await expect(this.totalsDialog).toBeVisible();
+  }
+
+  // The group-spend labels above the bars, oldest month first.
+  async getTotalsGroupLabels(): Promise<string[]> {
+    return this.totalsDialog.getByTestId('totals-bar-group').allInnerTexts();
+  }
+
+  // The user-share labels inside the purple segments. A month with no spend, or
+  // a share too small to label legibly, contributes no entry.
+  async getTotalsUserLabels(): Promise<string[]> {
+    return this.totalsDialog.getByTestId('totals-bar-user').allInnerTexts();
+  }
+
+  async getTotalsRange(): Promise<string> {
+    return (await this.totalsRange.innerText()).trim();
+  }
+
+  async getTotalsPeriodTotal(): Promise<string> {
+    return (await this.totalsDialog.getByTestId('totals-period-total').innerText()).trim();
+  }
+
+  async expectTotalsCannotGoForward(): Promise<void> {
+    await expect(this.totalsNextButton).toBeDisabled();
+  }
+
+  // Steps the window and waits for the label to change, so the assertion that
+  // follows cannot race the re-render.
+  async totalsPreviousPeriod(): Promise<void> {
+    const before = await this.getTotalsRange();
+    await this.totalsPreviousButton.click();
+    await expect(this.totalsRange).not.toHaveText(before);
+  }
+
+  async totalsNextPeriod(): Promise<void> {
+    const before = await this.getTotalsRange();
+    await this.totalsNextButton.click();
+    await expect(this.totalsRange).not.toHaveText(before);
+  }
+
   async clickExportAndExpectDownload(): Promise<{ filename: string; text: string }> {
     // Playwright hands us the download via the `download` event; race the wait
     // against the click so we never miss it. `download.path()` is a real
@@ -421,5 +476,69 @@ export class GroupDetailPage {
     const filename = download.suggestedFilename();
     const text = (await fs.readFile(await download.path())).toString('utf8');
     return { filename, text };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Teardown helper
+// ---------------------------------------------------------------------------
+
+type GroupDetailApiResponse = {
+  group: { expenses: Array<{ id: string; kind: 'EXPENSE' | 'SETTLEMENT' }> };
+};
+
+/**
+ * Delete every ledger entry in a group so it ends settled.
+ *
+ * E2E specs share one database and there is no group-delete endpoint, so a group
+ * a spec leaves behind is permanent. A leftover group with a NON-ZERO balance is
+ * the harmful case: it adds another "You are owed …" / "You owe …" chip to the
+ * groups list and can break another spec's assertions. Clearing the ledger keeps
+ * the residue inert.
+ *
+ * Expenses and settlements have separate delete routes, so the entry kind picks
+ * the path.
+ */
+export async function clearGroupLedgerViaApi(
+  groupId: string,
+  email: string,
+  password: string,
+): Promise<void> {
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
+
+  const loginResponse = await fetch(`${baseURL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (loginResponse.status !== 200) {
+    throw new Error(
+      `clearGroupLedgerViaApi: login failed for ${email} (status ${loginResponse.status})`,
+    );
+  }
+  const { token } = (await loginResponse.json()) as { token: string };
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  const groupResponse = await fetch(`${baseURL}/api/groups/${groupId}`, {
+    headers: authHeaders,
+  });
+  if (groupResponse.status !== 200) {
+    throw new Error(
+      `clearGroupLedgerViaApi: GET /groups/${groupId} failed (status ${groupResponse.status})`,
+    );
+  }
+  const { group } = (await groupResponse.json()) as GroupDetailApiResponse;
+
+  for (const entry of group.expenses) {
+    const collection = entry.kind === 'SETTLEMENT' ? 'settlements' : 'expenses';
+    const deleteResponse = await fetch(
+      `${baseURL}/api/groups/${groupId}/${collection}/${entry.id}`,
+      { method: 'DELETE', headers: authHeaders },
+    );
+    if (deleteResponse.status !== 204) {
+      throw new Error(
+        `clearGroupLedgerViaApi: DELETE ${collection}/${entry.id} failed (status ${deleteResponse.status})`,
+      );
+    }
   }
 }

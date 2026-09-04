@@ -120,6 +120,17 @@ export const en = {
     exporting: 'Exporting...',
     exportFailed: 'Export failed.',
     exportFailedTryAgain: 'Export failed. Please try again.',
+    // Totals modal.
+    totals: 'Totals',
+    totalsModalTitle: 'Totals',
+    totalsComparisonLabel: '3-Month Comparison',
+    totalsChartSubtitle: 'Group Spend vs. You',
+    totalsLegendYou: 'You',
+    totalsLegendGroup: 'Group',
+    totalsPeriodTotal: 'Selected Period Total',
+    totalsPreviousPeriod: 'Previous period',
+    totalsNextPeriod: 'Next period',
+    totalsClose: 'Close totals',
   },
 
   groupSettings: {

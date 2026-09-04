@@ -15,15 +15,15 @@ test('groups list matches UI design: thumbnails, avatars, balance chips', async 
 
   // 3. Weekend in Venice — GREEN "You are owed €..." (seeded demo net +40)
   await expect(page.getByRole('heading', { name: 'Weekend in Venice', level: 2 })).toBeVisible();
-  // Balance chip: owed
-  await expect(page.getByText(/You are owed €/)).toBeVisible();
+  const veniceCard = page.locator('li').filter({
+    has: page.getByRole('heading', { name: 'Weekend in Venice', level: 2 }),
+  });
+  // Balance chip: owed. Scoped to the card like every other chip assertion here —
+  // test-created groups from other specs can also carry a non-zero balance, and an
+  // unscoped match resolves to several chips and fails strict mode.
+  await expect(veniceCard.getByText(/You are owed €/)).toBeVisible();
   // Gradient thumbnail (no img)
-  await expect(
-    page
-      .locator('li')
-      .filter({ has: page.getByRole('heading', { name: 'Weekend in Venice', level: 2 }) })
-      .locator('div[aria-label*="thumbnail"]'),
-  ).toBeVisible();
+  await expect(veniceCard.locator('div[aria-label*="thumbnail"]')).toBeVisible();
 
   // 4. Holiday in Palermo — CORAL "You owe €..." (seeded demo net -88)
   const palermoCard = page.locator('li').filter({
@@ -44,9 +44,6 @@ test('groups list matches UI design: thumbnails, avatars, balance chips', async 
   await expect(page.getByRole('heading', { name: 'Office Lunch', level: 2 })).not.toBeVisible();
 
   // 8. Weekend in Venice has 2 member avatars (demo + alice)
-  const veniceCard = page.locator('li').filter({
-    has: page.getByRole('heading', { name: 'Weekend in Venice', level: 2 }),
-  });
   // Read the member avatars via aria-labels — "Demo User" and "Alice Rossi" are the seed names
   await expect(veniceCard.getByLabel('Demo User')).toBeVisible(); // Demo User initial
   await expect(veniceCard.getByLabel('Alice Rossi')).toBeVisible(); // Alice Rossi initial

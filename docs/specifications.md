@@ -83,6 +83,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Every user in a group can view the group's expenses and balances, and can edit any expense regardless of who created it.
 - Activities are tracked.
 - Group expenses can be exported as a CSV file.
+- Users can view a group's total spend for three consecutive months side by side, with the portion of each month that is their own share shown within the same bar, and can move the three-month window backwards and forwards one month at a time.
 - Users can view their profile picture when one is set, shown in place of the initials avatar; users can upload or change their profile picture from the account screen using the device's standard file picker (gallery, camera, or other sources); JPEG/PNG/WebP up to 5 MB are accepted, normalized server-side, and returned embedded in API responses.
 - A member's profile picture, when set, is shown to other members of their groups wherever that member is represented (member lists, payer selection, split details, and similar views).
 - Users can select the interface language (English or Italian) in their account. The language defaults to the device/browser language captured at registration; the saved preference applies at sign-in and takes effect immediately when changed.
@@ -98,6 +99,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Editing an expense allows changing any of its fields, including its description, amount, date, category, payer, and split details.
 - A settle-up payment is represented as a special expense entry so that it appears in the same ledger and affects balances consistently.
 - CSV export must include both regular expenses and settle-up entries that are currently visible in the group ledger.
+- Monthly spend totals count only regular expenses; settle-up entries are excluded, because a settle-up moves money between members rather than spending it. A member's own share of a month is the total they are responsible for under the expense splits, not the amount they paid out. The three-month window starts at the current month and never extends into the future.
 - Deleting an expense removes it from active balances immediately; any activity entry generated for the deletion remains part of the activity history.
 - The canonical financial source of truth is the ledger of expenses and settlement entries; balances are always derived from that ledger.
 - The display name is the single editable profile field; the email address is immutable after account creation and is never accepted by the profile-update API.
