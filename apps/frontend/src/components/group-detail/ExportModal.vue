@@ -72,7 +72,9 @@ const exportCsv = async () => {
       aria-modal="true"
       :aria-label="t('groupDetail.exportModalTitle')"
     >
-      <div class="flex items-start justify-between">
+      <div
+        class="-mx-6 flex items-start justify-between border-b border-white/[0.06] px-6 pb-4"
+      >
         <p
           class="font-display text-xs font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
         >

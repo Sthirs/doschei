@@ -54,28 +54,23 @@ const rangeLabel = computed(() => {
 <template>
   <Teleport to="body">
     <div
-      role="dialog"
-      aria-modal="true"
-      :aria-label="t('groupDetail.totalsModalTitle')"
-      class="fixed inset-0 z-50"
+      class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
     >
       <!-- Scrim -->
       <div
         class="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-[2px]"
         @click="emit('close')"
       ></div>
-      <!-- Sheet -->
+      <!-- Bottom sheet on phones, centred popup from sm: up -->
       <div
-        class="absolute inset-x-0 bottom-0 mx-auto max-w-[390px] rounded-t-[24px] border-t border-white/10 bg-[#1C1B25] pb-6 shadow-[0_-12px_20px_rgba(0,0,0,0.6)]"
+        class="relative w-full max-w-[390px] rounded-t-[24px] border-t border-white/10 bg-[#1C1B25] pb-6 shadow-[0_-12px_20px_rgba(0,0,0,0.6)] sm:rounded-[24px] sm:border sm:pb-5 sm:shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="t('groupDetail.totalsModalTitle')"
       >
-        <!-- Drag handle -->
-        <div class="flex justify-center pb-2 pt-[14px]">
-          <div class="h-1.5 w-12 rounded-full bg-white/20"></div>
-        </div>
-
         <!-- Header -->
         <div
-          class="flex items-center justify-between border-b border-white/[0.06] px-5 pb-[17px] pt-1"
+          class="flex items-center justify-between border-b border-white/[0.06] px-5 pb-[17px] pt-5"
         >
           <h2
             class="text-[18px] font-bold leading-7 tracking-[-0.45px] text-white"

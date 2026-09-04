@@ -31,8 +31,7 @@ const bars = computed(() =>
     const userPct = month.groupCents
       ? (month.userCents / month.groupCents) * 100
       : 0;
-    // `- 2` accounts for the 1px inset border the bar draws around its segments.
-    const userPx = ((heightPct / 100) * PLOT_PX - 2) * (userPct / 100);
+    const userPx = (heightPct / 100) * PLOT_PX * (userPct / 100);
     return {
       ...month,
       heightPct,
@@ -139,7 +138,7 @@ const periodTotalCents = computed(() =>
               </span>
               <div
                 v-if="bar.groupCents > 0"
-                class="flex w-full flex-col overflow-hidden rounded-b rounded-t-lg border border-white/10 p-px shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)]"
+                class="flex w-full flex-col overflow-hidden rounded-b rounded-t-lg border border-white/10 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)]"
                 :style="{ height: `${bar.heightPct}%` }"
               >
                 <span class="min-h-0 flex-1 bg-[#343144]"></span>

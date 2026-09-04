@@ -107,9 +107,12 @@ no charting dependency**, with the following binding choices:
    extract-as-is rule — which takes the view to 223 pure LOC and is what makes
    room for the feature. `TotalsModal.vue` owns the sheet chrome, the anchor
    state and the stepper; `MonthlyTotalsChart.vue` owns the axis, bars, month
-   labels and period total. The sheet follows the existing teleported
-   bottom-sheet idiom of `DateTimePicker.vue`, not `ExportModal.vue`'s in-place
-   overlay, because the design is a bottom sheet.
+   labels and period total. The sheet is teleported to `body` like
+   `DateTimePicker.vue`, and is responsive the way `ExportModal.vue` is: a bottom
+   sheet with a top-rounded edge on phones, a centred popup with all four corners
+   rounded from the `sm:` breakpoint up. It carries no drag handle, because the
+   sheet is not draggable — the close button and the scrim are the only dismissal
+   affordances, and a handle would advertise a gesture that does not exist.
 
 10. **Every icon is a glyph the codebase already ships.** The close X and the
     chevron come from `ExportModal.vue` and `DateTimePicker.vue`; the previous /
