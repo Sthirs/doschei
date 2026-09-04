@@ -1,6 +1,6 @@
 # ADR-0022: Group monthly spend totals — client-side aggregation, dependency-free bars
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-09-04
 - **Deciders:** Sthirs
 
