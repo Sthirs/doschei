@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 
 import {
   formatEur,
+  formatEurAxis,
+  formatEurWhole,
   balanceChipKind,
   balanceColorClass,
   groupInitials,
@@ -33,6 +35,42 @@ describe('formatEur', () => {
     // space vs U+00A0), so match on substance rather than exact spacing.
     expect(formatEur(42.5, 'it')).toMatch(/42,50\s?€/);
     expect(formatEur(42.5, 'it')).not.toContain('.');
+  });
+});
+
+describe('formatEurWhole', () => {
+  it('formats integer cents as whole euros, grouped', () => {
+    expect(formatEurWhole(0)).toBe('€0');
+    expect(formatEurWhole(65_000)).toBe('€650');
+    expect(formatEurWhole(104_000)).toBe('€1,040');
+  });
+
+  it('rounds to the nearest euro rather than truncating', () => {
+    expect(formatEurWhole(65_050)).toBe('€651');
+    expect(formatEurWhole(65_049)).toBe('€650');
+  });
+
+  it('it locale puts the symbol after the number', () => {
+    expect(formatEurWhole(65_000, 'it')).toMatch(/^650\s?€$/);
+  });
+});
+
+describe('formatEurAxis', () => {
+  it('matches the design ticks for a 1,200 euro axis', () => {
+    expect(formatEurAxis(0)).toBe('€0');
+    expect(formatEurAxis(40_000)).toBe('€400');
+    expect(formatEurAxis(80_000)).toBe('€800');
+    expect(formatEurAxis(120_000)).toBe('€1.2k');
+  });
+
+  it('abbreviates large amounts with a lower-case unit', () => {
+    expect(formatEurAxis(250_000)).toBe('€2.5k');
+    expect(formatEurAxis(120_000)).not.toContain('K');
+    expect(formatEurAxis(100_000_000)).toBe('€1m');
+  });
+
+  it('it locale abbreviates with a comma decimal separator', () => {
+    expect(formatEurAxis(120_000, 'it')).toMatch(/1,2k/);
   });
 });
 

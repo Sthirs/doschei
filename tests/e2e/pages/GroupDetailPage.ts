@@ -74,6 +74,15 @@ export class GroupDetailPage {
   private exportYearSelect = this.exportDialog.getByLabel('Year');
   private exportActionButton = this.exportDialog.getByRole('button', { name: 'Export Expenses' });
 
+  // Totals controls (GroupDetailView.vue → ActionRow.vue — the "Totals" button
+  // next to "Export" opens the TotalsModal bottom sheet, a teleported
+  // role="dialog" holding the three-month stacked chart and a period stepper).
+  private totalsTriggerButton = this.page.getByRole('button', { name: /^Totals$/, exact: true });
+  private totalsDialog = this.page.getByRole('dialog', { name: 'Totals' });
+  private totalsRange = this.totalsDialog.getByTestId('totals-range');
+  private totalsPreviousButton = this.totalsDialog.getByRole('button', { name: 'Previous period' });
+  private totalsNextButton = this.totalsDialog.getByRole('button', { name: 'Next period' });
+
   constructor(private page: Page) {}
 
   // ---------------------------------------------------------------------------
@@ -408,6 +417,52 @@ export class GroupDetailPage {
     const monthName = new Date(2000, month - 1, 1).toLocaleDateString('en-US', { month: 'long' });
     await this.exportMonthSelect.selectOption({ label: monthName });
     await this.exportYearSelect.selectOption({ label: String(year) });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Totals modal
+  // ---------------------------------------------------------------------------
+
+  async openTotalsModal(): Promise<void> {
+    await this.totalsTriggerButton.click();
+    await expect(this.totalsDialog).toBeVisible();
+  }
+
+  // The group-spend labels above the bars, oldest month first.
+  async getTotalsGroupLabels(): Promise<string[]> {
+    return this.totalsDialog.getByTestId('totals-bar-group').allInnerTexts();
+  }
+
+  // The user-share labels inside the purple segments. A month with no spend, or
+  // a share too small to label legibly, contributes no entry.
+  async getTotalsUserLabels(): Promise<string[]> {
+    return this.totalsDialog.getByTestId('totals-bar-user').allInnerTexts();
+  }
+
+  async getTotalsRange(): Promise<string> {
+    return (await this.totalsRange.innerText()).trim();
+  }
+
+  async getTotalsPeriodTotal(): Promise<string> {
+    return (await this.totalsDialog.getByTestId('totals-period-total').innerText()).trim();
+  }
+
+  async expectTotalsCannotGoForward(): Promise<void> {
+    await expect(this.totalsNextButton).toBeDisabled();
+  }
+
+  // Steps the window and waits for the label to change, so the assertion that
+  // follows cannot race the re-render.
+  async totalsPreviousPeriod(): Promise<void> {
+    const before = await this.getTotalsRange();
+    await this.totalsPreviousButton.click();
+    await expect(this.totalsRange).not.toHaveText(before);
+  }
+
+  async totalsNextPeriod(): Promise<void> {
+    const before = await this.getTotalsRange();
+    await this.totalsNextButton.click();
+    await expect(this.totalsRange).not.toHaveText(before);
   }
 
   async clickExportAndExpectDownload(): Promise<{ filename: string; text: string }> {

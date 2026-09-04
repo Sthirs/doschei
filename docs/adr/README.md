@@ -50,3 +50,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0019](0019-image-upload-architecture.md) | Image upload architecture — DB-resident data URLs, multer+sharp, replace-only | 🟢 accepted |
 | [ADR-0020](0020-client-cache-lifecycle-on-deploy.md) | Client cache lifecycle on deploy — build-stamped probe, silent purge-and-reload | 🟢 accepted |
 | [ADR-0021](0021-module-size-ceiling-and-split-convention.md) | Module size ceiling of 250 pure LOC and the responsibility-split convention | 🟡 proposed |
+| [ADR-0022](0022-group-monthly-spend-totals.md) | Group monthly spend totals — client-side aggregation, dependency-free bars | 🟡 proposed |

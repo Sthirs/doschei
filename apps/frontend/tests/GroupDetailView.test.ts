@@ -549,7 +549,7 @@ describe('GroupDetailView DOM-invariance snapshot', () => {
               <!-- Breakdown list -->
               <!--v-if-->
             </section><!-- Action row -->
-            <div class="flex gap-2"><button type="button" class="rounded-xl bg-[#6554E7] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-white transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-40" title="Record a payment between members">Settle Up</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Export</button></div>
+            <div class="flex gap-2"><button type="button" class="rounded-xl bg-[#6554E7] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-white transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-40" title="Record a payment between members">Settle Up</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Export</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Totals</button></div>
           </div><!-- Scrollable: expenses list -->
           <div class="flex-1 overflow-y-auto px-4">
             <!-- Month header -->
@@ -587,6 +587,8 @@ describe('GroupDetailView DOM-invariance snapshot', () => {
             <!-- Gradient fade overlay above button -->
             <div class="absolute inset-x-0 bottom-full h-4 bg-gradient-to-t from-[#13121B] via-[#13121B]/50 to-transparent pointer-events-none"></div><button type="button" class="w-full mb-4 rounded-xl bg-[#6554E7] py-4 text-[18px] font-normal text-[#F0EBFF] transition hover:bg-[#5a44cf] active:scale-[0.98]" style="line-height: 27px;">+ Add expense</button>
           </div><!-- Export modal -->
+          <!--v-if-->
+          <!-- Totals modal -->
           <!--v-if-->
           <!-- Error -->
           <!--v-if-->

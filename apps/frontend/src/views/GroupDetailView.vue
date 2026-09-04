@@ -3,11 +3,13 @@ import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
+import ActionRow from '@/components/group-detail/ActionRow.vue';
 import BalanceCard from '@/components/group-detail/BalanceCard.vue';
 import ExpenseRow from '@/components/group-detail/ExpenseRow.vue';
 import ExportModal from '@/components/group-detail/ExportModal.vue';
 import TopbarBackButton from '@/components/group-detail/TopbarBackButton.vue';
 import TopbarSettingsButtons from '@/components/group-detail/TopbarSettingsButtons.vue';
+import TotalsModal from '@/components/group-detail/TotalsModal.vue';
 import { api } from '@/lib/api';
 import { fromDateValue, getExpenseDateValue } from '@/lib/expenseDate';
 import { currentPageTitle, sharedGroup } from '@/router';
@@ -28,6 +30,7 @@ const group = ref<GroupDetail | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
 const showExportModal = ref(false);
+const showTotalsModal = ref(false);
 
 const groupId = computed(() => route.params.id as string);
 
@@ -182,28 +185,12 @@ onBeforeUnmount(() => {
           <BalanceCard v-if="group.balance" :balance="group.balance" />
 
           <!-- Action row -->
-          <div class="flex gap-2">
-            <button
-              type="button"
-              class="rounded-xl bg-[#6554E7] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-white transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-40"
-              :disabled="group.members.length < 2"
-              :title="
-                group.members.length < 2
-                  ? t('groupDetail.settleUpDisabledInviteTitle')
-                  : t('groupDetail.settleUpDisabledRecordTitle')
-              "
-              @click="navigateToSettleUpNew()"
-            >
-              {{ t('groupDetail.settleUp') }}
-            </button>
-            <button
-              type="button"
-              class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]"
-              @click="showExportModal = true"
-            >
-              {{ t('groupDetail.export') }}
-            </button>
-          </div>
+          <ActionRow
+            :member-count="group.members.length"
+            @settle-up="navigateToSettleUpNew()"
+            @open-export="showExportModal = true"
+            @open-totals="showTotalsModal = true"
+          />
         </div>
 
         <!-- Scrollable: expenses list -->
@@ -264,6 +251,14 @@ onBeforeUnmount(() => {
           :group-id="groupId"
           :group-name="group.name"
           @close="showExportModal = false"
+        />
+
+        <!-- Totals modal -->
+        <TotalsModal
+          v-if="showTotalsModal"
+          :expenses="group.expenses"
+          :current-user-id="group.balance.currentUserId"
+          @close="showTotalsModal = false"
         />
       </template>
 

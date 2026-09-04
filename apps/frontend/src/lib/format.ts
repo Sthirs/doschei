@@ -11,6 +11,37 @@ export const formatEur = (eur: number, locale: string = 'en'): string => {
   }).format(eur);
 };
 
+// Format a EUR amount given in integer cents as whole euros, e.g. "€1,040".
+//
+// Used for chart value labels, where two decimals of noise would not fit and
+// would not be read.
+export const formatEurWhole = (cents: number, locale: string = 'en'): string => {
+  return new Intl.NumberFormat(normalizeLocale(locale), {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+};
+
+// Format a EUR amount given in integer cents for a chart axis tick, abbreviating
+// thousands: "€0", "€400", "€1.2k".
+//
+// Intl compact notation emits an upper-case unit ("€1.2K"); the unit is
+// lower-cased so ticks read as designed. The currency renders as the "€"
+// symbol, never the "EUR" code, so no currency letters are at risk here.
+export const formatEurAxis = (cents: number, locale: string = 'en'): string => {
+  return new Intl.NumberFormat(normalizeLocale(locale), {
+    style: 'currency',
+    currency: 'EUR',
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 1,
+  })
+    .format(cents / 100)
+    .replace(/[KMBT]/g, (unit) => unit.toLowerCase());
+};
+
 // Map netForCurrentUser to balance chip kind
 export const balanceChipKind = (netForCurrentUser: number): 'owed' | 'owe' | 'settled' => {
   if (netForCurrentUser > 0) return 'owed';
