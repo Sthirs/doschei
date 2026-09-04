@@ -4,7 +4,13 @@
 // its period total, and the one-month-at-a-time stepper. Uses the
 // authenticatedPage fixture (no UI login).
 import { test, expect } from '../fixtures/auth';
-import { GroupsPage, GroupSettingsPage, GroupDetailPage, acceptInvitationViaApi } from '../pages';
+import {
+  GroupsPage,
+  GroupSettingsPage,
+  GroupDetailPage,
+  acceptInvitationViaApi,
+  clearGroupLedgerViaApi,
+} from '../pages';
 
 // The chart window is relative to today, so the expected labels are derived the
 // same way rather than hard-coded to a calendar month.
@@ -23,6 +29,19 @@ const rangeLabel = (newestMonthsAgo: number): string => {
   return `${label(monthStart(newestMonthsAgo + 2))} – ${label(monthStart(newestMonthsAgo))}`;
 };
 
+// The group survives the test (there is no group-delete endpoint), so its ledger
+// is cleared instead. Without this the group keeps the demo user at a +30 balance
+// and adds a permanent "You are owed …" chip to the shared groups list, which
+// other specs assert against. Runs in afterEach so a mid-test failure still
+// cleans up.
+let createdGroupId: string | null = null;
+
+test.afterEach(async () => {
+  if (!createdGroupId) return;
+  await clearGroupLedgerViaApi(createdGroupId, 'demo@doschei.local', 'password123');
+  createdGroupId = null;
+});
+
 test('view group spend against your own share over three months', async ({
   authenticatedPage: page,
 }) => {
@@ -38,6 +57,7 @@ test('view group spend against your own share over three months', async ({
 
   await groupsPage.openGroup(groupName);
   const groupId = await groupDetailPage.getGroupId();
+  createdGroupId = groupId;
 
   // Invite Alice so an EQUAL split gives Demo User half rather than the whole
   // amount, which is what makes the stacked bar have two visible segments.

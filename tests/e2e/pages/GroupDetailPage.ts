@@ -478,3 +478,67 @@ export class GroupDetailPage {
     return { filename, text };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Teardown helper
+// ---------------------------------------------------------------------------
+
+type GroupDetailApiResponse = {
+  group: { expenses: Array<{ id: string; kind: 'EXPENSE' | 'SETTLEMENT' }> };
+};
+
+/**
+ * Delete every ledger entry in a group so it ends settled.
+ *
+ * E2E specs share one database and there is no group-delete endpoint, so a group
+ * a spec leaves behind is permanent. A leftover group with a NON-ZERO balance is
+ * the harmful case: it adds another "You are owed …" / "You owe …" chip to the
+ * groups list and can break another spec's assertions. Clearing the ledger keeps
+ * the residue inert.
+ *
+ * Expenses and settlements have separate delete routes, so the entry kind picks
+ * the path.
+ */
+export async function clearGroupLedgerViaApi(
+  groupId: string,
+  email: string,
+  password: string,
+): Promise<void> {
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
+
+  const loginResponse = await fetch(`${baseURL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (loginResponse.status !== 200) {
+    throw new Error(
+      `clearGroupLedgerViaApi: login failed for ${email} (status ${loginResponse.status})`,
+    );
+  }
+  const { token } = (await loginResponse.json()) as { token: string };
+  const authHeaders = { Authorization: `Bearer ${token}` };
+
+  const groupResponse = await fetch(`${baseURL}/api/groups/${groupId}`, {
+    headers: authHeaders,
+  });
+  if (groupResponse.status !== 200) {
+    throw new Error(
+      `clearGroupLedgerViaApi: GET /groups/${groupId} failed (status ${groupResponse.status})`,
+    );
+  }
+  const { group } = (await groupResponse.json()) as GroupDetailApiResponse;
+
+  for (const entry of group.expenses) {
+    const collection = entry.kind === 'SETTLEMENT' ? 'settlements' : 'expenses';
+    const deleteResponse = await fetch(
+      `${baseURL}/api/groups/${groupId}/${collection}/${entry.id}`,
+      { method: 'DELETE', headers: authHeaders },
+    );
+    if (deleteResponse.status !== 204) {
+      throw new Error(
+        `clearGroupLedgerViaApi: DELETE ${collection}/${entry.id} failed (status ${deleteResponse.status})`,
+      );
+    }
+  }
+}
