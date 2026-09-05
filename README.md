@@ -1,178 +1,61 @@
 # Do Schèi
 
-> A web app to track shared expenses and split them with friends.
+<p align="center">
+  <img src="apps/frontend/public/logo-192.png" alt="Do Schèi Icon" title="Do Schèi Icon"></img>
+</p>
 
-Do Schèi is a web application for tracking shared expenses and splitting them with friends. The frontend is a Vue 3 + TypeScript PWA, the backend runs on Node.js with Express and PostgreSQL, and the whole stack deploys to a Kubernetes cluster through a cloud-native Helm chart. See [`docs/specs.md`](docs/specs.md) for the full product spec.
+> Track shared expenses and split them with friends.
 
-## Included
+Somebody always pays for the group. One person books the hotel, another covers
+dinner, a third fills the tank — and by the end of the trip nobody remembers who
+is up and who is down. Do Schèi keeps that score for you, so settling up is a
+thirty-second conversation instead of an argument over a spreadsheet.
 
-- Vue 3 + TypeScript PWA frontend with login, auth guard, groups screen, Pinia, Vue Router, Axios, Tailwind, ESLint, Prettier, Vitest + Vue Test Utils for unit tests, and Cypress + Playwright for e2e
-- Node.js + TypeScript + Express backend with TypeORM, JWT local auth + OAuth2 (Google), seeded demo user, groups and settlements, Vitest + Supertest for tests
-- Helm chart that deploys frontend, backend, and PostgreSQL into Minikube
-- Telepresence-based development flow to run frontend and/or backend locally while the rest of the stack stays in cluster
+Make a group for the people you actually share money with, log what you paid as
+you go, and say how it should be split. Do Schèi keeps a running balance for
+everyone: how much you are owed, how much you owe, and exactly what to pay to
+clear it.
 
-## Supported development workflow
+*Do schèi* is Venetian for "a couple of coins" — the kind of money you don't
+want to fall out over.
 
-There is one supported way to develop this project:
+## Screenshots
 
-- Minikube runs the baseline cluster services
-- Helm deploys `frontend`, `backend`, and `postgres`
-- Telepresence intercepts `frontend` and/or `backend`
-- `npm run dev:frontend` and `npm run dev:backend` run the intercepted service locally
+<img src="docs/screenshots/01-groups.png" alt="Groups list showing a balance for each group" width="210">
+<img src="docs/screenshots/02-group-detail.png" alt="A group's expense list with the balance broken down per person" width="210">
+<img src="docs/screenshots/03-settle-up.png" alt="Recording a payment to clear a balance" width="210">
+<img src="docs/screenshots/04-totals.png" alt="Three months of group spending compared, with your own share inside each bar" width="210">
 
-Local Docker PostgreSQL and direct localhost-only development are not part of the supported workflow.
+## What you can do
 
-## Prerequisites
+- **Share with anyone.** Invite people by email, whether or not they have signed
+  up yet. They see the invitation waiting for them the first time they log in.
+- **Add an expense in seconds.** Amount, who paid, and a category — which the app
+  guesses from what you typed, learning from the group's own history.
+- **Split it however it actually happened.** Equally, among just some of you, by
+  exact amounts, or by percentage. Two-person groups get one-tap shortcuts for
+  the common cases.
+- **Always know where you stand.** Every group shows your balance at a glance,
+  with a per-person breakdown behind it. The numbers are exact — no drifting
+  cents.
+- **Settle up properly.** Record a payment between two people and the balances
+  update to match, so the history stays honest.
+- **See where the money went.** Compare three months of group spending side by
+  side, with your own share shown inside each month.
+- **Take your data with you.** Export any month to CSV.
+- **Make it yours.** Profile and group pictures, and your choice of English or
+  Italian.
 
-- `nvm`
-- Node.js `26.2.0` via `.nvmrc`
-- npm
-- Docker
-- Minikube
-- Helm
-- Telepresence
+## Documentation
 
-## Cluster bootstrap
+- [Development guide](docs/development.md) — how to run and work on the project.
+- [Specification](docs/specifications.md) — the canonical description of the
+  product.
+- [Architecture decision records](docs/adr/README.md) — why things are the way
+  they are.
+- [Contribution methodology](AGENTS.md) — the process for making changes.
+- [Changelog](CHANGELOG.md) — what shipped when.
 
-```bash
-nvm install
-nvm use
-npm ci
-npm run cluster:up
-npm run cluster:build
-npm run cluster:deploy
-```
+## License
 
-Useful host value:
-
-```bash
-npm run dev:host
-```
-
-The app ingress host defaults to `doschei.$(minikube ip).nip.io`.
-
-Demo credentials:
-
-- email: `demo@doschei.local`
-- password: `password123`
-
-## Daily development with Telepresence
-
-Connect Telepresence:
-
-```bash
-npm run telepresence:connect
-```
-
-### Run backend locally
-
-```bash
-npm run telepresence:backend
-npm run dev:backend
-```
-
-### Run frontend locally
-
-```bash
-npm run telepresence:frontend
-npm run dev:frontend
-```
-
-### Run both locally
-
-Open two terminals for the intercepts and one for the app processes:
-
-```bash
-npm run telepresence:backend
-npm run telepresence:frontend
-npm run dev
-```
-
-Open the application through the ingress host printed by `npm run dev:host`.
-
-When you are done:
-
-```bash
-npm run telepresence:leave
-```
-
-## Notes
-
-- The backend local process uses the in-cluster PostgreSQL service over the Telepresence network.
-- The frontend local process is expected to be reached through the Minikube ingress host, not directly through `localhost:5173`.
-- Vite HMR is configured for the ingress host so the frontend can stay behind a Telepresence intercept.
-- TypeORM still uses schema synchronization in development (`DB_SYNC=true`).
-- Seed data is created by the in-cluster backend startup path.
-
-## Useful commands
-
-```bash
-npm run cluster:up
-npm run cluster:build
-npm run cluster:deploy
-npm run telepresence:connect
-npm run telepresence:frontend
-npm run telepresence:backend
-npm run telepresence:leave
-npm run dev:frontend
-npm run dev:backend
-npm run dev
-npm run build
-npm run lint
-npm run test
-npm run test:integration -- http://doschei.127.0.0.1.nip.io
-npm run test:playwright -- http://doschei.127.0.0.1.nip.io
-```
-
-## Auth toggles
-
-Two environment variables control whether local (password-based) auth is available.
-OAuth sign-in is unaffected by these flags.
-
-| Variable                           | Default   | Effect when set to `"false"`                                            |
-|------------------------------------|-----------|-------------------------------------------------------------------------|
-| `AUTH_LOCAL_LOGIN_ENABLED`         | `"true"`  | `POST /api/auth/login` returns 403; the login form is hidden in the UI  |
-| `AUTH_LOCAL_REGISTRATION_ENABLED`  | `"true"`  | `POST /api/auth/register` returns 403                                   |
-
-## Rate limiting
-
-The API applies a global per-IP rate limiter (express-rate-limit) to all /api routes; /api/health is exempt; exceeding the quota returns HTTP 429 with RateLimit/RateLimit-Policy headers (IETF draft-8) and Retry-After; local, Minikube, and CI deployments force a high limit via the chart's devMode toggle so automated tests never hit the cap.
-
-| Variable               | Default  | Effect                                                      |
-|------------------------|----------|-------------------------------------------------------------|
-| `RATE_LIMIT_WINDOW_MS` | `300000` | Length of the per-IP quota window in milliseconds           |
-| `RATE_LIMIT_LIMIT`     | `500`    | Max requests per IP per window; excess gets 429             |
-
-## Backend integration tests
-
-The backend integration suite targets an already running backend deployment. It does not start a local server process.
-
-Run the suite against a specific endpoint:
-
-```bash
-npm run test:integration -- http://doschei.127.0.0.1.nip.io
-```
-
-Or reuse an environment variable:
-
-```bash
-BACKEND_BASE_URL=http://doschei.127.0.0.1.nip.io npm run test:integration
-```
-
-Notes:
-
-- The endpoint must expose `/api/health` and `/api/*`.
-- Tests use unique emails and group names so they can run against the shared Minikube database.
-- There is one test file per endpoint: `auth/register`, `auth/login`, `auth/me`, `auth/me/image`, `groups GET`, `groups POST`, `groups/:id/image`, `settlements POST`, `settlements PATCH`, `settlements DELETE`.
-- The backend itself exposes health only on `/api/health`.
-
-## Structure
-
-```text
-apps/
-  backend/
-  frontend/
-helm/
-  doschei/
-scripts/
-```
+Released under the [MIT License](LICENSE).
