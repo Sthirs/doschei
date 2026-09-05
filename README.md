@@ -1,60 +1,94 @@
 # Do Schèi
 
 <p align="center">
-  <img src="apps/frontend/public/logo-192.png" alt="Do Schèi Icon" title="Do Schèi Icon"></img>
+  <img src="apps/frontend/public/logo-192.png" alt="Do Schèi" width="120">
 </p>
 
-> Track shared expenses and split them with friends.
+<p align="center">
+  <strong>Shared expenses without the spreadsheet.</strong>
+</p>
 
-Somebody always pays for the group. One person books the hotel, another covers
-dinner, a third fills the tank — and by the end of the trip nobody remembers who
-is up and who is down. Do Schèi keeps that score for you, so settling up is a
-thirty-second conversation instead of an argument over a spreadsheet.
+<p align="center">
+  Track what you spend, split it fairly, and always know who owes whom.
+</p>
 
-Make a group for the people you actually share money with, log what you paid as
-you go, and say how it should be split. Do Schèi keeps a running balance for
-everyone: how much you are owed, how much you owe, and exactly what to pay to
-clear it.
+<p align="center">
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License">
+</p>
 
-*Do schèi* is Venetian for "a couple of coins" — the kind of money you don't
-want to fall out over.
+---
+
+Somebody always pays for the group.
+
+One person books the hotel, another covers dinner, a third fills the tank
+— and by the end of the trip nobody remembers who is up and who is down.
+
+**Do Schèi keeps that score for you.**
+
+Create a group, record expenses as you go, choose how they should be split,
+and get a clear running balance for everyone. When it's time to settle up,
+you know exactly who needs to pay whom — no spreadsheet required.
+
+> *Do schèi* is Venetian for "a couple of coins" —
+> the kind of money you don't want to fall out over.
 
 ## Screenshots
 
-<img src="docs/screenshots/01-groups.png" alt="Groups list showing a balance for each group" width="210">
-<img src="docs/screenshots/02-group-detail.png" alt="A group's expense list with the balance broken down per person" width="210">
-<img src="docs/screenshots/03-settle-up.png" alt="Recording a payment to clear a balance" width="210">
-<img src="docs/screenshots/04-totals.png" alt="Three months of group spending compared, with your own share inside each bar" width="210">
+<p align="center">
+  <img src="docs/screenshots/01-groups.png"
+       alt="Groups list showing a balance for each group"
+       width="190">
+  <img src="docs/screenshots/02-group-detail.png"
+       alt="A group's expense list with the balance broken down per person"
+       width="190">
+  <img src="docs/screenshots/03-settle-up.png"
+       alt="Recording a payment to clear a balance"
+       width="190">
+  <img src="docs/screenshots/04-totals.png"
+       alt="Three months of group spending compared"
+       width="190">
+</p>
 
-## What you can do
+## Features
 
-- **Share with anyone.** Invite people by email, whether or not they have signed
-  up yet. They see the invitation waiting for them the first time they log in.
-- **Add an expense in seconds.** Amount, who paid, and a category — which the app
-  guesses from what you typed, learning from the group's own history.
-- **Split it however it actually happened.** Equally, among just some of you, by
-  exact amounts, or by percentage. Two-person groups get one-tap shortcuts for
-  the common cases.
-- **Always know where you stand.** Every group shows your balance at a glance,
-  with a per-person breakdown behind it. The numbers are exact — no drifting
-  cents.
-- **Settle up properly.** Record a payment between two people and the balances
-  update to match, so the history stays honest.
-- **See where the money went.** Compare three months of group spending side by
-  side, with your own share shown inside each month.
-- **Take your data with you.** Export any month to CSV.
-- **Make it yours.** Profile and group pictures, and your choice of English or
-  Italian.
+### Keep everyone in sync
+
+- **Shared groups** — Invite people by email, even before they sign up.
+- **Clear balances** — See at a glance how much you owe or are owed.
+- **Per-person breakdowns** — Know exactly where every balance comes from.
+- **Settle up** — Record payments and keep the history accurate.
+
+### Split expenses your way
+
+- **Equal splits** — Divide an expense evenly.
+- **Partial splits** — Include only the people who actually shared it.
+- **Exact amounts** — Enter precisely what each person owes.
+- **Percentages** — Split expenses by percentage.
+- **Quick shortcuts** — Two-person groups get one-tap options for common splits.
+
+### Understand your spending
+
+- **Smart categories** — Categories are suggested from what you type and
+  informed by the group's history.
+- **Monthly totals** — Compare three months of group spending side by side.
+- **Your share** — See your own contribution within each month's total.
+- **CSV export** — Take your data with you.
+
+### Make it yours
+
+- Profile and group pictures
+- Multi-language interface
+- Exact balances with no drifting cents
 
 ## Documentation
 
-- [Development guide](docs/development.md) — how to run and work on the project.
-- [Specification](docs/specifications.md) — the canonical description of the
-  product.
-- [Architecture decision records](docs/adr/README.md) — why things are the way
-  they are.
-- [Contribution methodology](AGENTS.md) — the process for making changes.
-- [Changelog](CHANGELOG.md) — what shipped when.
+| Document | Description |
+| --- | --- |
+| [Development guide](docs/development.md) | How to run and work on the project |
+| [Specification](docs/specifications.md) | The canonical product specification |
+| [Architecture decision records](docs/adr/README.md) | Why things are the way they are |
+| [Contribution methodology](AGENTS.md) | The process for making changes |
+| [Changelog](CHANGELOG.md) | What shipped when |
 
 ## License
 
