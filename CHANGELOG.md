@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/Sthirs/doschei/compare/v1.5.2...v1.6.0) (2026-09-05)
+
+
+### Features
+
+* add group totals chart ([#103](https://github.com/Sthirs/doschei/issues/103)) ([1ab105c](https://github.com/Sthirs/doschei/commit/1ab105cc994f23740fc38ef7e48610ff2ac28785))
+
 ## [1.5.2](https://github.com/Sthirs/doschei/compare/v1.5.1...v1.5.2) (2026-09-02)
 
 
