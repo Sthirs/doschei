@@ -193,127 +193,126 @@ The CI pipeline includes the following steps:
 
 ### Implementation Status
 
-> This appendix tracks, as of the audit on 2026-08-01, which statements in this
+> This appendix tracks, as of the audit on 2026-09-04, which statements in this
 > specification are **not yet implemented**, **partially implemented**, or where
 > the **current implementation diverges** from the spec. Per the hierarchy of
 > truth in [`AGENTS.md`](../AGENTS.md) (Specification > ADRs > code), a divergence
 > here means either the code must be brought up to the spec, or the spec must be
-> revisited through a product decision. Each item cites concrete file:line
-> evidence. Items not listed are considered implemented as specced.
+> revisited through a product decision. Items not listed are considered
+> implemented as specced.
+>
+> Entries quote the statement they annotate rather than citing its line number.
+> Line numbers rot as the spec grows: the 2026-08-01 revision of this appendix
+> cited them, and by this audit 11 of its 15 citations pointed at the wrong
+> statement.
 
 #### - Features
 
-- **§Features line 7 — "multilingual and supports English and Italian": IMPLEMENTED (2026-08).**
+- **"The application is multilingual and supports English and Italian": IMPLEMENTED (2026-08).**
   vue-i18n v11 with EN/IT catalogs (`apps/frontend/src/i18n/`), per-user
   `language` column exposed through all auth responses, language selector in
   the account screen, device-language capture at registration, and localized
   category labels behind stable keys. See [`ADR-0018`](adr/0018-internationalization-en-it.md)
-  (proposed) and the Playwright proof in `tests/e2e/account/language.spec.ts`.
+  and the Playwright proof in `tests/e2e/account/language.spec.ts`.
 
-- **§Features line 8 — "Users can create an account and sign in": PARTIALLY IMPLEMENTED.**
+- **"Users can create an account and sign in to the application": PARTIALLY IMPLEMENTED.**
   Backend `POST /api/auth/register` exists
   (`apps/backend/src/controllers/authController.ts`, `apps/backend/src/services/authService.ts`,
-  `apps/backend/src/routes/authRoutes.ts`), and login is fully implemented end-to-end.
-  The frontend, however, only ships a login form
-  (`apps/frontend/src/views/LoginView.vue`); there is **no registration UI**.
+  `apps/backend/src/routes/authRoutes.ts`), gated by `AUTH_LOCAL_REGISTRATION_ENABLED`,
+  and login is fully implemented end-to-end. The frontend, however, only ships a
+  login form (`apps/frontend/src/views/LoginView.vue`); there is **no registration
+  UI**, and nothing under `apps/frontend/src` calls `/api/auth/register`.
 
-- **§Features line 10 — "invite other users to join via email": IMPLEMENTED.**
+- **"Users can create groups and invite other users to join via email": IMPLEMENTED.**
   The email-keyed invitation system with accept/decline/cancel lifecycle is implemented
-  (`apps/backend/src/entities/Invitation.ts`, `apps/backend/src/services/invitationService.ts`).
+  (`apps/backend/src/entities/Invitation.ts`, `apps/backend/src/services/invitationService.ts`),
+  with the Playwright proof in `tests/e2e/invitations/invitations.spec.ts`.
 
-- **§Features line 12 — "name and image that can be updated by its members": IMPLEMENTED (2026-08).**
+- **"A group has a name and an image that can be updated by its members": IMPLEMENTED (2026-08).**
   The `Group` entity has an `imageUrl` column
   (`apps/backend/src/entities/Group.ts`) and it is rendered when set
-  (`apps/frontend/src/views/GroupsView.vue`). The `updateGroup` endpoint
-  (`apps/backend/src/services/groupService.ts`,
-  `apps/backend/src/controllers/groupController.ts`) now accepts `image` uploads
-  via `multipart/form-data`; the frontend provides a file picker in the group
-  settings screen. See [`ADR-0019`](adr/0019-image-upload-architecture.md)
-  (proposed).
+  (`apps/frontend/src/views/GroupsView.vue`). Name and image are separate
+  endpoints: `PATCH /api/groups/:id` takes only `name`
+  (`apps/backend/src/controllers/group/groupHandlers.ts`), while the image is
+  uploaded as `multipart/form-data` to `POST /api/groups/:id/image`
+  (`updateGroupImage`, `apps/backend/src/routes/groupRoutes.ts`). The frontend
+  provides a file picker in the group settings screen. See
+  [`ADR-0019`](adr/0019-image-upload-architecture.md).
 
-- **§Features lines 72-76 — two-user group shortcuts ("You paid, split equally", "You are owed the full amount", etc., with the other options behind a "More options" action): NOT IMPLEMENTED.**
-  The Add-Expense modal in `apps/frontend/src/views/GroupDetailView.vue` always
-  shows the full form regardless of member count. No matching UI, translation
-  strings, or component exists. The "More options" toggle and the four shortcut
-  presets are specced but absent.
+- **"In groups with exactly two users, the following shortcuts are available for faster data entry, while the other options are shown behind a **More options** action": NOT IMPLEMENTED.**
+  The expense form is a routed page since [`ADR-0012`](adr/0012-routed-pages-for-expense-settleup-forms.md)
+  (`apps/frontend/src/views/ExpenseFormView.vue` with
+  `apps/frontend/src/components/expense-form/`), and it always shows the full
+  form regardless of member count. No matching UI, translation strings, or
+  member-count branching exists. The "More options" toggle and the four
+  shortcut presets are specced but absent.
 
-- **§Features line 77 — "Each group shows how much each user owes or is owed within the group": PARTIALLY IMPLEMENTED.**
-  The backend only returns balances from the **current user's perspective**
-  (`netForCurrentUser` plus a pairwise `perUser[]` breakdown) via
-  `apps/backend/src/services/groupService.ts` (`computeBalance`), and the
-  frontend only renders that pairwise view
-  (`apps/frontend/src/views/GroupDetailView.vue`). The spec's canonical
-  "per-member net balance" (§Balance Rules line 112) for **all** members is not
+- **"Each group shows how much each user owes or is owed within the group": PARTIALLY IMPLEMENTED.**
+  The backend only returns balances from the **current user's perspective** —
+  `netForCurrentUser` plus a `perUser[]` breakdown that is pairwise against the
+  current user, not a per-member net
+  (`apps/backend/src/services/group/balanceComputation.ts`) — and the frontend
+  renders only that pairwise view
+  (`apps/frontend/src/components/group-detail/BalanceCard.vue`). The spec's
+  canonical "per-member net balance" (§Balance Rules) for **all** members is not
   exposed by the API and not rendered.
 
-- **§Features line 81 — "Activities are tracked": NOT IMPLEMENTED.**
+- **"Activities are tracked": NOT IMPLEMENTED.**
   No `Activity` / audit entity or table exists. `apps/backend/src/entities/`
-  contains only `Group`, `User`, `UserIdentity`, `Expense`, `ExpenseSplit`. No
-  activity feed is produced on create/update/delete/settle-up. See also the
-  related Product Decisions gap on line 94 below.
+  contains only `Group`, `User`, `UserIdentity`, `Invitation`, `Expense`, and
+  `ExpenseSplit`, and no activity feed is produced on
+  create/update/delete/settle-up. See also the related Product Decisions gap
+  below.
 
-- **§Features line 82 — "Group expenses can be exported as a CSV file": NOT IMPLEMENTED.**
-  No CSV generation code anywhere in the repo (case-insensitive grep for `csv`
-  / `text/csv` across `apps/frontend/src` and `apps/backend/src` returns nothing).
-  `apps/backend/src/routes/groupRoutes.ts` has no export route, and
-  `apps/backend/src/app.ts` mounts only `/api/health`, `/api/auth`, `/api/auth/oauth`,
-  `/api/groups`. No `Content-Disposition`, no `Blob`, no `createObjectURL`
-  usage in the frontend.
-
-- **§Features line 85 — "Users can view their profile picture when one is set, shown in place of the initials avatar; users can upload or change their profile picture from the account screen using the device's standard file picker (gallery, camera, or other sources); JPEG/PNG/WebP up to 5 MB are accepted, normalized server-side, and returned embedded in API responses.": IMPLEMENTED (2026-08).**
+- **"Users can view their profile picture when one is set … JPEG/PNG/WebP up to 5 MB are accepted, normalized server-side, and returned embedded in API responses": IMPLEMENTED (2026-08).**
   The `User` entity has an `imageDataUrl` column
   (`apps/backend/src/entities/User.ts`) storing a base64 data URL. The
   `PATCH /api/auth/me/image` endpoint accepts `multipart/form-data` uploads
   (`apps/backend/src/controllers/authController.ts`,
   `apps/backend/src/services/authService.ts`), validates MIME type (JPEG/PNG/WebP)
-  and size (≤ 5 MB), normalizes via `sharp` to a standard data URL, and returns
-  the updated user object with the embedded image. The frontend account screen
-  provides a file picker and displays the image or falls back to the initials
-  avatar. See [`ADR-0019`](adr/0019-image-upload-architecture.md) (proposed).
+  and size (≤ 5 MB) and normalizes via `sharp` to a data URL
+  (`apps/backend/src/services/imageService.ts`), returning the updated user with
+  the embedded image. The frontend account screen provides a file picker and
+  displays the image or falls back to the initials avatar. See
+  [`ADR-0019`](adr/0019-image-upload-architecture.md).
 
 #### - Product Decisions
 
-- **§Product Decisions line 87 — "Monetary values must be stored and processed as integer cents": PARTIALLY IMPLEMENTED.**
+- **"Monetary values must be stored and processed as integer cents to avoid floating-point rounding issues": PARTIALLY IMPLEMENTED.**
   Values are **processed** in integer cents
   (`apps/backend/src/services/expenseSplitMath.ts` `toCents`, allocator,
   `aggregateBalance`; frontend `apps/frontend/src/lib/splitMath.ts`), but they
-  are **stored as `decimal(10, 2)`** in the database
-  (`apps/backend/src/entities/Expense.ts` `@Column({ type: 'decimal', precision: 10, scale: 2 })`).
+  are **stored as `decimal(10, 2)`**: `Expense.amount`
+  (`apps/backend/src/entities/Expense.ts`) and `ExpenseSplit.shareValue` /
+  `ExpenseSplit.computedAmount` (`apps/backend/src/entities/ExpenseSplit.ts`).
   ADR-0006 documents this deliberately. The spec wording should be reconciled
   with ADR-0006 (either tighten the wording to "processed" or migrate the
   schema to integer cents).
 
-- **§Product Decisions line 90 — "Categories must be represented internally by stable keys, while labels are localized in the frontend": IMPLEMENTED (2026-08).**
+- **"Categories must be represented internally by stable keys, while labels are localized in the frontend": IMPLEMENTED (2026-08).**
   The `label` field was removed from `CategoryDefinition`; labels live in the
   EN/IT catalogs under `categories.*` and the picker renders/searches them via
-  the active locale. See [`ADR-0018`](adr/0018-internationalization-en-it.md)
-  (proposed).
+  the active locale. See [`ADR-0018`](adr/0018-internationalization-en-it.md).
 
-- **§Product Decisions line 94 — "any activity entry generated for the deletion remains part of the activity history": MOOT.**
-  Tied to the §Features line 81 activity-tracking gap above. Since activity
-  tracking is not implemented at all, this invariant has no observable
-  effect. It will need code support before it can be considered satisfied.
+- **"any activity entry generated for the deletion remains part of the activity history": MOOT.**
+  Tied to the "Activities are tracked" gap above. Since activity tracking is not
+  implemented at all, this invariant has no observable effect. It will need code
+  support before it can be considered satisfied.
 
 #### - Architecture — Frontend
 
-- **§Architecture line 131 — "designed to be accessible and to follow WCAG guidelines": PARTIAL.**
-  There are semantic landmarks (`<main>`, `<section>`, `<label>`),
-  `aria-hidden` on decorative SVGs, and visible focus rings (e.g.
-  `apps/frontend/src/views/LoginView.vue`), but there is no a11y audit, no
-  aria-labels on icon-only controls, and no automated a11y test. WCAG intent is
-  aspirational.
-
-#### - Architecture — Backend
-
-- **§Architecture line 144 — "Authorization Code + PKCE flow for Google authentication": IMPLEMENTED AS GENERIC OIDC.**
-  See the related §Features line 9 gap. The PKCE flow with `S256` is implemented,
-  but the concrete provider is generic OIDC, not Google-specific. Spec wording
-  should either move to "any OIDC provider (Google by default)" or a
-  Google-specific provider file should be added.
+- **"It is designed to be accessible and to follow WCAG guidelines": PARTIAL.**
+  There are semantic landmarks (`<main>`, `<section>`, `<label>`), `aria-hidden`
+  on decorative SVGs, visible focus rings, and icon-only controls do now carry
+  `aria-label`s wired to localized catalog keys (for example
+  `groups.thumbnailAria`, `account.signOutAria`,
+  `categoryPicker.dialogAriaLabel`). What is still missing is any a11y audit and
+  any automated a11y test, so full WCAG conformance remains unverified rather
+  than merely aspirational.
 
 #### - Architecture — Database
 
-- **§Architecture lines 155-156 and 162 — "in production, the database is provisioned separately and is not part of the application deployment"; "the database is not deployed by the Helm chart": NOT IMPLEMENTED AS SPECCED.**
+- **"In production, the database is provisioned separately and is not part of the application deployment"; "The database is not deployed by the Helm chart and must be provisioned separately": NOT IMPLEMENTED AS SPECCED.**
   The Helm chart **does** deploy PostgreSQL by default
   (`helm/doschei/templates/postgres-deployment.yaml`,
   `helm/doschei/templates/postgres-service.yaml`,
@@ -327,31 +326,35 @@ The CI pipeline includes the following steps:
 
 #### - CI
 
-- **§CI line 176 — "Linting: run ESLint to check for code style issues and potential bugs in the codebase": NOT IMPLEMENTED IN CI.**
+- **"**Linting**: run ESLint to check for code style issues and potential bugs in the codebase": NOT IMPLEMENTED IN CI.**
   ESLint configs and `npm run lint` scripts exist for both apps, but **no CI
-  workflow runs ESLint**. `apps/.../eslint.config.mjs` and `.prettierrc.json`
-  are present in each app. `.github/workflows/tests.yaml` only runs unit,
+  workflow runs ESLint**. `.github/workflows/tests.yaml` only runs unit,
   integration, Playwright, and Docker builds; the PR-checks reusable workflow
-  (`.github/workflows/common-pull-request-checks.yaml`) runs codeQL/Semgrep/Trivy
+  (`.github/workflows/common-pull-request-checks.yaml`) runs CodeQL/Semgrep/Trivy
   and the repo's `.pre-commit-config.yaml` — which contains **no ESLint hook**
   (markdownlint, shellcheck, hadolint, ruff, actionlint, gitleaks, etc., only).
-  A `npm run lint` step must be added to CI to satisfy this requirement.
+  A `npm run lint` step must be added to CI to satisfy this requirement. Open
+  since the first revision of this appendix (2026-08-01).
 
 #### Notes on items intentionally left unannotated
 
-- Balance Rules (§Balance Rules lines 99-112) are implemented as specified,
-  including cent-precise remainder distribution in input order, FIXED/PERCENT
-  sum validation, and the canonical-ledger invariant in
+- Balance Rules (§Balance Rules) are implemented as specified, including
+  cent-precise remainder distribution in input order, FIXED/PERCENT sum
+  validation, and the canonical-ledger invariant in
   `apps/backend/src/services/expenseSplitMath.ts` and
-  `apps/backend/src/services/settlementRules.ts`. The only nuance is that the
-  "sum of all member balances is zero" invariant holds by construction at the
-  math layer (`aggregateBalance` nets payer `+amount` against participants
-  `-computedAmount`), but there is **no explicit test that sums every member's
-  net balance** to assert zero, primarily because the API exposes only the
-  current-user perspective. A future test would strengthen confidence in this
-  invariant.
+  `apps/backend/src/services/settlementRules.ts`. The only nuance is the "sum of
+  all member balances is zero" invariant. It holds by construction at the math
+  layer (`aggregateBalance` nets payer `+amount` against participants
+  `-computedAmount`), and tests assert the related pairwise identity that
+  `sum(perUser) === netForCurrentUser` (`apps/backend/tests/groupService.test.ts`,
+  `apps/backend/tests/integration/expenses-splits.test.ts`). What is still
+  untested is the group-wide sum across **every** member, primarily because the
+  API exposes only the current-user perspective — the same gap as the §Features
+  per-member balance item above.
 - Architecture claims that are fully implemented (Express, TypeORM, dedicated
   Dockerfiles, Helm chart with ConfigMaps/Secrets, Telepresence/Minikube helper
   scripts, GitHub Actions on `push: main` and pull requests, Docker builds in
   CI, Pinia, Vue Router, Axios, Composition API, `script setup`, Tailwind, Vite,
-  PWA via `vite-plugin-pwa`) are not annotated here.
+  PWA via `vite-plugin-pwa`, per-IP rate limiting, CSV export, client cache
+  purge on new deploy, and the group monthly totals chart) are not annotated
+  here.

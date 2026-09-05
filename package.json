@@ -24,7 +24,8 @@
     "test": "npm run test --workspace @doschei/backend && npm run test --workspace @doschei/frontend",
     "test:integration": "npm run test:integration --workspace @doschei/backend --",
     "seed": "npm run seed --workspace @doschei/backend",
-    "test:playwright": "bash ./scripts/test-playwright.sh"
+    "test:playwright": "bash ./scripts/test-playwright.sh",
+    "screenshots": "bash ./scripts/capture-screenshots.sh"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

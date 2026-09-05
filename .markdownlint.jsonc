@@ -1,4 +1,9 @@
 {
   "default": true,
-  "MD013": false
+  "MD013": false,
+  // The README needs a little inline HTML: the centred logo (<p align>), and the
+  // screenshot row (<img width>), because a row of three 375px-wide captures
+  // overflows the rendered content column and Markdown image syntax cannot
+  // scale them for display without shrinking the committed files.
+  "MD033": { "allowed_elements": ["img", "p"] }
 }
