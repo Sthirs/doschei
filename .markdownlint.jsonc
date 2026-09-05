@@ -5,5 +5,7 @@
   // screenshot row (<img width>), because a row of three 375px-wide captures
   // overflows the rendered content column and Markdown image syntax cannot
   // scale them for display without shrinking the committed files.
-  "MD033": { "allowed_elements": ["img", "p"] }
+  "MD033": {
+    "allowed_elements": ["img", "p", "strong"]
+  }
 }
