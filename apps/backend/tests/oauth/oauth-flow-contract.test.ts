@@ -65,6 +65,11 @@ const { envMock, inMemoryUsers, inMemoryIdentities } = vi.hoisted(() => {
       FRONTEND_URL: '' as string,
       OAUTH_STATE_SECRET: 'test-state-secret',
       JWT_SECRET: 'test-jwt-secret',
+      // ADR-0023 session lifetimes (env.ts supplies these post-transform;
+      // this mock replaces the whole module, so it must too).
+      ACCESS_TOKEN_TTL_SECONDS: 3600,
+      REFRESH_TOKEN_TTL_SECONDS: 7776000,
+      REFRESH_TOKEN_REUSE_GRACE_SECONDS: 30,
       // Parsed OAUTH_CONFIG object (the Zod transform runs at module
       // load time; the mock replaces the entire env module so it
       // supplies the already-transformed value). `autoRegister: true`
@@ -139,6 +144,12 @@ vi.mock('../../src/db/data-source', () => {
 
   const userRepo = makeRepo(inMemoryUsers);
   const identityRepo = makeRepo(inMemoryIdentities);
+  // ADR-0023: the callback starts a refresh-token family after the identity
+  // upsert. Give it a real in-memory repo so the insert is exercised rather
+  // than stubbed away; rotation is covered in refreshTokenRotation.test.ts.
+  const refreshTokenRepo = makeRepo(
+    [] as Array<{ id: string; userId: string; tokenHash: string }>,
+  );
   const invitationRepo = {
     createQueryBuilder: () => ({
       update: () => ({
@@ -170,7 +181,14 @@ vi.mock('../../src/db/data-source', () => {
         if (entity.name === 'Invitation') {
           return invitationRepo;
         }
+        if (entity.name === 'RefreshToken') {
+          return refreshTokenRepo;
+        }
         return userRepo;
+      },
+      manager: {
+        getRepository: (entity: { name?: string }) =>
+          entity.name === 'RefreshToken' ? refreshTokenRepo : userRepo,
       },
       transaction: vi.fn(
         async (cb: (manager: unknown) => Promise<unknown>) =>

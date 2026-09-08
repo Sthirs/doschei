@@ -93,6 +93,14 @@ export const router = createRouter({
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
+  // ADR-0023: with no access token in localStorage nothing can 401, so the
+  // renew-and-retry interceptor never fires. Try the httpOnly refresh cookie
+  // instead — after a storage eviction it is the only surviving credential.
+  // Bounded to one attempt per page load inside lib/sessionRefresh.
+  if (!authStore.token) {
+    await authStore.tryRestoreSession();
+  }
+
   if (authStore.token && !authStore.user) {
     await authStore.fetchCurrentUser();
   }

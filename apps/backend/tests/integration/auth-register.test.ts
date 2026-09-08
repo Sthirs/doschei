@@ -1,4 +1,10 @@
-import { createJsonRequest, createTestUserPayload, ensureBackendAvailable } from './helpers/api';
+import {
+  createJsonRequest,
+  createTestUserPayload,
+  ensureBackendAvailable,
+  readSetCookie,
+  REFRESH_COOKIE_NAME,
+} from './helpers/api';
 
 describe('POST /api/auth/register', () => {
   beforeAll(async () => {
@@ -22,6 +28,14 @@ describe('POST /api/auth/register', () => {
       displayName: payload.displayName,
       language: 'en',
     });
+    // ADR-0023: registration starts a session, so it sets the refresh cookie —
+    // and the raw secret must never appear in the body.
+    const cookie = readSetCookie(response.headers, REFRESH_COOKIE_NAME);
+    expect(cookie).toBeDefined();
+    expect(cookie).toContain('HttpOnly');
+    expect(JSON.stringify(response.body)).not.toContain(
+      (cookie as string).slice(REFRESH_COOKIE_NAME.length + 1).split(';')[0],
+    );
   });
 
   it('rejects duplicate registration email', async () => {

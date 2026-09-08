@@ -24,4 +24,15 @@ describe('GET /api/auth/me', () => {
     expect(response.status).toBe(401);
     expect(response.body.message).toMatch(/missing bearer token/i);
   });
+
+  // ADR-0023: the frontend's renew-and-retry interceptor is triggered by a 401,
+  // so an unverifiable access token MUST produce 401 and not 500. This is the
+  // contract the whole silent-renewal path hangs off.
+  it('rejects an unverifiable token with 401, not 500', async () => {
+    const response = await createJsonRequest<{ message: string }>('/api/auth/me', {
+      headers: { Authorization: 'Bearer not-a-jwt' },
+    });
+
+    expect(response.status).toBe(401);
+  });
 });

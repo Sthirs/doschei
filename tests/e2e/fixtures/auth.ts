@@ -4,26 +4,147 @@
  *
  * authenticatedPage: test-scoped fixture that logs the demo user in via
  * POST /api/auth/login, persists a Playwright storageState to
- * tests/e2e/.auth/demo.json, and returns a Page with that storageState already
- * applied. Reuses the cached demo.json when present.
+ * tests/e2e/.auth/demo-<workerIndex>.json, and returns a Page with that
+ * storageState already applied. Reuses the cached file only while it is still
+ * usable (see isStorageStateUsable).
  *
  * pageForUser: test-scoped factory fixture. A test calls
  * `const page = await pageForUser(email, password)` to get a logged-in Page for
  * an arbitrary user. Each call logs in via the API, writes a fresh storageState
- * under tests/e2e/.auth/<sanitized-email>.json, and returns a new Page with that
- * storageState applied. All pages created by the factory are closed after the
- * test. Used by the 2-user invitation spec (invitations.spec.ts) so
- * browser contexts run inside the single-worker Playwright config (playwright.config.ts:7) or cross-worker in CI (2 workers).
+ * under tests/e2e/.auth/<sanitized-email>-<workerIndex>.json, and returns a new
+ * Page with that storageState applied. All pages created by the factory are
+ * closed after the test. Used by the 2-user invitation spec (invitations.spec.ts)
+ * so browser contexts run inside the single-worker Playwright config
+ * (playwright.config.ts:7) or cross-worker in CI (2 workers).
+ *
+ * ADR-0023 made three things load-bearing here:
+ *
+ *  1. The refresh cookie MUST be captured into the storageState. Without it a
+ *     stored access token that has aged past ACCESS_TOKEN_TTL_SECONDS has no way
+ *     to renew, and every spec fails at the auth guard.
+ *  2. A cached file MUST be validated rather than trusted. The old code returned
+ *     early on existsSync alone, so a file written before the access token was
+ *     shortened — or simply written an hour ago during a long run — silently
+ *     produced an expired session.
+ *  3. Storage state MUST be per worker. Two workers sharing one file hold the
+ *     SAME refresh cookie; when both refresh it, the loser trips reuse detection
+ *     and the family is revoked for both.
  */
-import { existsSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 import { test as base, type Page } from '@playwright/test';
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
 const AUTH_DIR = resolve('tests/e2e/.auth');
-const DEMO_STORAGE_PATH = resolve(AUTH_DIR, 'demo.json');
 const TOKEN_KEY = 'doschei.auth.token';
+const REFRESH_COOKIE_NAME = 'doschei.auth.refresh';
+/** Refuse a cached access token with less than this much life left. */
+const MIN_TOKEN_LIFETIME_SECONDS = 60;
+
+type StoredCookie = {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  expires: number;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'Strict' | 'Lax' | 'None';
+};
+
+/**
+ * Turn the backend's `Set-Cookie` into Playwright's storageState cookie shape.
+ *
+ * Path, Max-Age and SameSite are parsed out of the real header rather than
+ * hardcoded, so a future flag change cannot silently produce a cookie the
+ * browser then rejects.
+ */
+function parseRefreshCookie(setCookie: string[]): StoredCookie {
+  const header = setCookie.find((line) =>
+    line.startsWith(`${REFRESH_COOKIE_NAME}=`),
+  );
+
+  // A missing refresh cookie is a real backend regression (ADR-0023 issues one
+  // on every login). Failing loudly here beats a confusing auth-guard failure
+  // an hour into the run.
+  if (!header) {
+    throw new Error(
+      `Login did not set the ${REFRESH_COOKIE_NAME} cookie. Set-Cookie was: ${JSON.stringify(setCookie)}`,
+    );
+  }
+
+  const [pair, ...attributes] = header.split(';').map((part) => part.trim());
+  const value = pair.slice(`${REFRESH_COOKIE_NAME}=`.length);
+
+  const attribute = (name: string): string | undefined => {
+    const match = attributes.find(
+      (attr) => attr.toLowerCase().startsWith(`${name.toLowerCase()}=`),
+    );
+    return match?.slice(name.length + 1);
+  };
+  const hasFlag = (name: string): boolean =>
+    attributes.some((attr) => attr.toLowerCase() === name.toLowerCase());
+
+  const maxAge = Number(attribute('Max-Age') ?? '0');
+  const sameSite = (attribute('SameSite') ?? 'Lax') as StoredCookie['sameSite'];
+
+  return {
+    name: REFRESH_COOKIE_NAME,
+    value,
+    // Host-only cookie: no leading dot.
+    domain: new URL(baseURL).hostname,
+    path: attribute('Path') ?? '/',
+    expires: Math.floor(Date.now() / 1000) + (maxAge || 3600),
+    httpOnly: hasFlag('HttpOnly'),
+    secure: hasFlag('Secure'),
+    sameSite,
+  };
+}
+
+/** Seconds of life left on a JWT, or null when it cannot be read. */
+function tokenSecondsRemaining(token: string): number | null {
+  const payload = token.split('.')[1];
+  if (!payload) return null;
+  try {
+    const json = Buffer.from(payload, 'base64url').toString('utf8');
+    const exp = (JSON.parse(json) as { exp?: number }).exp;
+    if (typeof exp !== 'number') return null;
+    return exp - Math.floor(Date.now() / 1000);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A cached storageState is reusable only if BOTH credentials still work: an
+ * access token with real life left, and an unexpired refresh cookie to renew it
+ * with. Anything else falls through to a fresh login, which also means every
+ * pre-ADR-0023 file (they have no cookies) invalidates itself automatically.
+ */
+function isStorageStateUsable(path: string): boolean {
+  if (!existsSync(path)) return false;
+
+  try {
+    const state = JSON.parse(readFileSync(path, 'utf8')) as {
+      cookies?: StoredCookie[];
+      origins?: Array<{ localStorage?: Array<{ name: string; value: string }> }>;
+    };
+
+    const token = state.origins
+      ?.flatMap((origin) => origin.localStorage ?? [])
+      .find((entry) => entry.name === TOKEN_KEY)?.value;
+    if (!token) return false;
+
+    const remaining = tokenSecondsRemaining(token);
+    if (remaining === null || remaining < MIN_TOKEN_LIFETIME_SECONDS) return false;
+
+    const cookie = state.cookies?.find((c) => c.name === REFRESH_COOKIE_NAME);
+    return Boolean(cookie && cookie.expires > Date.now() / 1000);
+  } catch {
+    return false;
+  }
+}
 
 type LoginResponse = {
   token: string;
@@ -33,15 +154,16 @@ type LoginResponse = {
 /**
  * Shared inner helper: logs in via `POST /api/auth/login`, persists a Playwright
  * storageState file to `storagePath`, and returns `storagePath`. Reuses the
- * cached file when it already exists so repeated logins for the same user are a
- * no-op.
+ * cached file only while `isStorageStateUsable` says both credentials in it are
+ * still good, so repeated logins for the same user are a no-op but a stale file
+ * is replaced rather than handed back.
  */
 async function loginAndCacheStorageState(
   email: string,
   password: string,
   storagePath: string,
 ): Promise<string> {
-  if (existsSync(storagePath)) {
+  if (isStorageStateUsable(storagePath)) {
     return storagePath;
   }
 
@@ -62,7 +184,9 @@ async function loginAndCacheStorageState(
   }
 
   const storageState = {
-    cookies: [],
+    // ADR-0023: carry the refresh cookie, or the browser has no way to renew an
+    // access token that ages out mid-run.
+    cookies: [parseRefreshCookie(response.headers.getSetCookie())],
     origins: [
       {
         origin: baseURL,
@@ -87,21 +211,27 @@ function sanitizeEmailForFilename(email: string): string {
 type PageForUser = (email: string, password: string) => Promise<Page>;
 
 export const test = base.extend<{ authenticatedPage: Page; pageForUser: PageForUser }>({
-  authenticatedPage: async ({ browser }, use) => {
+  authenticatedPage: async ({ browser }, use, testInfo) => {
     const storageState = await loginAndCacheStorageState(
       'demo@doschei.local',
       'password123',
-      DEMO_STORAGE_PATH,
+      // Per worker: two workers sharing one file would hold the same refresh
+      // cookie, and the loser of a concurrent rotation trips reuse detection.
+      // Concurrent families for one user are perfectly legal server-side.
+      resolve(AUTH_DIR, `demo-${testInfo.parallelIndex}.json`),
     );
     const page = await browser.newPage({ storageState });
     await use(page);
     await page.close();
   },
 
-  pageForUser: async ({ browser }, use) => {
+  pageForUser: async ({ browser }, use, testInfo) => {
     const createdPages: Page[] = [];
     const factory: PageForUser = async (email, password) => {
-      const storagePath = resolve(AUTH_DIR, `${sanitizeEmailForFilename(email)}.json`);
+      const storagePath = resolve(
+        AUTH_DIR,
+        `${sanitizeEmailForFilename(email)}-${testInfo.parallelIndex}.json`,
+      );
       const storageState = await loginAndCacheStorageState(email, password, storagePath);
       const page = await browser.newPage({ storageState });
       createdPages.push(page);

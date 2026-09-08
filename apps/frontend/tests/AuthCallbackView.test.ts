@@ -5,11 +5,14 @@ import AuthCallbackView from '@/views/AuthCallbackView.vue';
 import { i18n } from '@/i18n';
 
 const mockLoginWithToken = vi.fn();
-const mockLogout = vi.fn();
+// ADR-0023 split logout() (server-side revocation) from clearSession()
+// (local-only). The callback failure path uses clearSession, because a token
+// that never worked has no live session to revoke.
+const mockClearSession = vi.fn();
 const mockAuthStore = {
   user: null as { id: string } | null,
   loginWithToken: mockLoginWithToken,
-  logout: mockLogout,
+  clearSession: mockClearSession,
 };
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => mockAuthStore,
@@ -123,7 +126,7 @@ describe('AuthCallbackView', () => {
 
       await mountView();
 
-      expect(mockLogout).toHaveBeenCalledTimes(1);
+      expect(mockClearSession).toHaveBeenCalledTimes(1);
       expect(mockRouterReplace).toHaveBeenCalledWith({
         name: 'login',
         query: { error: 'oauth_failed' },
@@ -137,7 +140,7 @@ describe('AuthCallbackView', () => {
 
       await mountView();
 
-      expect(mockLogout).toHaveBeenCalledTimes(1);
+      expect(mockClearSession).toHaveBeenCalledTimes(1);
       expect(mockRouterReplace).toHaveBeenCalledWith({
         name: 'login',
         query: { error: 'oauth_failed' },

@@ -40,6 +40,13 @@ backend:
     FRONTEND_URL: ""
     RATE_LIMIT_WINDOW_MS: "300000"
     RATE_LIMIT_LIMIT: "500"
+    # ADR-0023 session lifetimes, in seconds. The refresh window is sliding:
+    # every rotation resets it, so an active user never has to sign in again.
+    # Neither is a secret — the refresh secrets themselves are per-token random
+    # values, not a signing key.
+    ACCESS_TOKEN_TTL_SECONDS: "3600"
+    REFRESH_TOKEN_TTL_SECONDS: "7776000"
+    REFRESH_TOKEN_REUSE_GRACE_SECONDS: "30"
   secrets:
     jwt:
       secretName: doschei-backend-secrets

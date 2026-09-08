@@ -47,6 +47,11 @@ dev
 {{- else if eq $key "JWT_SECRET" -}}change-me-dev-secret
 {{- else if eq $key "FRONTEND_URL" -}}{{ printf "http://%s" $root.Values.ingress.host }}
 {{- else if eq $key "RATE_LIMIT_LIMIT" -}}1000000
+{{/* ADR-0023: the two TTLs get NO devMode override on purpose, so dev and CI
+     exercise the real lifetimes. Only the reuse grace window is shortened, so
+     the reuse-detection integration test needs a ~1.5s sleep instead of ~31s
+     while still covering a genuine two-tab race (which resolves in ms). */}}
+{{- else if eq $key "REFRESH_TOKEN_REUSE_GRACE_SECONDS" -}}1
 {{- else -}}{{- index $root.Values.backend.env $key -}}
 {{- end -}}
 {{- else -}}

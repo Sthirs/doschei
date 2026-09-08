@@ -33,7 +33,9 @@ onMounted(async () => {
     }
     throw new Error('loginWithToken did not set user');
   } catch {
-    authStore.logout();
+    // Local-only clear: the token we were handed never worked, so there is no
+    // live session to revoke server-side (ADR-0023).
+    authStore.clearSession();
     await router.replace({ name: 'login', query: { error: 'oauth_failed' } });
   }
 });

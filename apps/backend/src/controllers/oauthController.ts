@@ -9,6 +9,8 @@ import {
   UnverifiedEmailError,
   UserNotRegisteredError,
 } from '../services/oauthService';
+import { issueRefreshToken } from '../services/refreshTokenService';
+import { setRefreshCookie } from '../utils/refreshCookie';
 
 const oauthService = new OAuthService();
 
@@ -82,7 +84,7 @@ export const oauthCallback = async (req: Request, res: Response): Promise<void> 
     // claim (first-user-creation branch only; returning / link-by-email
     // branches never overwrite the user's saved language).
     const acceptLanguage = req.headers['accept-language'];
-    const { token } = await oauthService.handleCallback(
+    const { token, user } = await oauthService.handleCallback(
       provider,
       callbackUrl,
       queryState,
@@ -90,6 +92,12 @@ export const oauthCallback = async (req: Request, res: Response): Promise<void> 
       acceptLanguage,
     );
     res.clearCookie('doschei.oauth.state', { path: '/' });
+    // ADR-0023: an OAuth sign-in gets the same rotating refresh cookie as a
+    // local login — both mint the same app JWT, so one mechanism covers both.
+    // Set-Cookie is not filtered by SameSite, so a `strict` cookie can still be
+    // issued on this cross-site redirect response.
+    const refresh = await issueRefreshToken(user.id);
+    setRefreshCookie(res, refresh.raw);
     res.redirect(`${loggedFrontendUrl}/auth/callback?token=${encodeURIComponent(token)}`);
   } catch (error: unknown) {
     res.clearCookie('doschei.oauth.state', { path: '/' });
