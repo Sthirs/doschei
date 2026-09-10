@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.7.0](https://github.com/Sthirs/doschei/compare/v1.6.0...v1.7.0) (2026-09-10)
+
+
+### Features
+
+* implement refresh token ([#110](https://github.com/Sthirs/doschei/issues/110)) ([f72b8a1](https://github.com/Sthirs/doschei/commit/f72b8a1e3c15f0400432c6c1a2683d7a3bf5631f))
+
+
+### Bug Fixes
+
+* autofocus on amout of every new expense ([#113](https://github.com/Sthirs/doschei/issues/113)) ([56aa9ca](https://github.com/Sthirs/doschei/commit/56aa9ca9083b3a5db50a8ee4a85873fda83c19c9))
+* keep settlement amount when opening it for edit ([#112](https://github.com/Sthirs/doschei/issues/112)) ([1dd9d16](https://github.com/Sthirs/doschei/commit/1dd9d16bf0c5808b578ddc8536611cfb968d182d))
+* set colors of navigation bar when installed as PWA ([#114](https://github.com/Sthirs/doschei/issues/114)) ([801a8f7](https://github.com/Sthirs/doschei/commit/801a8f7d4f2a73da8b0c93f49836ebb0d66da2eb))
+
 ## [1.6.0](https://github.com/Sthirs/doschei/compare/v1.5.2...v1.6.0) (2026-09-05)
 
 
