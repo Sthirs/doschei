@@ -1,4 +1,4 @@
-FROM node:26.8.1-alpine3.23@sha256:871eb674ad6e692c91330a8959f1ce2f80ba3f445cdc54e306869d2ea265e42d AS build
+FROM node:26.8.2-alpine3.23@sha256:a3024faf41c40992531ecfb00604384665be870a44626afaf181c6d583f89296 AS build
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
@@ -9,7 +9,7 @@ RUN npm ci --workspace @doschei/backend --ignore-scripts
 COPY apps ./apps
 RUN npm run build --workspace @doschei/backend
 
-FROM node:26.8.1-alpine3.23@sha256:871eb674ad6e692c91330a8959f1ce2f80ba3f445cdc54e306869d2ea265e42d
+FROM node:26.8.2-alpine3.23@sha256:a3024faf41c40992531ecfb00604384665be870a44626afaf181c6d583f89296
 WORKDIR /app
 
 COPY --chown=1001:1001 package.json package-lock.json* ./
