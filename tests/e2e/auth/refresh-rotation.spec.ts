@@ -119,7 +119,21 @@ test.describe('refresh token rotation', () => {
 
   test('a visitor with no session is sent to /login after exactly one attempt', async ({ browser }) => {
     const context = await browser.newContext();
+
+    // ADR-0020: a virgin localStorage has no `doschei.app.buildId`, so the boot
+    // probe reads the first visit as a deploy and does its one-shot
+    // purge-and-reload (lib/appVersion.ts). That extra document load legitimately
+    // gets its own boot restore, which is not the refresh storm under test.
+    // Seed the live build id — same trick as app-version.spec.ts:90 — so this
+    // page loads exactly once. Nothing here weakens the assertions below.
+    const { buildId } = (await (
+      await context.request.get('/app-version.json')
+    ).json()) as { buildId: string };
     const page = await context.newPage();
+    await page.addInitScript(
+      (id: string) => localStorage.setItem('doschei.app.buildId', id),
+      buildId,
+    );
 
     const attempts: string[] = [];
     page.on('request', (request) => {
