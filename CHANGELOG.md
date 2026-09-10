@@ -10,7 +10,7 @@
 
 ### Bug Fixes
 
-* autofocus on amout of every new expense ([#113](https://github.com/Sthirs/doschei/issues/113)) ([56aa9ca](https://github.com/Sthirs/doschei/commit/56aa9ca9083b3a5db50a8ee4a85873fda83c19c9))
+* autofocus on amount of every new expense ([#113](https://github.com/Sthirs/doschei/issues/113)) ([56aa9ca](https://github.com/Sthirs/doschei/commit/56aa9ca9083b3a5db50a8ee4a85873fda83c19c9))
 * keep settlement amount when opening it for edit ([#112](https://github.com/Sthirs/doschei/issues/112)) ([1dd9d16](https://github.com/Sthirs/doschei/commit/1dd9d16bf0c5808b578ddc8536611cfb968d182d))
 * set colors of navigation bar when installed as PWA ([#114](https://github.com/Sthirs/doschei/issues/114)) ([801a8f7](https://github.com/Sthirs/doschei/commit/801a8f7d4f2a73da8b0c93f49836ebb0d66da2eb))
 
