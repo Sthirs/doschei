@@ -27,9 +27,7 @@ const refreshCookieValue = async (
 test.describe('refresh token rotation', () => {
   test('a signed-in user survives losing their access token', async ({ pageForUser }) => {
     const user = await registerUserViaApi(
-      `refresh-reload-${Date.now()}@doschei.local`,
-      'password123',
-      'Refresh Reload',
+      `refresh-reload-${Date.now()}@doschei.local`
     );
     const page = await pageForUser(user.email, user.password);
 
@@ -63,9 +61,7 @@ test.describe('refresh token rotation', () => {
 
   test('a 401 mid-session is renewed and retried transparently', async ({ pageForUser }) => {
     const user = await registerUserViaApi(
-      `refresh-retry-${Date.now()}@doschei.local`,
-      'password123',
-      'Refresh Retry',
+      `refresh-retry-${Date.now()}@doschei.local`
     );
     const page = await pageForUser(user.email, user.password);
 
@@ -95,9 +91,7 @@ test.describe('refresh token rotation', () => {
 
   test('signing out revokes the refresh token server-side', async ({ pageForUser }) => {
     const user = await registerUserViaApi(
-      `refresh-logout-${Date.now()}@doschei.local`,
-      'password123',
-      'Refresh Logout',
+      `refresh-logout-${Date.now()}@doschei.local`
     );
     const page = await pageForUser(user.email, user.password);
 
