@@ -93,6 +93,26 @@ export class GroupDetailPage {
     await this.page.goto(`/groups/${groupId}/expenses/new`);
   }
 
+  // GroupDetailView.vue:238-245 — the sticky "+ Add expense" button calls
+  // `navigateToExpenseNew()` (GroupDetailView.vue:71-78), a `router.push` —
+  // client-side navigation, NOT `page.goto`/a full document load. Use this
+  // (instead of `gotoAddExpense`) when a test needs to reach the form a
+  // SECOND time within the SAME document — e.g. to catch autofocus
+  // regressions that only reproduce without a full page reload.
+  async clickAddExpense(): Promise<void> {
+    await this.page.getByRole('button', { name: '+ Add expense' }).click();
+    await this.page.waitForURL(/\/groups\/[^/]+\/expenses\/new$/, { timeout: 10000 });
+  }
+
+  // ExpenseFormView.vue:48-64 — the topbar back arrow, aria-label
+  // "Back to group", is wired to `goBack()` (useExpenseForm.ts:58-64), a
+  // `router.push` back to group-detail — NOT a browser-history navigation —
+  // so leaving the form this way does NOT reload the document either.
+  async clickBackToGroup(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Back to group' }).click();
+    await this.page.waitForURL(/\/groups\/[^/]+$/, { timeout: 10000 });
+  }
+
   async gotoEditExpense(groupId: string, expenseId: string): Promise<void> {
     await this.page.goto(`/groups/${groupId}/expenses/${expenseId}/edit`);
   }
@@ -176,6 +196,41 @@ export class GroupDetailPage {
 
   async fillAmount(value: string) {
     await this.amountInput.fill(value);
+  }
+
+  // AmountField.vue — in create mode the amount input focuses itself on
+  // every mount (a template-ref `.focus()` call in `onMounted`, not the bare
+  // `autofocus` attribute — see the fix at AmountField.vue). Used to catch
+  // regressions where focus only lands on the FIRST mount of the document.
+  // ExpenseFormView.vue passes `:autofocus="mode === 'create'"`, so this
+  // assertion is only valid when opening the CREATE form.
+  async expectAmountFocused() {
+    await expect(this.amountInput).toBeFocused();
+  }
+
+  // AmountField.vue — the amount input only autofocuses when the parent
+  // passes `:autofocus="mode === 'create'"` (ExpenseFormView.vue), so edit
+  // mode must NOT steal focus and pop the mobile keyboard over a form the
+  // user is only reviewing.
+  //
+  // A bare `await expect(this.amountInput).not.toBeFocused()` would be
+  // false-confidence here: it's a NEGATED web-first assertion, so it is
+  // satisfied the instant the condition holds — including while the input is
+  // still detached during ExpenseFormView's `expenseForm.loading` state
+  // (rendered until the group finishes loading), i.e. BEFORE AmountField (and
+  // its `onMounted` autofocus logic) ever runs. That would let this check
+  // pass even if edit mode still stole focus.
+  //
+  // To close that gap, the caller must supply the value the form is expected
+  // to have loaded. Waiting for `toHaveValue` to hold first forces the poll
+  // to keep retrying until AmountField has actually mounted AND
+  // `initialise()` has populated `amount` from the fetched expense — exactly
+  // the point at which an unconditional `.focus()` call would already have
+  // fired (Vue's `onMounted`/`nextTick` microtasks flush before the DOM
+  // becomes observable to Playwright's polling). Only then do we check focus.
+  async expectAmountNotFocusedAfterLoad(expectedValue: string) {
+    await expect(this.amountInput).toHaveValue(expectedValue);
+    await expect(this.amountInput).not.toBeFocused();
   }
 
   async setPaidBy(displayName: string) {
