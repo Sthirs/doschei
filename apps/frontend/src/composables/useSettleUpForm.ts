@@ -141,6 +141,11 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
   });
 
   watch([payerId, payeeId], () => {
+    // Prefill/auto-recompute is create-mode-only: in edit mode payerId/payeeId
+    // are set from the settlement during initialise(), and the amount must
+    // stay the settlement's own stored amount, not the live outstanding
+    // balance.
+    if (mode.value === 'edit') return;
     if (amountTouched.value) return;
     if (!group.value) return;
     const computed_amount = settlementAmountFor(
