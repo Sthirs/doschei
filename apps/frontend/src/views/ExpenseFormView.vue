@@ -103,7 +103,7 @@ provide(expenseSplitKey, split);
             @submit.prevent="submit"
           >
             <!-- Amount (Figma-aligned) -->
-            <AmountField v-model="amount" />
+            <AmountField v-model="amount" :autofocus="mode === 'create'" />
 
             <!-- Description + Category -->
             <DescriptionRow
