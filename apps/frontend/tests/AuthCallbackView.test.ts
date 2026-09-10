@@ -6,16 +6,25 @@ import { i18n } from '@/i18n';
 
 const mockLoginWithToken = vi.fn();
 // ADR-0023 split logout() (server-side revocation) from clearSession()
-// (local-only). The callback failure path uses clearSession, because a token
-// that never worked has no live session to revoke.
+// (local-only). The callback failure path needs logout(): oauthController mints
+// a refresh family and sets the cookie *before* redirecting here, so a live
+// credential exists even when the token we were handed does not work.
+const mockLogout = vi.fn();
 const mockClearSession = vi.fn();
 const mockAuthStore = {
   user: null as { id: string } | null,
   loginWithToken: mockLoginWithToken,
+  logout: mockLogout,
   clearSession: mockClearSession,
 };
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => mockAuthStore,
+}));
+
+// Hoisted because the factory dereferences it eagerly, unlike the store mock.
+const mockSuppressSessionRestore = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/sessionRefresh', () => ({
+  suppressSessionRestore: mockSuppressSessionRestore,
 }));
 
 const mockRouterReplace = vi.fn();
@@ -110,12 +119,25 @@ describe('AuthCallbackView', () => {
       expect(mockLoginWithToken).not.toHaveBeenCalled();
       expect(mockRouterReplace).not.toHaveBeenCalled();
 
+      expect(mockSuppressSessionRestore).toHaveBeenCalledTimes(1);
+
       await vi.advanceTimersByTimeAsync(2000);
 
       expect(mockRouterReplace).toHaveBeenCalledWith({
         name: 'login',
         query: { error: 'oauth_failed' },
       });
+    });
+
+    it('cancels the pending redirect when the view unmounts first', async () => {
+      mockRouteQuery.value = {};
+      const wrapper = mount(AuthCallbackView, { global: { plugins: [i18n] } });
+      await wrapper.vm.$nextTick();
+
+      wrapper.unmount();
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(mockRouterReplace).not.toHaveBeenCalled();
     });
   });
 
@@ -126,7 +148,9 @@ describe('AuthCallbackView', () => {
 
       await mountView();
 
-      expect(mockClearSession).toHaveBeenCalledTimes(1);
+      expect(mockLogout).toHaveBeenCalledTimes(1);
+      // A local-only clear would leave the freshly minted refresh cookie live.
+      expect(mockClearSession).not.toHaveBeenCalled();
       expect(mockRouterReplace).toHaveBeenCalledWith({
         name: 'login',
         query: { error: 'oauth_failed' },
@@ -140,7 +164,9 @@ describe('AuthCallbackView', () => {
 
       await mountView();
 
-      expect(mockClearSession).toHaveBeenCalledTimes(1);
+      expect(mockLogout).toHaveBeenCalledTimes(1);
+      // A local-only clear would leave the freshly minted refresh cookie live.
+      expect(mockClearSession).not.toHaveBeenCalled();
       expect(mockRouterReplace).toHaveBeenCalledWith({
         name: 'login',
         query: { error: 'oauth_failed' },
