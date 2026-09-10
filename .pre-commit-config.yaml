@@ -42,7 +42,7 @@ repos:
           - --ignore-words-list=expres,afterall
 
   - repo: https://github.com/kjanat/actionlint
-    rev: c9565647ad2ff016b50b148a595dfcce50975816 # frozen: v1.13.0
+    rev: 662318dd6bbd9c0c120e35b03168bc1be69bf428 # frozen: v1.16.1
     hooks:
       - id: actionlint
 
@@ -52,7 +52,7 @@ repos:
       - id: shellcheck
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 1f1e8bf348ff38fc88619a38d3ca4d9c56abea49 # frozen: v0.16.5
+    rev: 321478e58f4938179c6b86e4ddfa923d1547a49b # frozen: v0.16.6
     hooks:
       - id: ruff-check
         args:
@@ -60,7 +60,7 @@ repos:
       - id: ruff-format
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: d153933366256874470b9d8395de436c50714f41 # frozen: 0.12.9
+    rev: 729e1cac863cab7564738c1672fbc1d2d7c7a5c2 # frozen: 0.12.12
     hooks:
       - id: uv-lock
 
@@ -81,7 +81,7 @@ repos:
         exclude: CHANGELOG\.md$
 
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: c13d0969095f9fe07df5d8502df705a33e032b86 # frozen: 44.59.1
+    rev: ab51a0bf3693d9a29aa93fa9e16d55fdb8384763 # frozen: 44.79.1
     hooks:
       - id: renovate-config-validator
         args: [--strict]
