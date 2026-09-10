@@ -393,6 +393,17 @@ export class GroupDetailPage {
     await expect(row.getByText(`\u20AC${parseFloat(opts.amount).toFixed(2)}`)).toBeVisible();
   }
 
+  // Opens a settlement's edit form the way a real user does it: clicking the
+  // settlement row in the expense list (GroupDetailView.vue:212-222 — the
+  // ExpenseRow's native click is forwarded via attribute fallthrough and
+  // routed to navigateToSettleUpEdit for SETTLEMENT-kind entries). This is
+  // deliberately NOT the same code path as `gotoSettleUpEdit` (a direct
+  // `page.goto`), so it also exercises the `sharedGroup` deep-link fallback
+  // in useSettleUpForm.ts:121-133 rather than always hitting the API fetch.
+  async clickSettlementRow() {
+    await this.page.getByTestId('expense-row').filter({ hasText: 'Settlement' }).click();
+  }
+
   async deleteCurrentSettlement() {
     // SettleUpView.vue:333-340 — the form's "Delete this payment" trigger
     // reveals the confirm panel (line 343-378, with h3 "Delete payment?").
