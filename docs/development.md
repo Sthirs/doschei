@@ -132,6 +132,41 @@ The API applies a global per-IP rate limiter (express-rate-limit):
 | `RATE_LIMIT_WINDOW_MS` | `300000` | Length of the per-IP quota window in milliseconds |
 | `RATE_LIMIT_LIMIT`     | `500`    | Max requests per IP per window; excess gets 429   |
 
+### Session lifetimes
+
+Sessions are a short-lived access JWT plus a rotating refresh token
+([ADR-0023](adr/0023-refresh-token-rotation.md)). The refresh window is
+**sliding** — every rotation resets it — so a user who opens the app at least
+once per window never has to sign in again.
+
+| Variable                            | Default   | Effect                                                        |
+|-------------------------------------|-----------|---------------------------------------------------------------|
+| `ACCESS_TOKEN_TTL_SECONDS`          | `3600`    | Lifetime of the `Bearer` access JWT                           |
+| `REFRESH_TOKEN_TTL_SECONDS`         | `7776000` | Sliding refresh window (90 days); every rotation extends it   |
+| `REFRESH_TOKEN_REUSE_GRACE_SECONDS` | `30`      | Grace window for a replayed just-rotated token (see below)    |
+
+Inside the grace window a replay is treated as a benign multi-tab race — 401,
+family kept. Outside it, the replay is treated as theft: 401, and the whole
+token family is revoked.
+
+Notes:
+
+- The refresh token is delivered as an httpOnly cookie named
+  `doschei.auth.refresh`, scoped to `/api/auth/session` — the mount point of the
+  two endpoints that use it, `POST /api/auth/session/refresh` and
+  `POST /api/auth/session/logout`. It is never present in a response body.
+- The cookie is marked `secure` when `NODE_ENV=production`, so **a production
+  deployment requires TLS**. Over plain HTTP the browser silently discards it and
+  users are signed out every `ACCESS_TOKEN_TTL_SECONDS`; the backend logs a
+  warning at startup when it detects that combination.
+- `devMode` forces `REFRESH_TOKEN_REUSE_GRACE_SECONDS=1` so the reuse-detection
+  integration tests stay fast. The two TTLs are deliberately **not** overridden,
+  so dev and CI exercise the real lifetimes.
+- Rotation is single-use: each refresh consumes the presented token and issues a
+  successor in the same family. Presenting an already-consumed token outside the
+  grace window revokes the whole family, which is how a stolen token gets
+  detected. Signing out revokes it too.
+
 ## Testing
 
 Every user-facing feature needs at least one Playwright e2e test — see
@@ -167,8 +202,9 @@ Notes:
 - Tests use unique emails and group names so they can run against the shared
   Minikube database.
 - There is one test file per endpoint: `auth/register`, `auth/login`, `auth/me`,
-  `auth/me/image`, `groups GET`, `groups POST`, `groups/:id/image`,
-  `settlements POST`, `settlements PATCH`, `settlements DELETE`.
+  `auth/me/image`, `auth/session/refresh`, `auth/session/logout`, `groups GET`,
+  `groups POST`, `groups/:id/image`, `settlements POST`, `settlements PATCH`,
+  `settlements DELETE`.
 
 ### End-to-end tests
 

@@ -52,6 +52,8 @@ export const it = {
     signingIn: 'Accesso in corso…',
     redirectingToLogin: 'Reindirizzamento al login…',
     missingToken: 'Token di autenticazione mancante.',
+    sessionExpired: 'La tua sessione è scaduta. Accedi di nuovo.',
+    oauthFailed: 'Accesso non riuscito. Riprova.',
   },
 
   login: {

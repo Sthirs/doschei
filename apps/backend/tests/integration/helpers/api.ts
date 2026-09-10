@@ -1,6 +1,11 @@
 type JsonResponse<T> = {
   status: number;
   body: T;
+  /**
+   * Purely additive — every existing caller destructures `{ status, body }`.
+   * Needed by the ADR-0023 session specs, which assert on `Set-Cookie`.
+   */
+  headers: Headers;
 };
 
 const trimTrailingSlash = (value: string) => value.replace(/\/$/, '');
@@ -53,6 +58,7 @@ export const createJsonRequest = async <T>(
   return {
     status: response.status,
     body: (response.status === 204 ? {} : (await response.json())) as T,
+    headers: response.headers,
   };
 };
 
@@ -79,6 +85,7 @@ export const createMultipartRequest = async <T>(
   return {
     status: response.status,
     body: (response.status === 204 ? {} : (await response.json())) as T,
+    headers: response.headers,
   };
 };
 
@@ -125,3 +132,32 @@ export const registerUser = async (prefix: string) =>
     method: 'POST',
     body: JSON.stringify(createTestUserPayload(prefix)),
   });
+
+/**
+ * The full `Set-Cookie` line for `name`, or undefined. ADR-0023 helpers.
+ */
+export const readSetCookie = (headers: Headers, name: string): string | undefined =>
+  headers.getSetCookie().find((line) => line.startsWith(`${name}=`));
+
+/** The value of a `Set-Cookie` line, up to the first attribute. */
+export const cookieValue = (setCookieLine: string): string =>
+  setCookieLine.slice(setCookieLine.indexOf('=') + 1).split(';')[0];
+
+/** A `Cookie:` request header carrying one cookie. */
+export const cookieHeader = (name: string, value: string): { cookie: string } => ({
+  cookie: `${name}=${value}`,
+});
+
+/**
+ * True when the line tells the browser to drop the cookie (empty value, or an
+ * expiry in the past).
+ */
+export const isClearingCookie = (setCookieLine: string): boolean =>
+  cookieValue(setCookieLine) === '' ||
+  /Expires=Thu, 01 Jan 1970/.test(setCookieLine) ||
+  /Max-Age=0/.test(setCookieLine);
+
+export const REFRESH_COOKIE_NAME = 'doschei.auth.refresh';
+
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));

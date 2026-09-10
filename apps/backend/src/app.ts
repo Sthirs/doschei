@@ -28,9 +28,14 @@ export const createApp = () => {
     legacyHeaders: false,
   });
 
+  // `credentials: true` so the ADR-0023 refresh cookie is not dropped if the
+  // app and API are ever served from different origins. Every environment is
+  // same-origin behind one ingress today, so this changes nothing now — but it
+  // requires CORS_ORIGIN to stay a concrete origin and never '*'.
   app.use(
     cors({
       origin: env.CORS_ORIGIN,
+      credentials: true,
     }),
   );
   app.use(express.json());

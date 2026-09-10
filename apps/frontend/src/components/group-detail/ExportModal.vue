@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import axios from 'axios';
+
+import { api } from '@/lib/api';
 
 const props = defineProps<{ groupId: string; groupName: string }>();
 const emit = defineEmits<{ close: [] }>();
@@ -24,25 +27,38 @@ const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 const monthName = (m: number) =>
   new Date(2000, m - 1, 1).toLocaleDateString(locale.value, { month: 'long' });
 
+/**
+ * Pull `{ message }` out of an error response. `responseType: 'blob'` applies to
+ * error responses as well, so the JSON body arrives as a Blob.
+ */
+const readErrorMessage = async (data: unknown): Promise<string | null> => {
+  try {
+    const text = data instanceof Blob ? await data.text() : String(data ?? '');
+    const parsed: unknown = JSON.parse(text);
+    const message = (parsed as { message?: unknown }).message;
+    return typeof message === 'string' ? message : null;
+  } catch {
+    return null;
+  }
+};
+
 const exportCsv = async () => {
   isExporting.value = true;
   exportErrorMessage.value = '';
   try {
-    const token = localStorage.getItem('doschei.auth.token');
-    const url = `/api/groups/${props.groupId}/expenses/export?month=${encodeURIComponent(exportMonth.value)}`;
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      exportErrorMessage.value = data.message ?? t('groupDetail.exportFailed');
-      return;
-    }
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
+    // Goes through the shared `api` instance rather than a bare fetch, so it
+    // inherits the ADR-0023 renew-and-retry interceptor. With a one-hour access
+    // token, a hand-rolled fetch reading localStorage directly would simply fail
+    // for anyone who opens this sheet an hour into a session.
+    const response = await api.get<Blob>(
+      `/groups/${props.groupId}/expenses/export`,
+      { params: { month: exportMonth.value }, responseType: 'blob' },
+    );
+    const objectUrl = URL.createObjectURL(response.data);
     const a = document.createElement('a');
     a.href = objectUrl;
-    const contentDisp = response.headers.get('content-disposition') ?? '';
+    // axios lowercases response header keys.
+    const contentDisp = String(response.headers['content-disposition'] ?? '');
     const filenameMatch = contentDisp.match(/filename\*?=(?:UTF-8''|")([^"]+)/);
     const filename = filenameMatch
       ? decodeURIComponent(filenameMatch[1])
@@ -53,7 +69,15 @@ const exportCsv = async () => {
     a.remove();
     URL.revokeObjectURL(objectUrl);
     emit('close');
-  } catch {
+  } catch (err: unknown) {
+    // With responseType 'blob' an error body arrives as a Blob too, so the
+    // server's message has to be read back out of it.
+    if (axios.isAxiosError(err) && err.response) {
+      exportErrorMessage.value =
+        (await readErrorMessage(err.response.data)) ??
+        t('groupDetail.exportFailed');
+      return;
+    }
     exportErrorMessage.value = t('groupDetail.exportFailedTryAgain');
   } finally {
     isExporting.value = false;

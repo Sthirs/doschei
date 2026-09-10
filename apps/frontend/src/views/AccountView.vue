@@ -39,7 +39,9 @@ const goBack = () => {
 };
 
 const logout = async () => {
-  authStore.logout();
+  // Awaited so the ADR-0023 refresh-token family is revoked server-side before
+  // we navigate away.
+  await authStore.logout();
   await router.push('/login');
 };
 

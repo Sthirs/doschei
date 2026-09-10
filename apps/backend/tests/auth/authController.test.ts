@@ -20,10 +20,24 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { refreshTokenManagerStub } = vi.hoisted(() => ({
+  // ADR-0023: register/login now start a refresh-token family via
+  // `AppDataSource.manager.getRepository(RefreshToken)`. Stub just enough of an
+  // EntityManager for that insert; rotation itself is covered in
+  // tests/auth/refreshTokenRotation.test.ts.
+  refreshTokenManagerStub: {
+    getRepository: () => ({
+      create: (row: Record<string, unknown>) => row,
+      save: async (row: Record<string, unknown>) => ({ id: 'rt-1', ...row }),
+    }),
+  },
+}));
+
 vi.mock('../../src/db/data-source', () => ({
   AppDataSource: {
     getRepository: vi.fn(() => ({})),
     transaction: vi.fn(),
+    manager: refreshTokenManagerStub,
   },
   initializeDatabase: vi.fn(async () => undefined),
 }));

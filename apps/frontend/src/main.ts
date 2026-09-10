@@ -2,6 +2,8 @@ import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import { registerSW } from 'virtual:pwa-register';
 import { createBrowserPorts, checkForNewBuild, shouldRunCheck } from '@/lib/appVersion';
+import { onAccessTokenChange, onSessionExpired } from '@/lib/sessionRefresh';
+import { useAuthStore } from '@/stores/auth';
 
 import App from './App.vue';
 import { i18n, setAppLocale, type Locale } from './i18n';
@@ -22,6 +24,28 @@ app.use(router);
 app.use(SetupCalendar, {});
 
 app.mount('#app');
+
+// ADR-0023: `lib/sessionRefresh` cannot import the store (that would close a
+// cycle through `lib/api`), so the wiring is registered here, after Pinia is
+// installed.
+onAccessTokenChange((token) => {
+  useAuthStore().setToken(token);
+});
+
+onSessionExpired(() => {
+  useAuthStore().clearSession();
+
+  const current = router.currentRoute.value;
+  // Only bounce from a guarded page; redirecting while already on /login would
+  // loop. `redirect` is preserved so re-authenticating lands the user back where
+  // they were, matching the router guard and LoginView's redirectTarget.
+  if (current.meta.requiresAuth) {
+    void router.replace({
+      name: 'login',
+      query: { redirect: current.fullPath, error: 'expired' },
+    });
+  }
+});
 
 // Mirror the active locale into <html lang> at boot; the auth store will
 // call setAppLocale again after Task 8 wires the server-side preference.

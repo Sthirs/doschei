@@ -88,6 +88,12 @@ spec:
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "RATE_LIMIT_WINDOW_MS") | quote }}
             - name: RATE_LIMIT_LIMIT
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "RATE_LIMIT_LIMIT") | quote }}
+            - name: ACCESS_TOKEN_TTL_SECONDS
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "ACCESS_TOKEN_TTL_SECONDS") | quote }}
+            - name: REFRESH_TOKEN_TTL_SECONDS
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "REFRESH_TOKEN_TTL_SECONDS") | quote }}
+            - name: REFRESH_TOKEN_REUSE_GRACE_SECONDS
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "REFRESH_TOKEN_REUSE_GRACE_SECONDS") | quote }}
             - name: CORS_ORIGIN
               value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "CORS_ORIGIN") | quote }}
             - name: DB_HOSTNAME

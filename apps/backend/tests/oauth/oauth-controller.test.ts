@@ -35,6 +35,11 @@ const { envMock } = vi.hoisted(() => ({
     oauthEnabled: true,
     OAUTH_STATE_SECRET: 'test-state-secret',
     JWT_SECRET: 'test-jwt-secret',
+    // ADR-0023 session lifetimes (env.ts supplies these post-transform;
+    // this mock replaces the whole module, so it must too).
+    ACCESS_TOKEN_TTL_SECONDS: 3600,
+    REFRESH_TOKEN_TTL_SECONDS: 7776000,
+    REFRESH_TOKEN_REUSE_GRACE_SECONDS: 30,
     OAUTH_CONFIG: {
       autoLaunch: false,
       autoRegister: true,
@@ -58,6 +63,14 @@ vi.mock('../../src/db/data-source', () => ({
   AppDataSource: {
     transaction: vi.fn(),
     getRepository: vi.fn(),
+    // ADR-0023: the callback now starts a refresh-token family via
+    // `AppDataSource.manager.getRepository(RefreshToken)` before redirecting.
+    manager: {
+      getRepository: () => ({
+        create: (row: Record<string, unknown>) => row,
+        save: async (row: Record<string, unknown>) => ({ id: 'rt-1', ...row }),
+      }),
+    },
   },
   initializeDatabase: vi.fn(async () => undefined),
 }));

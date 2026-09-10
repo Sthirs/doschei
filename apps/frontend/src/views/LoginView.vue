@@ -23,6 +23,17 @@ const authConfig = ref<{ localLoginEnabled: boolean; localRegistrationEnabled: b
 
 const redirectTarget = computed(() => String(route.query.redirect ?? '/groups'));
 
+/**
+ * Surface the `?error=` the redirecting caller set. Both producers already
+ * existed or arrive with ADR-0023 — `oauth_failed` from AuthCallbackView and
+ * `expired` from the session-expiry handler in main.ts — but nothing rendered
+ * them, so the user was bounced here with no explanation.
+ */
+const ERROR_MESSAGE_KEYS: Record<string, string> = {
+  expired: 'auth.sessionExpired',
+  oauth_failed: 'auth.oauthFailed',
+};
+
 const submit = async () => {
   errorMessage.value = '';
 
@@ -35,6 +46,9 @@ const submit = async () => {
 };
 
 onMounted(async () => {
+  const errorKey = ERROR_MESSAGE_KEYS[String(route.query.error ?? '')];
+  if (errorKey) errorMessage.value = t(errorKey);
+
   try {
     const { data } = await api.get('/auth/oauth/config');
     oauthConfig.value = data;

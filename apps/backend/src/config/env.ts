@@ -55,6 +55,49 @@ const envSchema = z.object({
       }
       return parsed;
     }),
+  // ADR-0023 session lifetimes. Integers of SECONDS, following the
+  // RATE_LIMIT_* house pattern: blank-tolerant, fail-fast on a value that
+  // would silently break sessions.
+  ACCESS_TOKEN_TTL_SECONDS: z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value.trim() === '') return 3600;
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new Error(
+          'ACCESS_TOKEN_TTL_SECONDS must be a positive integer number of seconds',
+        );
+      }
+      return parsed;
+    }),
+  REFRESH_TOKEN_TTL_SECONDS: z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value.trim() === '') return 7776000;
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new Error(
+          'REFRESH_TOKEN_TTL_SECONDS must be a positive integer number of seconds',
+        );
+      }
+      return parsed;
+    }),
+  // 0 disables the grace window entirely (every replay counts as theft).
+  REFRESH_TOKEN_REUSE_GRACE_SECONDS: z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value.trim() === '') return 30;
+      const parsed = Number(value);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        throw new Error(
+          'REFRESH_TOKEN_REUSE_GRACE_SECONDS must be a non-negative integer number of seconds',
+        );
+      }
+      return parsed;
+    }),
   CORS_ORIGIN: z.string().default('http://doschei.127.0.0.1.nip.io'),
   OAUTH_CONFIG: z
     .string()

@@ -326,6 +326,38 @@ describe('createBrowserPorts (factory)', () => {
     expect(mockRegistrations[1].unregister).toHaveBeenCalledTimes(1);
   });
 
+  it('purgeCachesAndWorkers does NOT touch cookies or the auth token', async () => {
+    // ADR-0020 promises the deploy purge keeps the user signed in, and ADR-0023
+    // now puts the long-lived refresh credential in a cookie. If the purge ever
+    // grew to clear cookies or localStorage, every deploy would sign everyone
+    // out — so lock the boundary here rather than discovering it in production.
+    const mockCaches = {
+      keys: vi.fn().mockResolvedValue([]),
+      delete: vi.fn().mockResolvedValue(true),
+    };
+    (globalThis as { caches?: CacheStorage }).caches =
+      mockCaches as unknown as CacheStorage;
+    (globalThis as { navigator?: Navigator }).navigator = {
+      serviceWorker: { getRegistrations: vi.fn().mockResolvedValue([]) },
+    } as unknown as Navigator;
+
+    const documentStub = { cookie: 'doschei.auth.refresh=secret' };
+    (globalThis as { document?: Document }).document =
+      documentStub as unknown as Document;
+    const removeItem = vi.fn();
+    (globalThis as { localStorage?: Storage }).localStorage = {
+      removeItem,
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+    } as unknown as Storage;
+
+    const ports = createBrowserPorts();
+    await ports.purgeCachesAndWorkers();
+
+    expect(documentStub.cookie).toBe('doschei.auth.refresh=secret');
+    expect(removeItem).not.toHaveBeenCalled();
+  });
+
   it('purgeCachesAndWorkers: caches API missing → no throw', async () => {
     // No caches on globalThis
     (globalThis as { caches?: CacheStorage }).caches = undefined;

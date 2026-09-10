@@ -3,12 +3,24 @@ import { createPinia, setActivePinia } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 import type { AuthUser } from '@/types/auth';
 
-// Mock the api module
+// Mock the api module. `post` is required as well as `get`: ADR-0023's
+// logout() calls POST /auth/session/logout for server-side revocation.
 const mockApiGet = vi.fn();
+const mockApiPost = vi.fn();
 vi.mock('@/lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
   },
+}));
+
+// ADR-0023 cold-boot restore. Stubbed here so the store's delegation is
+// asserted without a network layer; lib/sessionRefresh has its own suite.
+const mockRestoreSession = vi.fn();
+const mockSuppressRestore = vi.fn();
+vi.mock('@/lib/sessionRefresh', () => ({
+  tryRestoreSession: (...args: unknown[]) => mockRestoreSession(...args),
+  suppressSessionRestore: () => mockSuppressRestore(),
 }));
 
 // Mock i18n
@@ -29,6 +41,9 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
+  mockApiPost.mockReset();
+  mockRestoreSession.mockReset();
+  mockSuppressRestore.mockReset();
 });
 
 const TOKEN_KEY = 'doschei.auth.token';
@@ -167,5 +182,136 @@ describe('useAuthStore fetchCurrentUser', () => {
     expect(authStore.token).toBe('test-token-success');
     expect(authStore.user).toEqual(user);
     expect(localStorage.getItem(TOKEN_KEY)).toBe('test-token-success');
+  });
+});
+
+describe('auth store — sign-out (ADR-0023)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+
+  it('logout() revokes the refresh family server-side, then clears locally', async () => {
+    memStore[TOKEN_KEY] = 'live-token';
+    mockApiPost.mockResolvedValue({ data: undefined });
+    const store = useAuthStore();
+    store.user = makeUser();
+
+    await store.logout();
+
+    expect(mockApiPost).toHaveBeenCalledWith('/auth/session/logout');
+    expect(store.token).toBe('');
+    expect(store.user).toBeNull();
+    expect(memStore[TOKEN_KEY]).toBeUndefined();
+    // Without this the router guard would speculatively try to restore the
+    // session on the very next navigation and land the user on
+    // /login?error=expired after a deliberate sign-out.
+    expect(mockSuppressRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it('logout() still clears locally when the revocation request fails', async () => {
+    // Offline, or the cookie was already dead. Signing out locally is the part
+    // the user actually asked for, so it must not depend on the network.
+    memStore[TOKEN_KEY] = 'live-token';
+    mockApiPost.mockRejectedValue(new Error('offline'));
+    const store = useAuthStore();
+    store.user = makeUser();
+
+    await expect(store.logout()).resolves.toBeUndefined();
+    expect(store.token).toBe('');
+    expect(memStore[TOKEN_KEY]).toBeUndefined();
+  });
+
+  it('clearSession() makes NO network call', () => {
+    memStore[TOKEN_KEY] = 'live-token';
+    const store = useAuthStore();
+    store.user = makeUser();
+
+    store.clearSession();
+
+    expect(mockApiPost).not.toHaveBeenCalled();
+    expect(store.token).toBe('');
+    expect(store.user).toBeNull();
+    expect(memStore[TOKEN_KEY]).toBeUndefined();
+  });
+
+  it("fetchCurrentUser's 401 branch uses clearSession, not logout", async () => {
+    // Firing a logout request with a token the server just rejected would be a
+    // pointless round trip.
+    memStore[TOKEN_KEY] = 'dead-token';
+    mockApiGet.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 401 },
+    });
+    const store = useAuthStore();
+
+    await store.fetchCurrentUser();
+
+    expect(mockApiPost).not.toHaveBeenCalled();
+    expect(store.token).toBe('');
+  });
+});
+
+describe('auth store — setToken (ADR-0023)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+
+  it('updates state and storage so isAuthenticated stays honest', () => {
+    const store = useAuthStore();
+
+    store.setToken('rotated-token');
+
+    expect(store.token).toBe('rotated-token');
+    expect(store.isAuthenticated).toBe(true);
+    expect(memStore[TOKEN_KEY]).toBe('rotated-token');
+  });
+});
+
+describe('auth store — tryRestoreSession (ADR-0023)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+
+  it('adopts the token and user from a successful restore', async () => {
+    const user = makeUser({ language: 'it' });
+    mockRestoreSession.mockResolvedValue({ token: 'restored', user });
+    const store = useAuthStore();
+
+    const result = await store.tryRestoreSession();
+
+    expect(result).toEqual(user);
+    expect(store.token).toBe('restored');
+    expect(store.user).toEqual(user);
+  });
+
+  it('falls back to /auth/me when a sibling tab won the refresh (no user in body)', async () => {
+    const user = makeUser();
+    mockRestoreSession.mockResolvedValue({ token: 'restored', user: null });
+    mockApiGet.mockResolvedValue({ data: { user } });
+    const store = useAuthStore();
+
+    const result = await store.tryRestoreSession();
+
+    expect(mockApiGet).toHaveBeenCalledWith('/auth/me');
+    expect(result).toEqual(user);
+    expect(store.token).toBe('restored');
+  });
+
+  it('leaves the store signed out when there is no session to restore', async () => {
+    mockRestoreSession.mockResolvedValue(null);
+    const store = useAuthStore();
+
+    expect(await store.tryRestoreSession()).toBeNull();
+    expect(store.token).toBe('');
+    expect(store.isAuthenticated).toBe(false);
   });
 });

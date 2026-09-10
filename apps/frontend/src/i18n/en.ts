@@ -43,6 +43,10 @@ export const en = {
     signingIn: 'Signing you in…',
     redirectingToLogin: 'Redirecting to login…',
     missingToken: 'Missing authentication token.',
+    // Shown on /login?error=… — the OAuth callback already redirected with
+    // error=oauth_failed, and ADR-0023's expiry handler adds error=expired.
+    sessionExpired: 'Your session expired. Please sign in again.',
+    oauthFailed: 'Sign-in failed. Please try again.',
   },
 
   login: {

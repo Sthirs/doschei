@@ -31,6 +31,11 @@ vi.mock('../../src/config/env', () => ({
   env: {
     OAUTH_STATE_SECRET: 'test-state-secret',
     JWT_SECRET: 'test-jwt-secret',
+    // ADR-0023 session lifetimes (env.ts supplies these post-transform;
+    // this mock replaces the whole module, so it must too).
+    ACCESS_TOKEN_TTL_SECONDS: 3600,
+    REFRESH_TOKEN_TTL_SECONDS: 7776000,
+    REFRESH_TOKEN_REUSE_GRACE_SECONDS: 30,
     FRONTEND_URL: 'http://127.0.0.1:3000',
     OAUTH_CONFIG: {
       autoLaunch: false,
