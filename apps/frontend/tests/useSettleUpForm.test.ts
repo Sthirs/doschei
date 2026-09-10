@@ -151,6 +151,36 @@ describe('useSettleUpForm', () => {
     expect(form.amount.value).toBe(800);
   });
 
+  it('keeps the settlement own amount in edit mode, not the outstanding balance', async () => {
+    // Outstanding balance with user-2 is 800, but the settlement being
+    // edited was for 42 — a partial payment. The edit form must show 42.
+    mocks.route.name = 'settleup-edit';
+    mocks.route.params = { id: 'g1', sid: 's1' };
+    const group = makeGroup(-1);
+    group.expenses = [
+      {
+        id: 's1',
+        kind: 'SETTLEMENT',
+        description: '',
+        amount: 42,
+        category: '',
+        paidByName: 'Alice',
+        paidByUserId: 'user-1',
+        settledWithUserId: 'user-2',
+        settledWithName: 'Bob',
+        date: '2024-01-01',
+        createdAt: '2024-01-01',
+        splits: [],
+      },
+    ];
+
+    const { form } = await mountForm(group);
+
+    expect(form.payerId.value).toBe('user-1');
+    expect(form.payeeId.value).toBe('user-2');
+    expect(form.amount.value).toBe(42);
+  });
+
   it('sets currentPageTitle on mount and clears it on unmount', async () => {
     const { wrapper } = await mountForm(makeGroup(-1));
     expect(mocks.currentPageTitle.value).toBe(
