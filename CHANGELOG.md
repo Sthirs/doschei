@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/Sthirs/doschei/compare/v1.7.0...v1.8.0) (2026-09-11)
+
+
+### Features
+
+* add notifications ([#118](https://github.com/Sthirs/doschei/issues/118)) ([7ab286a](https://github.com/Sthirs/doschei/commit/7ab286ad58821e4f31c00a42ccc799d9a0771228))
+* native browser navigation behaves consistently with app navigation ([#115](https://github.com/Sthirs/doschei/issues/115)) ([cd85ea6](https://github.com/Sthirs/doschei/commit/cd85ea6b9266c38837ccde4227185ba34e4a3d02))
+
 ## [1.7.0](https://github.com/Sthirs/doschei/compare/v1.6.0...v1.7.0) (2026-09-10)
 
 
