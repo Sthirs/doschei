@@ -93,6 +93,35 @@ When you are done:
 npm run telepresence:leave
 ```
 
+### Testing a rebuilt image (no Telepresence)
+
+To verify a change by running it as a deployed pod — e.g. before
+`test:integration` or `test:playwright`, which both target an
+already-running deployment — rebuild and redeploy instead of using a
+Telepresence intercept. Reach the instance at the ingress host printed by
+`npm run dev:host`.
+
+Rebuild only the workspace you changed; it's faster than
+`npm run cluster:build`, which builds both images:
+
+```bash
+minikube image build -f apps/frontend/Dockerfile -t doschei/frontend:dev .
+# or: apps/backend/Dockerfile -t doschei/backend:dev
+```
+
+`scripts/minikube-build.sh` tags images `doschei/frontend:dev` and
+`doschei/backend:dev` — a **fixed tag**. Because the tag never changes,
+`npm run cluster:deploy` (`helm upgrade`) does not restart anything on its
+own, so a rebuilt image is not picked up. Always follow a rebuild with an
+explicit restart:
+
+```bash
+kubectl -n doschei rollout restart deployment/doschei-frontend
+kubectl -n doschei rollout status deployment/doschei-frontend --timeout=180s
+```
+
+(swap `frontend` for `backend` as needed).
+
 ### Things to know
 
 - The local backend process talks to the in-cluster PostgreSQL service over the
