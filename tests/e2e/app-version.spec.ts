@@ -82,7 +82,7 @@ test.describe('App version and cache behavior', () => {
     test.setTimeout(90_000);
 
     test('buildId change triggers exactly one reload, clears stale cache, preserves auth', async ({
-      authenticatedPage: page,
+      authenticatedPageNoBuildIdSeed: page,
     }) => {
       // Seed the prior build so the first load does not itself reload (a
       // first-time visitor hits the null→A path). Guarded so it is not

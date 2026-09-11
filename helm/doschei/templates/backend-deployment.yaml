@@ -140,6 +140,27 @@ spec:
                   name: {{ include "doschei.backendOauthSecretName" . }}
                   key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "oauthStateSecret") }}
                   optional: true
+            - name: VAPID_SUBJECT
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "VAPID_SUBJECT") | quote }}
+            - name: VAPID_AUTO_GENERATE
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "VAPID_AUTO_GENERATE") | quote }}
+            - name: PUSH_ENDPOINT_ALLOWLIST
+              value: {{ include "doschei.backendEnvValue" (dict "root" . "key" "PUSH_ENDPOINT_ALLOWLIST") | quote }}
+            # ADR-0025: push degrades to a no-op when these are unset, same as
+            # OAUTH_CONFIG/OAUTH_STATE_SECRET above — `optional: true` lets the
+            # pod start against a secret that has not provisioned them yet.
+            - name: VAPID_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.backendVapidSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "vapidPublicKey") }}
+                  optional: true
+            - name: VAPID_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "doschei.backendVapidSecretName" . }}
+                  key: {{ include "doschei.backendSecretKey" (dict "root" . "type" "vapidPrivateKey") }}
+                  optional: true
           readinessProbe:
             httpGet:
               path: /api/health

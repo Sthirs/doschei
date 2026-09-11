@@ -196,6 +196,47 @@ Notes:
   grace window revokes the whole family, which is how a stolen token gets
   detected. Signing out revokes it too.
 
+### Push notifications
+
+Device notifications ([ADR-0025](adr/0025-web-push-notifications.md)) use the
+Web Push protocol with VAPID. There is no in-app setting — the feature
+degrades to a silent no-op whenever `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` are
+unset, so it is safe to deploy without them.
+
+| Variable            | Required | Effect                                                 |
+|---------------------|----------|--------------------------------------------------------|
+| `VAPID_PUBLIC_KEY`  | No       | Served to the frontend via `GET /api/push/public-key`  |
+| `VAPID_PRIVATE_KEY` | No       | Signs outgoing push payloads; never exposed to clients |
+| `VAPID_SUBJECT`     | No       | Contact URI/mailto sent to push services; not a secret |
+
+Minikube and CI never get a committed keypair — a real VAPID keypair is
+high-entropy key material, unlike the dummy `JWT_SECRET`/`OAUTH_STATE_SECRET`
+values the chart's `devMode` guard commits, so there's no "obviously fake"
+version of it to check in. Instead, `devMode` sets `VAPID_AUTO_GENERATE=true`
+and the backend mints its own ephemeral keypair at boot
+(`apps/backend/src/config/env.ts`) whenever no real keypair is configured.
+Every restart mints a new one, which invalidates existing subscriptions the
+same harmless way a manual rotation does (see below) — clients re-subscribe
+automatically the next time they open the app.
+
+**A production deployment needs its own persisted keypair** — leave
+`VAPID_AUTO_GENERATE` unset/`"false"` there, since an ephemeral per-restart
+keypair would break push across every pod restart and wouldn't be shared
+across replicas. Generate one and provision it as the secret named by
+`backend.secrets.vapid.secretName` in `values.yaml`:
+
+```bash
+npx --package=web-push web-push generate-vapid-keys
+kubectl create secret generic doschei-backend-vapid \
+  --namespace doschei \
+  --from-literal=VAPID_PUBLIC_KEY=<public key> \
+  --from-literal=VAPID_PRIVATE_KEY=<private key>
+```
+
+Rotating the keypair invalidates every existing subscription; clients
+re-subscribe automatically the next time they open the app (see
+`apps/frontend/src/lib/push.ts`), so no coordinated rollout is needed.
+
 ## Testing
 
 Every user-facing feature needs at least one Playwright e2e test — see

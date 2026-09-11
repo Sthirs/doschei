@@ -1,6 +1,7 @@
 import { AppDataSource } from '../../db/data-source';
 import { Expense } from '../../entities/Expense';
 import { ExpenseSplit } from '../../entities/ExpenseSplit';
+import { notifyLedgerChange } from '../push/notifyLedgerChange';
 import {
   buildSettlementSplit,
   validateSettlementInput,
@@ -105,6 +106,23 @@ export async function createSettlementForGroup(
     throw new Error('Created settlement could not be reloaded.');
   }
 
+  const requesterUser = group.members.find(
+    (member) => member.id === requesterUserId,
+  );
+  void notifyLedgerChange({
+    kind: 'settlement.created',
+    groupId,
+    groupName: group.name,
+    actor: {
+      id: requesterUserId,
+      displayName: requesterUser?.displayName ?? '',
+    },
+    paidBy: reloaded.paidBy,
+    splitUsers: reloaded.splits.map((split) => split.user),
+    description: reloaded.description,
+    amount: Number(reloaded.amount),
+  });
+
   return serializeExpense(reloaded);
 }
 
@@ -202,6 +220,18 @@ export async function updateSettlementForGroup(
     throw new Error('Updated settlement could not be reloaded.');
   }
 
+  const requesterUser = group.members.find((member) => member.id === userId);
+  void notifyLedgerChange({
+    kind: 'settlement.updated',
+    groupId,
+    groupName: group.name,
+    actor: { id: userId, displayName: requesterUser?.displayName ?? '' },
+    paidBy: reloaded.paidBy,
+    splitUsers: reloaded.splits.map((split) => split.user),
+    description: reloaded.description,
+    amount: Number(reloaded.amount),
+  });
+
   return serializeExpense(reloaded);
 }
 
@@ -211,16 +241,36 @@ export async function deleteSettlementForGroup(
   settlementId: string,
   userId: string,
 ) {
-  await getGroupForMember(repositories, groupId, userId);
+  const group = await getGroupForMember(repositories, groupId, userId);
 
   const expense = await repositories.expenseRepository.findOne({
     where: { id: settlementId, group: { id: groupId } },
-    relations: { paidBy: true },
+    // `splits: { user: true }` is loaded here (not just `paidBy`) because
+    // recipients must be resolved BEFORE `remove()` — there is nothing left
+    // to query once the row is gone.
+    relations: { paidBy: true, splits: { user: true } },
   });
 
   if (!expense || expense.kind !== 'SETTLEMENT') {
     throw new Error('Settlement not found.');
   }
 
+  const requesterUser = group.members.find((member) => member.id === userId);
+  const paidBy = expense.paidBy;
+  const splitUsers = expense.splits.map((split) => split.user);
+  const description = expense.description;
+  const amount = Number(expense.amount);
+
   await repositories.expenseRepository.remove(expense);
+
+  void notifyLedgerChange({
+    kind: 'settlement.deleted',
+    groupId,
+    groupName: group.name,
+    actor: { id: userId, displayName: requesterUser?.displayName ?? '' },
+    paidBy,
+    splitUsers,
+    description,
+    amount,
+  });
 }

@@ -18,9 +18,20 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-      launchOptions: {
-        args: [`--unsafely-treat-insecure-origin-as-secure=${baseURL}`],
+      use: {
+        ...devices['Desktop Chrome'],
+        // Playwright's default headless Chromium binary (headless_shell)
+        // does not honor --unsafely-treat-insecure-origin-as-secure below,
+        // so the plain-HTTP ingress never becomes a secure context and
+        // navigator.serviceWorker / Notification stay unavailable. The full
+        // 'chromium' channel binary does honor it.
+        channel: 'chromium',
+        // launchOptions belongs inside `use` — a sibling `launchOptions` key
+        // on the project object (the previous shape here) is silently
+        // ignored by Playwright, so this flag was never actually applied.
+        launchOptions: {
+          args: [`--unsafely-treat-insecure-origin-as-secure=${baseURL}`],
+        },
       },
     },
   ],

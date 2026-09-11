@@ -2,6 +2,7 @@ import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import { registerSW } from 'virtual:pwa-register';
 import { createBrowserPorts, checkForNewBuild, shouldRunCheck } from '@/lib/appVersion';
+import { setupPushNotifications } from '@/lib/push';
 import { onAccessTokenChange, onSessionExpired } from '@/lib/sessionRefresh';
 import { useAuthStore } from '@/stores/auth';
 
@@ -46,6 +47,30 @@ onSessionExpired(() => {
     });
   }
 });
+
+// ADR-0025: there is no settings UI for push, so it is wired to the
+// authenticated session itself rather than to any one user action.
+// `$subscribe` reacts to every path that establishes a token — login,
+// silent refresh, and cold-boot cookie restore — without adding an import
+// to stores/auth.ts. The `pushWired` guard keeps this to real
+// signed-out→signed-in transitions instead of firing on every unrelated
+// state mutation (e.g. `isLoading` toggling during login).
+{
+  const authStore = useAuthStore();
+  let pushWired = false;
+
+  const wirePushIfNeeded = () => {
+    if (authStore.token && !pushWired) {
+      pushWired = true;
+      setupPushNotifications();
+    } else if (!authStore.token) {
+      pushWired = false;
+    }
+  };
+
+  authStore.$subscribe(wirePushIfNeeded);
+  wirePushIfNeeded();
+}
 
 // Mirror the active locale into <html lang> at boot; the auth store will
 // call setAppLocale again after Task 8 wires the server-side preference.

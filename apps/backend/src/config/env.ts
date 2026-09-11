@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { generateVAPIDKeys } from 'web-push';
 import { z } from 'zod';
 
 dotenv.config();
@@ -120,9 +121,43 @@ const envSchema = z.object({
     }),
   FRONTEND_URL: z.string().optional(),
   OAUTH_STATE_SECRET: z.string().optional(),
+  // ADR-0025: Web Push. Both optional — push degrades to a no-op when either
+  // is absent, so environments (and the whole test suite) that never
+  // provision a VAPID keypair keep working unmodified.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default('mailto:noreply@doschei.local'),
+  // Dev-only convenience: mint an ephemeral keypair at boot instead of
+  // provisioning a real one. Gated behind an explicit flag (rather than
+  // NODE_ENV) so a production deployment that forgot to provision a keypair
+  // fails closed to "push disabled" instead of silently generating one that
+  // only the pod that minted it can sign for.
+  VAPID_AUTO_GENERATE: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true'),
+  // Extra push-service host suffixes to accept on top of
+  // `DEFAULT_PUSH_HOST_SUFFIXES` (comma-separated). Only needed for a browser
+  // whose push service is not one of the shipped defaults; it does not let a
+  // deployment push notifications itself — see the module comment on
+  // `services/push/endpointValidation.ts`.
+  PUSH_ENDPOINT_ALLOWLIST: z.string().optional(),
 });
 
 const parsedEnv = envSchema.parse(process.env);
+
+// See VAPID_AUTO_GENERATE above: only fills the gap when no real keypair was
+// provisioned, so an explicitly configured pair always wins. `||`, not `??`
+// — an empty-string secret value (e.g. an unset-but-present Kubernetes
+// secretKeyRef) must also count as "not configured".
+const generatedVapidKeys =
+  parsedEnv.VAPID_AUTO_GENERATE &&
+  !parsedEnv.VAPID_PUBLIC_KEY &&
+  !parsedEnv.VAPID_PRIVATE_KEY
+    ? generateVAPIDKeys()
+    : undefined;
+const vapidPublicKey = parsedEnv.VAPID_PUBLIC_KEY || generatedVapidKeys?.publicKey;
+const vapidPrivateKey = parsedEnv.VAPID_PRIVATE_KEY || generatedVapidKeys?.privateKey;
 
 const databaseUrl =
   parsedEnv.DATABASE_URL ??
@@ -143,4 +178,11 @@ export const env = {
   oauthEnabled:
     parsedEnv.OAUTH_CONFIG?.enabled === true &&
     Boolean(parsedEnv.OAUTH_STATE_SECRET),
+  VAPID_PUBLIC_KEY: vapidPublicKey,
+  VAPID_PRIVATE_KEY: vapidPrivateKey,
+  pushEnabled: Boolean(vapidPublicKey && vapidPrivateKey),
+  pushEndpointExtraHostSuffixes: (parsedEnv.PUSH_ENDPOINT_ALLOWLIST ?? '')
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry) => entry.length > 0),
 };
