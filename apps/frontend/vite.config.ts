@@ -29,13 +29,21 @@ export default defineConfig({
     appVersionStampPlugin,
     vue(),
     VitePWA({
+      // ADR-0025: injectManifest (a hand-written service worker with
+      // Workbox precaching injected in) instead of generateSW, because a
+      // push/notificationclick handler needs a custom worker file — see
+      // src/sw.ts. Precaching, cleanup, and the /api/ navigation denylist
+      // (previously `workbox.navigateFallbackDenylist` below) all had to be
+      // re-implemented by hand there; see that file for the equivalent.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
-      workbox: {
-        // Without this, Workbox's default NavigationRoute intercepts every
-        // top-level browser navigation and returns the cached index.html —
-        // including navigations to /api/* (e.g. GET /api/auth/oauth, which
-        // must reach the backend to issue the OAuth redirect to the IdP).
-        navigateFallbackDenylist: [/^\/api\//],
+      injectManifest: {
+        // vite-plugin-pwa's injectManifest build runs its own esbuild pass
+        // over src/sw.ts; it does not go through the app's own Vite/Vitest
+        // pipeline, so this glob only needs to match what sw.ts precaches.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
       },
       includeAssets: [
         'favicon.svg',
@@ -83,6 +91,7 @@ export default defineConfig({
       },
       devOptions: {
         enabled: true,
+        type: 'module',
       },
     }),
   ],

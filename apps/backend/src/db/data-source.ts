@@ -7,6 +7,7 @@ import { Expense } from '../entities/Expense';
 import { ExpenseSplit } from '../entities/ExpenseSplit';
 import { Group } from '../entities/Group';
 import { Invitation } from '../entities/Invitation';
+import { PushSubscription } from '../entities/PushSubscription';
 import { RefreshToken } from '../entities/RefreshToken';
 import { User } from '../entities/User';
 import { UserIdentity } from '../entities/UserIdentity';
@@ -16,7 +17,16 @@ export const AppDataSource = new DataSource({
   url: env.DATABASE_URL,
   synchronize: env.DB_SYNC,
   logging: false,
-  entities: [User, UserIdentity, RefreshToken, Group, Expense, ExpenseSplit, Invitation],
+  entities: [
+    User,
+    UserIdentity,
+    RefreshToken,
+    Group,
+    Expense,
+    ExpenseSplit,
+    Invitation,
+    PushSubscription,
+  ],
 });
 
 export const initializeDatabase = async (): Promise<DataSource> => {

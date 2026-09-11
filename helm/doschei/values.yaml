@@ -47,6 +47,21 @@ backend:
     ACCESS_TOKEN_TTL_SECONDS: "3600"
     REFRESH_TOKEN_TTL_SECONDS: "7776000"
     REFRESH_TOKEN_REUSE_GRACE_SECONDS: "30"
+    # ADR-0025: not a secret — identifies the sender to push services, e.g.
+    # for abuse contact, per the Web Push protocol's VAPID `sub` claim.
+    VAPID_SUBJECT: mailto:noreply@doschei.example.com
+    # Leave "false" here: a real deployment provisions its own persisted
+    # keypair via backend.secrets.vapid below. devMode overrides this to
+    # "true" so the backend mints an ephemeral one at boot instead of
+    # requiring a committed dev secret — see doschei.backendEnvValue.
+    VAPID_AUTO_GENERATE: "false"
+    # Comma-separated extra push-service host suffixes accepted on
+    # POST /api/push/subscriptions, on top of the built-in list of the push
+    # services shipped browsers use. Leave empty unless your users are on a
+    # browser whose push service is not covered; it does not make this
+    # deployment deliver notifications itself. See
+    # apps/backend/src/services/push/endpointValidation.ts.
+    PUSH_ENDPOINT_ALLOWLIST: ""
   secrets:
     jwt:
       secretName: doschei-backend-secrets
@@ -64,6 +79,11 @@ backend:
       keys:
         config: OAUTH_CONFIG
         stateSecret: OAUTH_STATE_SECRET
+    vapid:
+      secretName: doschei-backend-vapid
+      keys:
+        publicKey: VAPID_PUBLIC_KEY
+        privateKey: VAPID_PRIVATE_KEY
 
 ingress:
   enabled: true

@@ -29,6 +29,13 @@ vi.mock('@/i18n', () => ({
   setAppLocale: vi.fn(),
 }));
 
+// ADR-0025: logout() must drop the device's push subscription before the
+// next person uses it, or they would receive this user's notifications.
+const mockRemovePushSubscription = vi.fn();
+vi.mock('@/lib/push', () => ({
+  removePushSubscription: (...args: unknown[]) => mockRemovePushSubscription(...args),
+}));
+
 // Mock localStorage (happy-dom lacks it)
 const memStore: Record<string, string> = {};
 beforeEach(() => {
@@ -44,6 +51,7 @@ afterEach(() => {
   mockApiPost.mockReset();
   mockRestoreSession.mockReset();
   mockSuppressRestore.mockReset();
+  mockRemovePushSubscription.mockReset();
 });
 
 const TOKEN_KEY = 'doschei.auth.token';
@@ -209,6 +217,19 @@ describe('auth store — sign-out (ADR-0023)', () => {
     // session on the very next navigation and land the user on
     // /login?error=expired after a deliberate sign-out.
     expect(mockSuppressRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it('logout() removes the device push subscription before clearing the session', async () => {
+    memStore[TOKEN_KEY] = 'live-token';
+    mockApiPost.mockResolvedValue({ data: undefined });
+    mockRemovePushSubscription.mockResolvedValue(undefined);
+    const store = useAuthStore();
+    store.user = makeUser();
+
+    await store.logout();
+
+    expect(mockRemovePushSubscription).toHaveBeenCalledTimes(1);
+    expect(store.token).toBe('');
   });
 
   it('logout() still clears locally when the revocation request fails', async () => {

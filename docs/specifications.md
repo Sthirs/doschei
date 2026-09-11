@@ -87,6 +87,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - Users can view their profile picture when one is set, shown in place of the initials avatar; users can upload or change their profile picture from the account screen using the device's standard file picker (gallery, camera, or other sources); JPEG/PNG/WebP up to 5 MB are accepted, normalized server-side, and returned embedded in API responses.
 - A member's profile picture, when set, is shown to other members of their groups wherever that member is represented (member lists, payer selection, split details, and similar views).
 - Users can select the interface language (English or Italian) in their account. The language defaults to the device/browser language captured at registration; the saved preference applies at sign-in and takes effect immediately when changed.
+- Members involved in an expense or settlement receive a device notification when another member creates, edits, or deletes it; invitees receive one when invited to a group. Notifications are delivered by the operating system when the app is installed as a PWA, not as an in-app banner. Notifications are enabled by default with no in-app setting — the browser's notification permission is the only control.
 
 ## Product Decisions
 
@@ -104,6 +105,7 @@ Do Schèi is a web application that allows users to track shared expenses and sp
 - The canonical financial source of truth is the ledger of expenses and settlement entries; balances are always derived from that ledger.
 - The display name is the single editable profile field; the email address is immutable after account creation and is never accepted by the profile-update API.
 - Category auto-selection learns only from the expense history of the group the expense belongs to, is computed entirely client-side, ignores settle-up entries, applies only while the category is still the default and was not manually chosen in the form, and never overrides a manual selection. The taxonomy-name fallback matches against category labels in the user's active interface language.
+- Push notification recipients for an expense or settlement are the payer plus every member named in its split, never the actor who made the change. Notification text is rendered server-side in the recipient's saved language (`User.language`), because the recipient's device is not connected when the notification is composed. Sending a notification is best-effort and must never block or fail the ledger write that triggered it.
 
 ## Balance Rules
 
@@ -142,6 +144,7 @@ It is designed to be responsive and to work well on both mobile and desktop devi
 It is designed to be accessible and to follow WCAG guidelines.
 It is designed to be performant and uses lazy loading and code splitting to reduce the initial load time.
 It uses PWA features to allow users to install the application on their devices and use it offline.
+It uses a custom service worker (built with Workbox's `injectManifest` strategy) that owns asset precaching, the `/api/` navigation denylist, and the push and notification-click handlers used to deliver OS-level notifications.
 When a new application version is detected, the client automatically clears all cached assets and service workers and reloads once, keeping the user signed in.
 The Account screen displays the version of the deployed application.
 It uses Vite as the build tool to provide a fast development experience and an optimized production build.
@@ -162,6 +165,7 @@ The business logic is separated from the API routes and the database access laye
 It uses ESLint and Prettier to maintain a consistent code style and catch potential issues early in the development process.
 It uses Vitest for unit testing and Supertest for integration testing to ensure the quality of the code and the functionality of the API.
 It protects the API with a global per-IP rate limiter based on `express-rate-limit`, allowing 500 requests per IP per 5-minute window by default, configurable via the `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_LIMIT` environment variables and Helm values, with the health endpoint exempt.
+It delivers OS-level push notifications for ledger and invitation events using the Web Push protocol with VAPID, via the `web-push` package; the feature degrades to a no-op when VAPID keys are not configured.
 
 ### Database
 

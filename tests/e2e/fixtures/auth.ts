@@ -33,7 +33,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-import { test as base, type Page } from '@playwright/test';
+import { test as base, type Browser, type Page } from '@playwright/test';
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
 const AUTH_DIR = resolve('tests/e2e/.auth');
@@ -152,6 +152,31 @@ type LoginResponse = {
 };
 
 /**
+ * A brand-new page has no `doschei.app.buildId` in localStorage. main.ts's
+ * ADR-0020 "new build detected" check treats that as a mismatch on its very
+ * first navigation, unregisters the service worker it just installed, and
+ * force-reloads mid-test. This was invisible as long as the Playwright
+ * config never actually gave pages a secure context (see
+ * playwright.config.ts's `channel`/`launchOptions` history) — without one,
+ * no service worker ever installed at all, so this path never ran. Seeding
+ * the current build id before the first navigation (real first-time
+ * visitors get this same one-time reload; it is orthogonal to whatever a
+ * given spec is testing) makes every page skip it.
+ */
+async function currentBuildId(): Promise<string> {
+  const res = await fetch(`${baseURL}/app-version.json`);
+  const { buildId } = (await res.json()) as { buildId: string };
+  return buildId;
+}
+
+async function seedBuildId(page: Page): Promise<void> {
+  const buildId = await currentBuildId();
+  await page.addInitScript((id: string) => {
+    window.localStorage.setItem('doschei.app.buildId', id);
+  }, buildId);
+}
+
+/**
  * Shared inner helper: logs in via `POST /api/auth/login`, persists a Playwright
  * storageState file to `storagePath`, and returns `storagePath`. Reuses the
  * cached file only while `isStorageStateUsable` says both credentials in it are
@@ -208,19 +233,45 @@ function sanitizeEmailForFilename(email: string): string {
   return email.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
+async function createAuthenticatedPage(
+  browser: Browser,
+  testInfo: { parallelIndex: number },
+): Promise<Page> {
+  const storageState = await loginAndCacheStorageState(
+    'demo@doschei.local',
+    'password123',
+    // Per worker: two workers sharing one file would hold the same refresh
+    // cookie, and the loser of a concurrent rotation trips reuse detection.
+    // Concurrent families for one user are perfectly legal server-side.
+    resolve(AUTH_DIR, `demo-${testInfo.parallelIndex}.json`),
+  );
+  return browser.newPage({ storageState });
+}
+
 type PageForUser = (email: string, password: string) => Promise<Page>;
 
-export const test = base.extend<{ authenticatedPage: Page; pageForUser: PageForUser }>({
+export const test = base.extend<{
+  authenticatedPage: Page;
+  pageForUser: PageForUser;
+  /**
+   * Same login as `authenticatedPage`, minus the `seedBuildId` call. Exists
+   * only for app-version.spec.ts's own redeploy-simulation test, which
+   * drives `doschei.app.buildId` and `/app-version.json` itself to assert
+   * ADR-0020's reload behaviour — seeding a real build id ahead of it would
+   * make every navigation in that test see a mismatch against its mocked
+   * `/app-version.json` response, not just the one it means to simulate.
+   */
+  authenticatedPageNoBuildIdSeed: Page;
+}>({
   authenticatedPage: async ({ browser }, use, testInfo) => {
-    const storageState = await loginAndCacheStorageState(
-      'demo@doschei.local',
-      'password123',
-      // Per worker: two workers sharing one file would hold the same refresh
-      // cookie, and the loser of a concurrent rotation trips reuse detection.
-      // Concurrent families for one user are perfectly legal server-side.
-      resolve(AUTH_DIR, `demo-${testInfo.parallelIndex}.json`),
-    );
-    const page = await browser.newPage({ storageState });
+    const page = await createAuthenticatedPage(browser, testInfo);
+    await seedBuildId(page);
+    await use(page);
+    await page.close();
+  },
+
+  authenticatedPageNoBuildIdSeed: async ({ browser }, use, testInfo) => {
+    const page = await createAuthenticatedPage(browser, testInfo);
     await use(page);
     await page.close();
   },
@@ -234,6 +285,7 @@ export const test = base.extend<{ authenticatedPage: Page; pageForUser: PageForU
       );
       const storageState = await loginAndCacheStorageState(email, password, storagePath);
       const page = await browser.newPage({ storageState });
+      await seedBuildId(page);
       createdPages.push(page);
       return page;
     };

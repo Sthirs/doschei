@@ -4,6 +4,7 @@ import { AppDataSource } from '../db/data-source';
 import { Group } from '../entities/Group';
 import { Invitation } from '../entities/Invitation';
 import { User } from '../entities/User';
+import { notifyGroupInvitation } from './push/notifyInvitation';
 
 type SerializedInvitation = {
   id: string;
@@ -86,6 +87,21 @@ export class InvitationService {
     });
 
     const saved = await this.invitationRepository.save(invitation);
+
+    // Only the invitee that already has an account can be notified — see
+    // ADR-0025: `inviteeId` is null until the invitee registers, and there
+    // is nothing to subscribe to yet in that case.
+    if (inviteeId) {
+      const inviter = group.members.find(
+        (member) => member.id === inviterUserId,
+      );
+      void notifyGroupInvitation({
+        groupId,
+        groupName: group.name,
+        inviterName: inviter?.displayName ?? '',
+        inviteeUserId: inviteeId,
+      });
+    }
 
     return this.serializeInvitation(saved);
   }

@@ -47,10 +47,16 @@ dev
 {{- else if eq $key "JWT_SECRET" -}}change-me-dev-secret
 {{- else if eq $key "FRONTEND_URL" -}}{{ printf "http://%s" $root.Values.ingress.host }}
 {{- else if eq $key "RATE_LIMIT_LIMIT" -}}1000000
-{{/* ADR-0023: the two TTLs get NO devMode override on purpose, so dev and CI
-     exercise the real lifetimes. Only the reuse grace window is shortened, so
-     the reuse-detection integration test needs a ~1.5s sleep instead of ~31s
-     while still covering a genuine two-tab race (which resolves in ms). */}}
+{{- /* ADR-0025: devMode never commits a real VAPID keypair — the backend
+     mints its own ephemeral one at boot instead (config/env.ts). Real
+     deployments keep VAPID_AUTO_GENERATE unset/"false" and provision a
+     persisted keypair via backend.secrets.vapid. */ -}}
+{{- else if eq $key "VAPID_AUTO_GENERATE" -}}true
+{{- /* ADR-0023: the two TTLs get NO devMode override on purpose, so dev and
+     CI exercise the real lifetimes. Only the reuse grace window is
+     shortened, so the reuse-detection integration test needs a ~1.5s sleep
+     instead of ~31s while still covering a genuine two-tab race (which
+     resolves in ms). */ -}}
 {{- else if eq $key "REFRESH_TOKEN_REUSE_GRACE_SECONDS" -}}1
 {{- else -}}{{- index $root.Values.backend.env $key -}}
 {{- end -}}
@@ -83,6 +89,14 @@ dev
 {{- end -}}
 {{- end -}}
 
+{{- define "doschei.backendVapidSecretName" -}}
+{{- if .Values.devMode.enabled -}}
+{{- printf "%s-backend" (include "doschei.fullname" .) -}}
+{{- else -}}
+{{- .Values.backend.secrets.vapid.secretName -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "doschei.backendSecretKey" -}}
 {{- $root := .root -}}
 {{- $type := .type -}}
@@ -108,6 +122,12 @@ dev
 {{- $root.Values.backend.secrets.oauth.keys.config -}}
 {{- else if eq $type "oauthStateSecret" -}}
 {{- $root.Values.backend.secrets.oauth.keys.stateSecret -}}
+{{- else if and $root.Values.devMode.enabled (eq $type "vapidPublicKey") -}}VAPID_PUBLIC_KEY
+{{- else if and $root.Values.devMode.enabled (eq $type "vapidPrivateKey") -}}VAPID_PRIVATE_KEY
+{{- else if eq $type "vapidPublicKey" -}}
+{{- $root.Values.backend.secrets.vapid.keys.publicKey -}}
+{{- else if eq $type "vapidPrivateKey" -}}
+{{- $root.Values.backend.secrets.vapid.keys.privateKey -}}
 {{- else -}}
 {{- $root.Values.backend.secrets.database.keys.databaseName -}}
 {{- end -}}

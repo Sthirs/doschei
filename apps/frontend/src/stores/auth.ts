@@ -12,6 +12,7 @@ import {
   tryRestoreSession as restoreSession,
 } from '@/lib/sessionRefresh';
 import { normalizeLocale, setAppLocale, type Locale } from '@/i18n';
+import { removePushSubscription } from '@/lib/push';
 import type { AuthUser } from '@/types/auth';
 
 type LoginPayload = {
@@ -97,6 +98,10 @@ export const useAuthStore = defineStore('auth', {
         // Offline, or the cookie was already dead. Clearing locally is the
         // part the user asked for.
       }
+      // ADR-0025: must run before clearSession() drops the token, and before
+      // the next person uses this device, or they would receive this user's
+      // notifications.
+      await removePushSubscription();
       this.clearSession();
     },
     /**
