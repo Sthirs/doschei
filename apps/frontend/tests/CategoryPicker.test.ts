@@ -1,14 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { createRouter, createMemoryHistory } from 'vue-router';
 
 import CategoryPicker from '@/components/CategoryPicker.vue';
 import { i18n } from '@/i18n';
+
+// CategoryPicker's open/close state is now a routed overlay
+// (useRoutedOverlay('category'), ADR-0024), so it needs a real router in its
+// injection context — without one, useRoute()/useRouter() throw.
+function createTestRouter() {
+  return createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/', name: 'home', component: { template: '<div />' } }],
+  });
+}
 
 function mountPicker(props: Record<string, unknown> = {}) {
   return mount(CategoryPicker, {
     props: { modelValue: 'general', ...props },
     global: {
-      plugins: [i18n],
+      plugins: [i18n, createTestRouter()],
       stubs: {
         Teleport: {
           template: '<div class="teleport-stub"><slot /></div>',
@@ -25,7 +36,9 @@ async function openPanel(wrapper: ReturnType<typeof mountPicker>) {
 }
 
 function getSearchInput(wrapper: ReturnType<typeof mountPicker>) {
-  const inputs = wrapper.findAll<HTMLInputElement>('input[aria-label="Search categories"]');
+  const inputs = wrapper.findAll<HTMLInputElement>(
+    'input[aria-label="Search categories"]',
+  );
   return inputs[0];
 }
 

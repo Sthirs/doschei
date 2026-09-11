@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 
 import { useAccountProfile } from '@/composables/useAccountProfile';
 import { useImageUpload } from '@/composables/useImageUpload';
+import { goBackOr } from '@/lib/backNavigation';
 import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -35,7 +36,7 @@ const { isUploading, uploadError, handleFileChange } = useImageUpload(
 );
 
 const goBack = () => {
-  router.push('/groups');
+  goBackOr(router, { name: 'groups' });
 };
 
 const logout = async () => {
@@ -63,7 +64,7 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="flex h-9 w-9 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/10 hover:text-slate-100"
-        :aria-label="t('account.backToGroups')"
+        :aria-label="t('common.back')"
         @click="goBack"
       >
         <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
@@ -105,7 +106,12 @@ onBeforeUnmount(() => {
           class="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-[#6654E7] text-[#F0EBFF] shadow-lg transition hover:bg-[#5a47d4] cursor-pointer"
           :aria-label="t('account.changePhoto')"
         >
-          <img src="/icons/edit.svg" alt="" aria-hidden="true" class="h-5 w-5" />
+          <img
+            src="/icons/edit.svg"
+            alt=""
+            aria-hidden="true"
+            class="h-5 w-5"
+          />
         </label>
 
         <!-- Hidden file input -->
@@ -129,12 +135,20 @@ onBeforeUnmount(() => {
       </h2>
 
       <!-- Upload error -->
-      <p v-if="uploadError" data-testid="account-upload-error" class="text-sm text-[#FFB4AB] text-center">
+      <p
+        v-if="uploadError"
+        data-testid="account-upload-error"
+        class="text-sm text-[#FFB4AB] text-center"
+      >
         {{ uploadError }}
       </p>
 
       <!-- Uploading indicator -->
-      <p v-if="isUploading" data-testid="account-uploading" class="text-sm text-[#C6BFFF] text-center">
+      <p
+        v-if="isUploading"
+        data-testid="account-uploading"
+        class="text-sm text-[#C6BFFF] text-center"
+      >
         {{ t('account.photoUploading') }}
       </p>
     </div>
@@ -252,6 +266,11 @@ onBeforeUnmount(() => {
     </button>
 
     <!-- App Version -->
-    <p data-testid="account-version" class="mt-8 text-center text-xs text-[#C8C4D7]/70">{{ t('account.versionLabel') }} {{ appVersion }}</p>
+    <p
+      data-testid="account-version"
+      class="mt-8 text-center text-xs text-[#C8C4D7]/70"
+    >
+      {{ t('account.versionLabel') }} {{ appVersion }}
+    </p>
   </main>
 </template>
