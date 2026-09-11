@@ -104,13 +104,34 @@ export class GroupDetailPage {
     await this.page.waitForURL(/\/groups\/[^/]+\/expenses\/new$/, { timeout: 10000 });
   }
 
+  // ActionRow.vue "Settle Up" button, same client-side-navigation caveat as
+  // clickAddExpense() above: a `router.push`, so `state.back` on the
+  // resulting settle-up entry correctly points at THIS group-detail entry —
+  // unlike `gotoSettleUpCreate` (a full `page.goto`), which starts a fresh
+  // browser-history entry with no `state.back` at all.
+  async clickSettleUp(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Settle Up', exact: true }).click();
+    await this.page.waitForURL(/\/groups\/[^/]+\/settle-up$/, { timeout: 10000 });
+  }
+
   // ExpenseFormView.vue:48-64 — the topbar back arrow, aria-label
-  // "Back to group", is wired to `goBack()` (useExpenseForm.ts:58-64), a
-  // `router.push` back to group-detail — NOT a browser-history navigation —
-  // so leaving the form this way does NOT reload the document either.
+  // "Back to group", is wired to `goBack()` (useExpenseForm.ts:58-64), which
+  // calls `goBackTo` (lib/backNavigation.ts, ADR-0024): it pops the browser
+  // history entry when the previous one already is group-detail, so leaving
+  // the form this way IS now a real history navigation in the common case —
+  // see tests/e2e/navigation/back-button.spec.ts.
   async clickBackToGroup(): Promise<void> {
     await this.page.getByRole('button', { name: 'Back to group' }).click();
     await this.page.waitForURL(/\/groups\/[^/]+$/, { timeout: 10000 });
+  }
+
+  // GroupDetailView.vue's own topbar back arrow (aria-label "Back to
+  // groups", plural — distinct from the singular "Back to group" used by the
+  // nested expense/settle-up/settings pages above), wired the same way via
+  // goBackTo (ADR-0024).
+  async clickBackToGroups(): Promise<void> {
+    await this.page.getByRole('button', { name: 'Back to groups' }).click();
+    await this.page.waitForURL(/\/groups$/, { timeout: 10000 });
   }
 
   async gotoEditExpense(groupId: string, expenseId: string): Promise<void> {
@@ -126,7 +147,10 @@ export class GroupDetailPage {
   }
 
   async getGroupId(): Promise<string> {
-    const id = this.page.url().split('/').pop();
+    // Use the URL's pathname, not a naive split('/').pop() — a trailing
+    // ?overlay=<id> query (useRoutedOverlay, ADR-0024) would otherwise be
+    // captured as part of the id.
+    const id = new URL(this.page.url()).pathname.split('/').pop();
     if (!id) {
       throw new Error(`getGroupId: no id segment in URL ${this.page.url()}`);
     }
@@ -478,6 +502,18 @@ export class GroupDetailPage {
     await expect(this.exportDialog).toBeVisible();
   }
 
+  // Export is now a `?overlay=export` route navigation (useRoutedOverlay,
+  // ADR-0024): the X button pops the entry `open()` pushed, so this waits
+  // for the query to clear rather than just the dialog hiding.
+  async closeExportModal(): Promise<void> {
+    await this.exportDialog.getByRole('button', { name: 'Close' }).click();
+    await expect(this.exportDialog).not.toBeVisible();
+  }
+
+  async expectExportModalHidden(): Promise<void> {
+    await expect(this.exportDialog).not.toBeVisible();
+  }
+
   async setExportMonth(yyyyMm: string): Promise<void> {
     const [year, month] = yyyyMm.split('-').map(Number);
     const monthName = new Date(2000, month - 1, 1).toLocaleDateString('en-US', { month: 'long' });
@@ -492,6 +528,17 @@ export class GroupDetailPage {
   async openTotalsModal(): Promise<void> {
     await this.totalsTriggerButton.click();
     await expect(this.totalsDialog).toBeVisible();
+  }
+
+  // Totals is now a `?overlay=totals` route navigation (useRoutedOverlay,
+  // ADR-0024): the X button pops the entry `open()` pushed.
+  async closeTotalsModal(): Promise<void> {
+    await this.totalsDialog.getByRole('button', { name: 'Close totals' }).click();
+    await expect(this.totalsDialog).not.toBeVisible();
+  }
+
+  async expectTotalsModalHidden(): Promise<void> {
+    await expect(this.totalsDialog).not.toBeVisible();
   }
 
   // The group-spend labels above the bars, oldest month first.
