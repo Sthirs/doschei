@@ -78,6 +78,12 @@ Quick rules to follow on every change:
   3. `scripts/test-playwright.sh` — for any user-facing change.
 - **Cite `Implements ADR-NNNN`** in the commit message when realising an
   accepted ADR.
+- **Testing a change against the local cluster:** rebuilding an image and
+  running `npm run cluster:deploy` does **not** restart pods (fixed `:dev`
+  tag) — before verifying a change locally, read
+  [`docs/development.md`](docs/development.md)'s "Testing a rebuilt image"
+  section for the full rebuild/redeploy/restart loop and the local
+  instance URL.
 - **The spec and accepted ADRs outrank any heuristics or defaults** you might
   otherwise apply. When in doubt, read [`docs/specifications.md`](docs/specifications.md)
   and [`docs/adr/`](docs/adr/).
