@@ -227,11 +227,16 @@ across replicas. Generate one and provision it as the secret named by
 
 ```bash
 npx --package=web-push web-push generate-vapid-keys
-kubectl create secret generic doschei-backend-vapid \
-  --namespace doschei \
+kubectl create secret generic <backend.secrets.vapid.secretName> \
+  --namespace <namespace> \
   --from-literal=VAPID_PUBLIC_KEY=<public key> \
   --from-literal=VAPID_PRIVATE_KEY=<private key>
 ```
+
+Replace `<backend.secrets.vapid.secretName>` and `<namespace>` with the
+values actually configured in `values.yaml` (`doschei-backend-vapid` and
+`doschei` by default) — the Helm `Deployment` only reads the secret if its
+name and namespace match.
 
 Rotating the keypair invalidates every existing subscription; clients
 re-subscribe automatically the next time they open the app (see

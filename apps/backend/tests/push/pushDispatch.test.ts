@@ -110,7 +110,7 @@ describe('dispatchNotification', () => {
 
     await dispatchNotification(['u1'], 'expense.created', params);
 
-    expect(deleteByEndpointMock).toHaveBeenCalledWith('dead-endpoint');
+    expect(deleteByEndpointMock).toHaveBeenCalledWith('dead-endpoint', 'p', 'a');
   });
 
   it('swallows a throwing transport instead of rejecting', async () => {

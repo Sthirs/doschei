@@ -16,6 +16,12 @@ const getRepository = (): Repository<PushSubscription> => {
  * Upserts by `endpoint` (the natural key — the browser reissues the same
  * endpoint on re-subscribe, including the boot-time re-subscribe that
  * absorbs ADR-0020's unregister-on-deploy behaviour).
+ *
+ * A single atomic `INSERT ... ON CONFLICT`, not a `findOne`-then-`save`
+ * sequence: two concurrent registrations of a brand-new endpoint (e.g.
+ * several tabs booting at once) would otherwise both pass the `findOne`
+ * check and one would fail on the unique constraint, surfacing to a client
+ * that did nothing wrong as a 400.
  */
 export const upsertSubscription = async (
   userId: string,
@@ -23,20 +29,24 @@ export const upsertSubscription = async (
   p256dh: string,
   auth: string,
 ): Promise<void> => {
-  const repo = getRepository();
-  const existing = await repo.findOne({ where: { endpoint } });
-  if (existing) {
-    existing.userId = userId;
-    existing.p256dh = p256dh;
-    existing.auth = auth;
-    await repo.save(existing);
-    return;
-  }
-  await repo.save(repo.create({ userId, endpoint, p256dh, auth }));
+  await getRepository().upsert(
+    { userId, endpoint, p256dh, auth },
+    { conflictPaths: ['endpoint'] },
+  );
 };
 
-export const deleteByEndpoint = async (endpoint: string): Promise<void> => {
-  await getRepository().delete({ endpoint });
+/**
+ * Prunes the subscription a dispatch attempt found "gone" — scoped to the
+ * exact `p256dh`/`auth` that attempt sent, not just `endpoint`, so a
+ * subscription re-registered (same endpoint, new keys) between the failed
+ * send and this cleanup isn't deleted out from under its new owner.
+ */
+export const deleteByEndpoint = async (
+  endpoint: string,
+  p256dh: string,
+  auth: string,
+): Promise<void> => {
+  await getRepository().delete({ endpoint, p256dh, auth });
 };
 
 export const deleteByEndpointForUser = async (

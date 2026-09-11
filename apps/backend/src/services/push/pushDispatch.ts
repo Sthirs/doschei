@@ -53,7 +53,7 @@ export const dispatchNotification = async (
           payloadFor(language),
         );
         if (result === 'gone') {
-          await deleteByEndpoint(subscription.endpoint);
+          await deleteByEndpoint(subscription.endpoint, subscription.p256dh, subscription.auth);
         }
       }),
     );

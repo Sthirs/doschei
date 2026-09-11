@@ -153,7 +153,7 @@ describe('removePushSubscription', () => {
       pushManager: { getSubscription: vi.fn().mockResolvedValue(null) },
     };
     vi.stubGlobal('navigator', {
-      serviceWorker: { ready: Promise.resolve(registration) },
+      serviceWorker: { getRegistration: vi.fn().mockResolvedValue(registration) },
     });
     const notificationStub = { permission: 'granted' };
     vi.stubGlobal('window', { PushManager: class {}, Notification: notificationStub });
@@ -173,7 +173,7 @@ describe('removePushSubscription', () => {
       },
     };
     vi.stubGlobal('navigator', {
-      serviceWorker: { ready: Promise.resolve(registration) },
+      serviceWorker: { getRegistration: vi.fn().mockResolvedValue(registration) },
     });
     const notificationStub = { permission: 'granted' };
     vi.stubGlobal('window', { PushManager: class {}, Notification: notificationStub });
@@ -184,6 +184,21 @@ describe('removePushSubscription', () => {
     expect(mockApiDelete).toHaveBeenCalledWith('/push/subscriptions', {
       data: { endpoint: 'https://push.example.com/x' },
     });
+  });
+
+  it('settles even when navigator.serviceWorker.ready never resolves', async () => {
+    vi.stubGlobal('navigator', {
+      serviceWorker: {
+        ready: new Promise(() => {}),
+        getRegistration: vi.fn().mockResolvedValue(undefined),
+      },
+    });
+    const notificationStub = { permission: 'granted' };
+    vi.stubGlobal('window', { PushManager: class {}, Notification: notificationStub });
+    vi.stubGlobal('Notification', notificationStub);
+
+    await expect(removePushSubscription()).resolves.toBeUndefined();
+    expect(mockApiDelete).not.toHaveBeenCalled();
   });
 });
 

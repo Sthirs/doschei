@@ -75,12 +75,19 @@ export async function ensurePushSubscription(): Promise<void> {
   }
 }
 
-/** DELETEs the current subscription server-side. Called on logout. */
+/**
+ * DELETEs the current subscription server-side. Called on logout — uses
+ * `getRegistration()` rather than `navigator.serviceWorker.ready`, since
+ * `ready` only resolves once a worker reaches the active state and would
+ * hang forever (and with it, the logout flow that awaits this) if
+ * registration never completes.
+ */
 export async function removePushSubscription(): Promise<void> {
   if (!isPushSupported()) return;
 
   try {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) return;
     const subscription = await registration.pushManager.getSubscription();
     if (!subscription) return;
 

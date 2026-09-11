@@ -30,7 +30,10 @@ registerRoute(
 // Matches the previous `registerType: 'autoUpdate'` behaviour: take over
 // immediately instead of waiting for all tabs to close.
 self.skipWaiting();
-self.clients.claim();
+
+self.addEventListener('activate', (event: ExtendableEvent) => {
+  event.waitUntil(self.clients.claim());
+});
 
 type PushPayload = {
   title: string;
