@@ -162,6 +162,12 @@ type LoginResponse = {
  * the current build id before the first navigation (real first-time
  * visitors get this same one-time reload; it is orthogonal to whatever a
  * given spec is testing) makes every page skip it.
+ *
+ * `seedBuildId` below is exported (not just used internally by the fixtures)
+ * because the specs that drive a genuinely unauthenticated `/login` load —
+ * login.guard, dex-login, login-ui, local-login-disabled — never touch
+ * `authenticatedPage` but need the same seeding to avoid racing their own
+ * `waitForURL`/element assertions against this reload.
  */
 async function currentBuildId(): Promise<string> {
   const res = await fetch(`${baseURL}/app-version.json`);
@@ -169,7 +175,7 @@ async function currentBuildId(): Promise<string> {
   return buildId;
 }
 
-async function seedBuildId(page: Page): Promise<void> {
+export async function seedBuildId(page: Page): Promise<void> {
   const buildId = await currentBuildId();
   await page.addInitScript((id: string) => {
     window.localStorage.setItem('doschei.app.buildId', id);
