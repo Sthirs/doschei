@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 
 import {
   STORED_BUILD_KEY,
@@ -189,28 +189,21 @@ describe('checkForNewBuild (orchestrator)', () => {
 });
 
 describe('createBrowserPorts (factory)', () => {
-  const originalGlobalThis = globalThis;
-  const originalNavigator = globalThis.navigator;
-  const originalWindow = globalThis.window;
-  const originalCaches = (globalThis as { caches?: CacheStorage }).caches;
-
   beforeEach(() => {
     vi.resetModules();
-    // Reset globals to clean state
-    (globalThis as { localStorage?: Storage }).localStorage = undefined;
-    (globalThis as { sessionStorage?: Storage }).sessionStorage = undefined;
-    (globalThis as { caches?: CacheStorage }).caches = undefined;
-    (globalThis as { navigator?: Navigator }).navigator = undefined;
-    (globalThis as { window?: Window & typeof globalThis }).window = undefined;
+    // Reset globals to clean state. Vitest 5 + happy-dom wire these up as
+    // getter-only accessors on globalThis, so a plain `globalThis.x = y`
+    // throws ("has only a getter") — vi.stubGlobal replaces the descriptor
+    // instead of invoking a (nonexistent) setter.
+    vi.stubGlobal('localStorage', undefined);
+    vi.stubGlobal('sessionStorage', undefined);
+    vi.stubGlobal('caches', undefined);
+    vi.stubGlobal('navigator', undefined);
+    vi.stubGlobal('window', undefined);
   });
 
   afterAll(() => {
-    // Restore
-    (globalThis as { localStorage?: Storage }).localStorage = originalGlobalThis.localStorage;
-    (globalThis as { sessionStorage?: Storage }).sessionStorage = originalGlobalThis.sessionStorage;
-    (globalThis as { caches?: CacheStorage }).caches = originalCaches;
-    (globalThis as { navigator?: Navigator }).navigator = originalNavigator;
-    (globalThis as { window?: Window & typeof globalThis }).window = originalWindow;
+    vi.unstubAllGlobals();
   });
 
   it('fetchRemoteBuildId: ok response with buildId → returns id', async () => {
@@ -218,7 +211,7 @@ describe('createBrowserPorts (factory)', () => {
       ok: true,
       json: vi.fn().mockResolvedValue({ buildId: 'build-456' }),
     });
-    (globalThis as { fetch?: typeof fetch }).fetch = mockFetch;
+    vi.stubGlobal('fetch', mockFetch);
 
     const ports = createBrowserPorts();
     const id = await ports.fetchRemoteBuildId();
@@ -228,7 +221,7 @@ describe('createBrowserPorts (factory)', () => {
 
   it('fetchRemoteBuildId: non-ok response → null', async () => {
     const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 404 });
-    (globalThis as { fetch?: typeof fetch }).fetch = mockFetch;
+    vi.stubGlobal('fetch', mockFetch);
 
     const ports = createBrowserPorts();
     const id = await ports.fetchRemoteBuildId();
@@ -237,7 +230,7 @@ describe('createBrowserPorts (factory)', () => {
 
   it('fetchRemoteBuildId: fetch throws → null', async () => {
     const mockFetch = vi.fn().mockRejectedValue(new Error('offline'));
-    (globalThis as { fetch?: typeof fetch }).fetch = mockFetch;
+    vi.stubGlobal('fetch', mockFetch);
 
     const ports = createBrowserPorts();
     const id = await ports.fetchRemoteBuildId();
@@ -249,7 +242,7 @@ describe('createBrowserPorts (factory)', () => {
       ok: true,
       json: vi.fn().mockResolvedValue({ otherField: 'value' }),
     });
-    (globalThis as { fetch?: typeof fetch }).fetch = mockFetch;
+    vi.stubGlobal('fetch', mockFetch);
 
     const ports = createBrowserPorts();
     const id = await ports.fetchRemoteBuildId();
@@ -263,7 +256,7 @@ describe('createBrowserPorts (factory)', () => {
       setItem: vi.fn((k: string, v: string) => store.set(k, v)),
       removeItem: vi.fn((k: string) => store.delete(k)),
     };
-    (globalThis as { localStorage?: Storage }).localStorage = localStorage as unknown as Storage;
+    vi.stubGlobal('localStorage', localStorage as unknown as Storage);
 
     const ports = createBrowserPorts();
     expect(ports.getStoredBuildId()).toBeNull();
@@ -281,7 +274,7 @@ describe('createBrowserPorts (factory)', () => {
       setItem: vi.fn((k: string, v: string) => store.set(k, v)),
       removeItem: vi.fn((k: string) => store.delete(k)),
     };
-    (globalThis as { sessionStorage?: Storage }).sessionStorage = sessionStorage as unknown as Storage;
+    vi.stubGlobal('sessionStorage', sessionStorage as unknown as Storage);
 
     const ports = createBrowserPorts();
     expect(ports.hasReloadGuard()).toBe(false);
@@ -301,7 +294,7 @@ describe('createBrowserPorts (factory)', () => {
       keys: vi.fn().mockResolvedValue(cacheKeys),
       delete: vi.fn().mockResolvedValue(true),
     };
-    (globalThis as { caches?: CacheStorage }).caches = mockCaches as unknown as CacheStorage;
+    vi.stubGlobal('caches', mockCaches as unknown as CacheStorage);
 
     const mockRegistrations = [
       { unregister: vi.fn().mockResolvedValue(true) },
@@ -312,7 +305,7 @@ describe('createBrowserPorts (factory)', () => {
         getRegistrations: vi.fn().mockResolvedValue(mockRegistrations),
       },
     };
-    (globalThis as { navigator?: Navigator }).navigator = mockNavigator as unknown as Navigator;
+    vi.stubGlobal('navigator', mockNavigator as unknown as Navigator);
 
     const ports = createBrowserPorts();
     await ports.purgeCachesAndWorkers();
@@ -335,21 +328,19 @@ describe('createBrowserPorts (factory)', () => {
       keys: vi.fn().mockResolvedValue([]),
       delete: vi.fn().mockResolvedValue(true),
     };
-    (globalThis as { caches?: CacheStorage }).caches =
-      mockCaches as unknown as CacheStorage;
-    (globalThis as { navigator?: Navigator }).navigator = {
+    vi.stubGlobal('caches', mockCaches as unknown as CacheStorage);
+    vi.stubGlobal('navigator', {
       serviceWorker: { getRegistrations: vi.fn().mockResolvedValue([]) },
-    } as unknown as Navigator;
+    } as unknown as Navigator);
 
     const documentStub = { cookie: 'doschei.auth.refresh=secret' };
-    (globalThis as { document?: Document }).document =
-      documentStub as unknown as Document;
+    vi.stubGlobal('document', documentStub as unknown as Document);
     const removeItem = vi.fn();
-    (globalThis as { localStorage?: Storage }).localStorage = {
+    vi.stubGlobal('localStorage', {
       removeItem,
       getItem: vi.fn(),
       setItem: vi.fn(),
-    } as unknown as Storage;
+    } as unknown as Storage);
 
     const ports = createBrowserPorts();
     await ports.purgeCachesAndWorkers();
@@ -360,9 +351,9 @@ describe('createBrowserPorts (factory)', () => {
 
   it('purgeCachesAndWorkers: caches API missing → no throw', async () => {
     // No caches on globalThis
-    (globalThis as { caches?: CacheStorage }).caches = undefined;
+    vi.stubGlobal('caches', undefined);
     const mockNavigator = { serviceWorker: undefined };
-    (globalThis as { navigator?: Navigator }).navigator = mockNavigator as unknown as Navigator;
+    vi.stubGlobal('navigator', mockNavigator as unknown as Navigator);
 
     const ports = createBrowserPorts();
     await expect(ports.purgeCachesAndWorkers()).resolves.toBeUndefined();
@@ -373,9 +364,9 @@ describe('createBrowserPorts (factory)', () => {
       keys: vi.fn().mockResolvedValue([]),
       delete: vi.fn().mockResolvedValue(true),
     };
-    (globalThis as { caches?: CacheStorage }).caches = mockCaches as unknown as CacheStorage;
+    vi.stubGlobal('caches', mockCaches as unknown as CacheStorage);
     const mockNavigator = { serviceWorker: undefined };
-    (globalThis as { navigator?: Navigator }).navigator = mockNavigator as unknown as Navigator;
+    vi.stubGlobal('navigator', mockNavigator as unknown as Navigator);
 
     const ports = createBrowserPorts();
     await expect(ports.purgeCachesAndWorkers()).resolves.toBeUndefined();
@@ -384,7 +375,7 @@ describe('createBrowserPorts (factory)', () => {
   it('reload calls window.location.reload()', () => {
     const mockReload = vi.fn();
     const mockWindow = { location: { reload: mockReload } };
-    (globalThis as { window?: Window & typeof globalThis }).window = mockWindow as unknown as Window & typeof globalThis;
+    vi.stubGlobal('window', mockWindow as unknown as Window & typeof globalThis);
 
     const ports = createBrowserPorts();
     ports.reload();
@@ -392,7 +383,7 @@ describe('createBrowserPorts (factory)', () => {
   });
 
   it('reload: window missing → no throw', () => {
-    (globalThis as { window?: Window & typeof globalThis }).window = undefined;
+    vi.stubGlobal('window', undefined);
     const ports = createBrowserPorts();
     expect(() => ports.reload()).not.toThrow();
   });
@@ -409,8 +400,8 @@ describe('createBrowserPorts (factory)', () => {
         throw new Error('private mode');
       }),
     };
-    (globalThis as { localStorage?: Storage }).localStorage = throwingStorage as unknown as Storage;
-    (globalThis as { sessionStorage?: Storage }).sessionStorage = throwingStorage as unknown as Storage;
+    vi.stubGlobal('localStorage', throwingStorage as unknown as Storage);
+    vi.stubGlobal('sessionStorage', throwingStorage as unknown as Storage);
 
     const ports = createBrowserPorts();
     expect(ports.getStoredBuildId()).toBeNull();
@@ -450,8 +441,8 @@ describe('Storage key isolation — doschei.auth.token and doschei.lang never to
         sessionStorageCalls.push(k);
       }),
     };
-    (globalThis as { localStorage?: Storage }).localStorage = localStorage as unknown as Storage;
-    (globalThis as { sessionStorage?: Storage }).sessionStorage = sessionStorage as unknown as Storage;
+    vi.stubGlobal('localStorage', localStorage as unknown as Storage);
+    vi.stubGlobal('sessionStorage', sessionStorage as unknown as Storage);
 
     const ports = createBrowserPorts();
 
@@ -509,24 +500,27 @@ describe('Storage key isolation — doschei.auth.token and doschei.lang never to
         sessionStorageCalls.push(k);
       }),
     };
-    (globalThis as { localStorage?: Storage }).localStorage = localStorage as unknown as Storage;
-    (globalThis as { sessionStorage?: Storage }).sessionStorage = sessionStorage as unknown as Storage;
+    vi.stubGlobal('localStorage', localStorage as unknown as Storage);
+    vi.stubGlobal('sessionStorage', sessionStorage as unknown as Storage);
 
     // Mock fetch, caches, SW, window
-    (globalThis as { fetch?: typeof fetch }).fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: vi.fn().mockResolvedValue({ buildId: 'new-build' }),
-    });
-    (globalThis as { caches?: CacheStorage }).caches = {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ buildId: 'new-build' }),
+      }),
+    );
+    vi.stubGlobal('caches', {
       keys: vi.fn().mockResolvedValue([]),
       delete: vi.fn().mockResolvedValue(true),
-    } as unknown as CacheStorage;
-    (globalThis as { navigator?: Navigator }).navigator = {
+    } as unknown as CacheStorage);
+    vi.stubGlobal('navigator', {
       serviceWorker: { getRegistrations: vi.fn().mockResolvedValue([]) },
-    } as unknown as Navigator;
-    (globalThis as { window?: Window & typeof globalThis }).window = {
+    } as unknown as Navigator);
+    vi.stubGlobal('window', {
       location: { reload: vi.fn() },
-    } as unknown as Window & typeof globalThis;
+    } as unknown as Window & typeof globalThis);
 
     const ports = createBrowserPorts();
     await checkForNewBuild(ports);
