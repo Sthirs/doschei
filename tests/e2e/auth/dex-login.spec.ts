@@ -2,10 +2,14 @@
 // Does NOT use the authenticatedPage fixture — starts unauthenticated and drives the
 // entire browser redirect chain: /login → /api/auth/oauth → /dex/auth/local → /groups.
 import { expect, test } from '@playwright/test';
+import { seedBuildId } from '../fixtures/auth';
 
 test.describe('Dex OAuth login', () => {
   test('signs in via Dex and lands on /groups', async ({ page }) => {
-    // 1. Load the login page
+    // 1. Load the login page. Seeded first so main.ts's ADR-0020
+    //    "new build detected" check doesn't fire a purge-and-reload mid-flow
+    //    (see seedBuildId's doc comment in ../fixtures/auth).
+    await seedBuildId(page);
     await page.goto('/login');
 
     // 2. Wait for the OAuth config fetch to complete and the button to render.

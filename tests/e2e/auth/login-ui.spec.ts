@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { seedBuildId } from '../fixtures/auth';
 
 test.describe('Login UI — visual fidelity', () => {
   test('renders the single-column UI layout with prefilled demo credentials', async ({ page }) => {
+    // Seeded first so main.ts's ADR-0020 "new build detected" check doesn't
+    // fire a purge-and-reload mid-flow (see seedBuildId's doc comment in
+    // ../fixtures/auth).
+    await seedBuildId(page);
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
 
@@ -60,6 +65,10 @@ test.describe('Login UI — visual fidelity', () => {
       return;
     }
 
+    // Seeded first so main.ts's ADR-0020 "new build detected" check doesn't
+    // fire a purge-and-reload mid-flow (see seedBuildId's doc comment in
+    // ../fixtures/auth).
+    await seedBuildId(page);
     await page.goto('/login');
     await page.waitForLoadState('networkidle');
     if (!page.url().includes('/login')) {
