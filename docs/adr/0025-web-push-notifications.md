@@ -1,6 +1,6 @@
 # ADR-0025: Web Push notifications for ledger and invitation events
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-09-11
 - **Deciders:** Sthirs
 
