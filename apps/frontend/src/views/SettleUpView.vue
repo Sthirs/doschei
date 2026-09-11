@@ -25,6 +25,8 @@ const {
   validationMessage,
   goBack,
   submit,
+  startDelete,
+  cancelDelete,
   deleteSettlement,
 } = useSettleUpForm();
 </script>
@@ -148,14 +150,24 @@ const {
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
                 >{{ t('settleUp.whoPaid') }}</span
               >
-              <UserPicker v-model="payerId" :members="group.members" test-id="payer-picker" />
+              <UserPicker
+                v-model="payerId"
+                :members="group.members"
+                test-id="payer-picker"
+                overlay-id="payer"
+              />
             </label>
             <label class="flex-1 flex flex-col gap-1.5">
               <span
                 class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C8C4D7]"
                 >{{ t('settleUp.toWhom') }}</span
               >
-              <UserPicker v-model="payeeId" :members="group.members" test-id="payee-picker" />
+              <UserPicker
+                v-model="payeeId"
+                :members="group.members"
+                test-id="payee-picker"
+                overlay-id="payee"
+              />
             </label>
           </div>
 
@@ -164,7 +176,14 @@ const {
 
           <!-- Balance impact caption -->
           <p class="text-sm text-center text-[#C8C4D7]">
-            {{ t('settleUp.balanceImpact', { amount: formatEur(Math.abs(group.balance.netForCurrentUser), locale) }) }}
+            {{
+              t('settleUp.balanceImpact', {
+                amount: formatEur(
+                  Math.abs(group.balance.netForCurrentUser),
+                  locale,
+                ),
+              })
+            }}
           </p>
 
           <!-- Validation / error messages -->
@@ -205,7 +224,7 @@ const {
               type="button"
               class="flex-1 rounded-xl border border-white/[0.08] py-3 text-sm font-medium text-[#C8C4D7] transition hover:bg-white/5"
               :disabled="submitting"
-              @click="showDeleteConfirm = false"
+              @click="cancelDelete"
             >
               {{ t('settleUp.cancel') }}
             </button>
@@ -240,7 +259,7 @@ const {
           v-if="mode === 'edit'"
           type="button"
           class="w-full py-2 text-center text-sm font-medium text-[#FFB4AB] transition hover:text-[#ff8a80]"
-          @click="showDeleteConfirm = true"
+          @click="startDelete"
         >
           {{ t('settleUp.deleteThisPayment') }}
         </button>

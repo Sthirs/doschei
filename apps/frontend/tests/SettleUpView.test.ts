@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { reactive } from 'vue';
 
 import SettleUpView from '@/views/SettleUpView.vue';
 import { i18n } from '@/i18n';
@@ -8,15 +9,48 @@ import { api } from '@/lib/api';
 import type { Expense, GroupDetail } from '@/types/group';
 
 // --- Mock state (hoisted so vi.mock factories can reference it) ---
-const mocks = vi.hoisted(() => ({
-  route: {
-    name: 'settleup-new' as string,
-    params: { id: 'g1' } as Record<string, string>,
-  },
-  push: vi.fn(),
-  currentPageTitle: { value: null as string | null },
-  sharedGroup: { value: null as GroupDetail | null },
-}));
+// `push`/`back`/`replace` start as bare vi.fn()'s here — `vi.hoisted` runs
+// eagerly, before this file's own `import`s (including 'vue') have settled,
+// so anything needing `reactive()` from vue must be wired up afterwards, in
+// normal module code below.
+const mocks = vi.hoisted(() => {
+  const afterEachCallbacks: Array<() => void> = [];
+  return {
+    route: {
+      name: 'settleup-new' as string,
+      params: { id: 'g1' } as Record<string, string>,
+      // useSettleUpForm now calls useRoutedOverlay('delete') (ADR-0024),
+      // which reads route.query — without this it throws on render.
+      query: {} as Record<string, string>,
+    },
+    push: vi.fn(),
+    back: vi.fn(),
+    replace: vi.fn(),
+    afterEachCallbacks,
+    historyBack: null as string | null,
+    currentPageTitle: { value: null as string | null },
+    sharedGroup: { value: null as GroupDetail | null },
+  };
+});
+
+// Wired up here, not inside vi.hoisted (see the comment above): `route`
+// becomes `reactive()` so useRoutedOverlay's `isOpen` computed genuinely
+// tracks it, and `push`/`replace` are given implementations that mutate
+// `route.query` the way a real router would — this file's delete-confirm
+// test drives the UI through real clicks and asserts on the rendered DOM.
+mocks.route = reactive(mocks.route);
+mocks.push.mockImplementation((to: { query?: Record<string, string> }) => {
+  if (to?.query) mocks.route.query = { ...to.query };
+  queueMicrotask(() => mocks.afterEachCallbacks.forEach((cb) => cb()));
+});
+mocks.back.mockImplementation(() => {
+  queueMicrotask(() => mocks.afterEachCallbacks.forEach((cb) => cb()));
+});
+mocks.replace.mockImplementation((to: { query?: Record<string, string> }) => {
+  if (to?.query) mocks.route.query = { ...to.query };
+  queueMicrotask(() => mocks.afterEachCallbacks.forEach((cb) => cb()));
+  return Promise.resolve(undefined);
+});
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -27,9 +61,32 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+// `back`/`replace`/`afterEach`/`options.history.state` exist only because
+// goBackTo and useRoutedOverlay (ADR-0024) are NOT mocked here and run for
+// real against these — see the identical comment in useSettleUpForm.test.ts.
 vi.mock('vue-router', () => ({
   useRoute: () => mocks.route,
-  useRouter: () => ({ push: mocks.push }),
+  useRouter: () => ({
+    push: mocks.push,
+    back: mocks.back,
+    replace: mocks.replace,
+    resolve: (to: { name: string }) => ({
+      fullPath: to.name === 'group-detail' ? '/groups/g1' : '/unknown',
+    }),
+    afterEach: (cb: () => void) => {
+      mocks.afterEachCallbacks.push(cb);
+      return () => {};
+    },
+    options: {
+      history: {
+        state: {
+          get back() {
+            return mocks.historyBack;
+          },
+        },
+      },
+    },
+  }),
 }));
 
 vi.mock('@/router', () => ({
@@ -54,8 +111,18 @@ function getDefaultGroup(): GroupDetail {
     imageUrl: null,
     memberCount: 2,
     members: [
-      { id: 'user-1', displayName: 'Alice', email: 'alice@test.com', imageUrl: null },
-      { id: 'user-2', displayName: 'Bob', email: 'bob@test.com', imageUrl: null },
+      {
+        id: 'user-1',
+        displayName: 'Alice',
+        email: 'alice@test.com',
+        imageUrl: null,
+      },
+      {
+        id: 'user-2',
+        displayName: 'Bob',
+        email: 'bob@test.com',
+        imageUrl: null,
+      },
     ],
     netForCurrentUser: 800,
     expenses: [],
@@ -114,21 +181,22 @@ const mountView = async (group: GroupDetail) => {
   return wrapper;
 };
 
-const findButtonByText = (
-  wrapper: ReturnType<typeof mount>,
-  text: string,
-) =>
-  wrapper
-    .findAll('button')
-    .find((b) => b.text().trim() === text);
+const findButtonByText = (wrapper: ReturnType<typeof mount>, text: string) =>
+  wrapper.findAll('button').find((b) => b.text().trim() === text);
 
 describe('SettleUpView', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    // vi.clearAllMocks() only clears call history, not implementations, so
+    // the push/back/replace implementations wired up above module-level
+    // survive it. (mockReset() would additionally wipe them — do not use it
+    // here.)
     vi.clearAllMocks();
     mocks.route.name = 'settleup-new';
     mocks.route.params = { id: 'g1' };
-    mocks.push.mockReset();
+    mocks.route.query = {};
+    mocks.afterEachCallbacks.length = 0;
+    mocks.historyBack = null;
     mocks.currentPageTitle.value = null;
     mocks.sharedGroup.value = null;
   });
@@ -166,7 +234,10 @@ describe('SettleUpView', () => {
         date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       }),
     );
-    expect(mocks.push).toHaveBeenCalledWith(
+    // The exit now goes through goBackTo (lib/backNavigation.ts, ADR-0024).
+    // historyBack defaults to null in beforeEach (no matching previous
+    // entry), so it takes the replace fallback rather than a push.
+    expect(mocks.replace).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'group-detail' }),
     );
   });
@@ -243,7 +314,10 @@ describe('SettleUpView', () => {
       }),
     );
     expect(api.post).not.toHaveBeenCalled();
-    expect(mocks.push).toHaveBeenCalledWith(
+    // The exit now goes through goBackTo (lib/backNavigation.ts, ADR-0024).
+    // historyBack defaults to null in beforeEach (no matching previous
+    // entry), so it takes the replace fallback rather than a push.
+    expect(mocks.replace).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'group-detail' }),
     );
   });
@@ -257,11 +331,13 @@ describe('SettleUpView', () => {
 
     const wrapper = await mountView(group);
 
-    // Click "Delete this payment" → confirm panel appears.
+    // Click "Delete this payment" → confirm panel appears. Opening is now a
+    // routed-overlay navigation (useRoutedOverlay('delete'), ADR-0024), so a
+    // plain $nextTick is not enough — flush the async push first.
     const openConfirm = findButtonByText(wrapper, 'Delete this payment');
     expect(openConfirm).toBeDefined();
     await openConfirm!.trigger('click');
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     expect(wrapper.html()).toContain('Delete payment?');
     expect(wrapper.html()).toContain('This action cannot be undone.');
@@ -274,7 +350,10 @@ describe('SettleUpView', () => {
 
     expect(api.delete).toHaveBeenCalledTimes(1);
     expect(api.delete).toHaveBeenCalledWith('/groups/g1/settlements/s1');
-    expect(mocks.push).toHaveBeenCalledWith(
+    // The exit now goes through goBackTo (lib/backNavigation.ts, ADR-0024).
+    // historyBack defaults to null in beforeEach (no matching previous
+    // entry), so it takes the replace fallback rather than a push.
+    expect(mocks.replace).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'group-detail' }),
     );
   });

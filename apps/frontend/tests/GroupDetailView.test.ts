@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { ref } from 'vue';
 
@@ -93,15 +93,50 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-// Mock vue-router
+// Mock vue-router. `back`/`replace`/`options.history.state`/`afterEach` exist
+// only because goBackTo (lib/backNavigation.ts, ADR-0024) is NOT mocked here
+// and runs for real against these mocks. `afterEachCallbacks` simulates
+// vue-router invoking every registered afterEach guard once a navigation
+// settles, which is what clears goBackTo's module-level `popPending` latch —
+// without it, the latch set by one test's back-arrow click would leak into
+// the next. `mockHistoryBack` is reassigned per-test to control which branch
+// goBackTo takes.
 const mockRouterPush = vi.fn();
+const afterEachCallbacks: Array<() => void> = [];
+const mockRouterBack = vi.fn(() => {
+  queueMicrotask(() => afterEachCallbacks.forEach((cb) => cb()));
+});
+const mockRouterReplace = vi.fn(() => {
+  queueMicrotask(() => afterEachCallbacks.forEach((cb) => cb()));
+  return Promise.resolve(undefined);
+});
+let mockHistoryBack: string | null = null;
 vi.mock('vue-router', () => ({
   useRoute: () => ({
     params: { id: 'group-1' },
     meta: { requiresAuth: true },
+    query: {},
   }),
   useRouter: () => ({
     push: mockRouterPush,
+    back: mockRouterBack,
+    replace: mockRouterReplace,
+    resolve: (to: { name: string }) => ({
+      fullPath: to.name === 'groups' ? '/groups' : '/unknown',
+    }),
+    afterEach: (cb: () => void) => {
+      afterEachCallbacks.push(cb);
+      return () => {};
+    },
+    options: {
+      history: {
+        state: {
+          get back() {
+            return mockHistoryBack;
+          },
+        },
+      },
+    },
   }),
 }));
 
@@ -139,7 +174,9 @@ const mountGroupDetailView = () =>
 // Queue the group payload returned by api.get for the next mount (loadGroup is
 // called once on mount, so a single mockResolvedValueOnce is consumed).
 const mockGroupResponse = (group: Record<string, unknown>) => {
-  (api.get as unknown as { mockResolvedValueOnce: (value: unknown) => unknown }).mockResolvedValueOnce({
+  (
+    api.get as unknown as { mockResolvedValueOnce: (value: unknown) => unknown }
+  ).mockResolvedValueOnce({
     data: { group },
   });
 };
@@ -148,6 +185,8 @@ describe('GroupDetailView', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    afterEachCallbacks.length = 0;
+    mockHistoryBack = null;
     // Mock history.state to avoid null reference in happy-dom
     Object.defineProperty(window, 'history', {
       value: { state: {} },
@@ -272,7 +311,9 @@ describe('GroupDetailView', () => {
       ...getDefaultGroup(),
       balance: {
         ...getDefaultGroup().balance,
-        perUser: [{ userId: 'user-2', displayName: 'Bob', netForCurrentUser: 10 }],
+        perUser: [
+          { userId: 'user-2', displayName: 'Bob', netForCurrentUser: 10 },
+        ],
       },
     });
     const wrapper = mountGroupDetailView();
@@ -283,7 +324,9 @@ describe('GroupDetailView', () => {
     expect(wrapper.html()).toContain('See breakdown');
     expect(wrapper.html()).not.toContain('Bob owes you');
 
-    const breakdownButton = wrapper.findAll('button').find((b) => b.text().includes('See breakdown'))!;
+    const breakdownButton = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('See breakdown'))!;
     await breakdownButton.trigger('click');
     await wrapper.vm.$nextTick();
 
@@ -297,27 +340,10 @@ describe('GroupDetailView', () => {
     expect(wrapper.html()).not.toContain('Bob owes you');
   });
 
-  it('renders the export modal with month and year <select>s', async () => {
-    const wrapper = mountGroupDetailView();
-
-    await vi.dynamicImportSettled();
-    await wrapper.vm.$nextTick();
-
-    const exportButton = wrapper.findAll('button').find((b) => b.text().trim() === 'Export')!;
-    await exportButton.trigger('click');
-    await wrapper.vm.$nextTick();
-
-    const html = wrapper.html();
-    expect(html).toContain('Select Period');
-    expect(html).toContain('Month');
-    expect(html).toContain('Year');
-    expect(html).toContain('Export Expenses');
-
-    const selects = wrapper.findAll('select');
-    expect(selects).toHaveLength(2);
-    expect(selects[0].findAll('option')).toHaveLength(12);
-    expect(selects[1].findAll('option')).toHaveLength(5);
-  });
+  // The Export modal is now opened via a real ?overlay=export navigation
+  // (useRoutedOverlay, ADR-0024), which this file's static `useRoute()` mock
+  // (fixed `query: {}`) cannot reflect back into `showExportModal`. Moved to
+  // GroupDetailOverlayRoutes.test.ts, which mounts against a real router.
 
   it('renders YOU OWE / YOU LENT badges on expense rows', async () => {
     mockGroupResponse({
@@ -374,7 +400,9 @@ describe('GroupDetailView', () => {
     const html = wrapper.html();
     expect(html).toContain('+ Add expense');
 
-    const bottomButton = wrapper.findAll('button').find((b) => b.text().includes('+ Add expense'));
+    const bottomButton = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('+ Add expense'));
     expect(bottomButton).toBeTruthy();
   });
 
@@ -466,7 +494,13 @@ describe('GroupDetailView', () => {
     );
   });
 
-  it('navigates to the groups list when the back arrow is clicked', async () => {
+  // The back arrow now goes through goBackTo (lib/backNavigation.ts,
+  // ADR-0024): it pops history when the previous entry already is `/groups`,
+  // and only falls back to a forward `replace` when it is not (e.g. a deep
+  // link straight into this page). It never `push`es — that would grow the
+  // stack, which is the bug this ADR fixes.
+  it('pops history when the previous entry is already the groups list', async () => {
+    mockHistoryBack = '/groups';
     const wrapper = mountGroupDetailView();
 
     await vi.dynamicImportSettled();
@@ -476,8 +510,28 @@ describe('GroupDetailView', () => {
       .findAll('button')
       .find((b) => b.attributes('aria-label') === 'Back to groups')!;
     await backButton.trigger('click');
+    await flushPromises();
 
-    expect(mockRouterPush).toHaveBeenCalledWith({ name: 'groups' });
+    expect(mockRouterBack).toHaveBeenCalledTimes(1);
+    expect(mockRouterReplace).not.toHaveBeenCalled();
+    expect(mockRouterPush).not.toHaveBeenCalled();
+  });
+
+  it('replaces instead of popping when the previous entry is not the groups list', async () => {
+    mockHistoryBack = null; // e.g. a deep link straight into /groups/:id
+    const wrapper = mountGroupDetailView();
+
+    await vi.dynamicImportSettled();
+    await wrapper.vm.$nextTick();
+
+    const backButton = wrapper
+      .findAll('button')
+      .find((b) => b.attributes('aria-label') === 'Back to groups')!;
+    await backButton.trigger('click');
+    await flushPromises();
+
+    expect(mockRouterReplace).toHaveBeenCalledWith({ name: 'groups' });
+    expect(mockRouterBack).not.toHaveBeenCalled();
   });
 });
 

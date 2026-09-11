@@ -63,7 +63,6 @@ export const useExpenseFormState = () => {
   const errorMessage = ref('');
   const submitting = ref(false);
   const deleting = ref(false);
-  const showDeleteConfirm = ref(false);
 
   const {
     onCategoryPicked,
@@ -96,7 +95,6 @@ export const useExpenseFormState = () => {
   };
 
   const initialise = () => {
-    showDeleteConfirm.value = false;
     errorMessage.value = '';
     // Reset the manual-selection flag so a freshly loaded form can still
     // auto-pick the default slot. Any pending suggestion is also dropped — it
@@ -164,7 +162,6 @@ export const useExpenseFormState = () => {
     errorMessage,
     submitting,
     deleting,
-    showDeleteConfirm,
     split,
     numericAmount,
     initialise,
