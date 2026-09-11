@@ -1,8 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
+import { createRouter, createMemoryHistory } from 'vue-router';
 
 import DateTimePicker from '@/components/DateTimePicker.vue';
 import { i18n } from '@/i18n';
+
+// DateTimePicker's open/close state is now a routed overlay
+// (useRoutedOverlay('date'), ADR-0024), so it needs a real router in its
+// injection context — without one, useRoute()/useRouter() throw.
+function createTestRouter() {
+  return createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/', name: 'home', component: { template: '<div />' } }],
+  });
+}
 
 // Stub DatePicker (from v-calendar) as a simple passthrough that renders the
 // v-model value and emits nothing on its own. The unit test asserts WRAPPER
@@ -18,7 +29,7 @@ function mountPicker(props: Record<string, unknown> = {}) {
   return mount(DateTimePicker, {
     props: { modelValue: '2024-01-15', ...props },
     global: {
-      plugins: [i18n],
+      plugins: [i18n, createTestRouter()],
       stubs: {
         DatePicker: stubDatePicker,
         // Stub Teleport as a passthrough so the teleported sheet content is
@@ -62,7 +73,7 @@ describe('DateTimePicker', () => {
 
     // Open the bottom sheet by clicking the trigger.
     await wrapper.find('[data-test-id="dtp"]').trigger('click');
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     // Find the Apply button inside the teleported sheet.
     const buttons = wrapper.findAll('button');
@@ -82,7 +93,7 @@ describe('DateTimePicker', () => {
     expect(wrapper.html()).not.toContain('Apply');
 
     await wrapper.find('[data-test-id="dtp"]').trigger('click');
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     const html = wrapper.html();
     expect(html).toContain('Cancel');
@@ -93,7 +104,7 @@ describe('DateTimePicker', () => {
     const wrapper = mountPicker({ modelValue: '2024-01-15' });
 
     await wrapper.find('[data-test-id="dtp"]').trigger('click');
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     const buttons = wrapper.findAll('button');
     const cancel = buttons.find((b) => b.text().trim() === 'Cancel');
@@ -114,7 +125,7 @@ describe('DateTimePicker', () => {
     const wrapper = mountPicker({ modelValue: '2024-01-15' });
 
     await wrapper.find('[data-test-id="dtp"]').trigger('click');
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     // Simulate the user picking a day in the calendar — v-calendar day cells
     // update the wrapper's internal draft ref via v-model.
@@ -142,7 +153,7 @@ describe('DateTimePicker', () => {
     expect(html).toContain('Sat, Jun 15');
 
     await wrapper.find('[data-test-id="dtp"]').trigger('click');
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     const buttons = wrapper.findAll('button');
     const apply = buttons.find((b) => b.text().trim() === 'Apply');
@@ -158,7 +169,7 @@ describe('DateTimePicker', () => {
     const wrapper = mountPicker({ modelValue: '2024-01-15' });
 
     await wrapper.find('[data-test-id="dtp"]').trigger('click');
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     // The footer action row uses `flex justify-end gap-2 …`.
     const actionRow = wrapper.find('.flex.justify-end.gap-2');
@@ -174,7 +185,7 @@ describe('DateTimePicker', () => {
     const wrapper = mountPicker({ modelValue: '2024-01-15' });
 
     await wrapper.find('[data-test-id="dtp"]').trigger('click');
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     // The scrim is the first direct child div of the dialog.
     const scrim = wrapper.find('[role="dialog"] > div');

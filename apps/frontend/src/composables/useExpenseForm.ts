@@ -3,9 +3,11 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
+import { goBackTo } from '@/lib/backNavigation';
 import { currentPageTitle, sharedGroup } from '@/router';
 import { useExpenseFormState } from '@/composables/useExpenseFormState';
 import { useExpenseFormValidation } from '@/composables/useExpenseFormValidation';
+import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
 
 /**
  * View model for `ExpenseFormView`: composes form state, validation, and the
@@ -31,7 +33,6 @@ export const useExpenseForm = () => {
     errorMessage,
     submitting,
     deleting,
-    showDeleteConfirm,
     split,
     numericAmount,
     initialise,
@@ -39,6 +40,13 @@ export const useExpenseForm = () => {
     scheduleSuggestion,
     cancelSuggestion,
   } = useExpenseFormState();
+
+  const {
+    isOpen: showDeleteConfirm,
+    open: startDelete,
+    close: cancelDelete,
+    closeBeforeLeaving: closeDeleteConfirmBeforeLeaving,
+  } = useRoutedOverlay('delete');
 
   const { isFormValid, validationMessage } = useExpenseFormValidation({
     description,
@@ -56,7 +64,7 @@ export const useExpenseForm = () => {
   );
 
   const goBack = () => {
-    router.push({
+    goBackTo(router, {
       name: 'group-detail',
       params: { id: groupId.value },
       state: { groupName: group.value?.name },
@@ -129,20 +137,15 @@ export const useExpenseForm = () => {
     }
   };
 
-  const startDelete = () => {
-    showDeleteConfirm.value = true;
-  };
-
-  const cancelDelete = () => {
-    showDeleteConfirm.value = false;
-  };
-
   const confirmDelete = async () => {
     deleting.value = true;
     errorMessage.value = '';
 
     try {
       await api.delete(`/groups/${groupId.value}/expenses/${expenseId.value}`);
+      // The overlay's own entry points at this now-deleted expense, so it
+      // must be dropped (replace), not popped, before goBack() pops again.
+      await closeDeleteConfirmBeforeLeaving();
       goBack();
     } catch {
       errorMessage.value = t('expenseForm.deleteError');

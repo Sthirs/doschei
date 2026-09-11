@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { createRouter, createMemoryHistory } from 'vue-router';
 
 import UserPicker from '@/components/UserPicker.vue';
 import { i18n } from '@/i18n';
@@ -14,13 +15,25 @@ const makeMember = (overrides: Partial<GroupMember> = {}): GroupMember => ({
   ...overrides,
 });
 
-const mountComponent = (props: { modelValue: string; members: GroupMember[] } = {
-  modelValue: '',
-  members: [],
-}) => {
+// UserPicker's open/close state is now a routed overlay (useRoutedOverlay,
+// ADR-0024) keyed by its required `overlayId` prop — needs a real router in
+// its injection context, and the prop must be unique whenever more than one
+// instance is mounted at once (only relevant in production, where SettleUpView
+// mounts a payer and a payee picker side by side; a fixed id is fine here
+// since these tests only ever mount one at a time).
+const mountComponent = (
+  props: { modelValue: string; members: GroupMember[]; overlayId?: string } = {
+    modelValue: '',
+    members: [],
+  },
+) => {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/', name: 'home', component: { template: '<div />' } }],
+  });
   return mount(UserPicker, {
-    props,
-    global: { plugins: [i18n], stubs: { Teleport: true } },
+    props: { overlayId: 'payer', ...props },
+    global: { plugins: [i18n, router], stubs: { Teleport: true } },
   });
 };
 
@@ -43,7 +56,11 @@ describe('UserPicker', () => {
 
   it('renders img when selected member has imageUrl', () => {
     const members = [
-      makeMember({ id: 'user-1', displayName: 'Alice', imageUrl: 'https://example.com/alice.jpg' }),
+      makeMember({
+        id: 'user-1',
+        displayName: 'Alice',
+        imageUrl: 'https://example.com/alice.jpg',
+      }),
     ];
     const wrapper = mountComponent({ modelValue: 'user-1', members });
 
@@ -68,6 +85,7 @@ describe('UserPicker', () => {
     // Open dropdown
     const trigger = wrapper.find('button[aria-label="Select who paid"]');
     await trigger.trigger('click');
+    await flushPromises();
 
     // Desktop option shows initials
     const optionAvatar = wrapper.find('.max-h-60 .flex.h-7.w-7');
@@ -78,13 +96,18 @@ describe('UserPicker', () => {
 
   it('renders img in desktop dropdown option when member has imageUrl', async () => {
     const members = [
-      makeMember({ id: 'user-1', displayName: 'Alice', imageUrl: 'https://example.com/alice.jpg' }),
+      makeMember({
+        id: 'user-1',
+        displayName: 'Alice',
+        imageUrl: 'https://example.com/alice.jpg',
+      }),
     ];
     const wrapper = mountComponent({ modelValue: '', members });
 
     // Open dropdown
     const trigger = wrapper.find('button[aria-label="Select who paid"]');
     await trigger.trigger('click');
+    await flushPromises();
 
     // Desktop option shows image
     const optionAvatar = wrapper.find('.max-h-60 .flex.h-7.w-7');
@@ -107,6 +130,7 @@ describe('UserPicker', () => {
     // Open dropdown (mobile bottom-sheet is rendered via Teleport to body)
     const trigger = wrapper.find('button[aria-label="Select who paid"]');
     await trigger.trigger('click');
+    await flushPromises();
 
     // Mobile option shows initials (Teleport renders to body, so we check the wrapper's teleported content)
     // The mobile options are in the Teleport, so we need to find them in the wrapper
@@ -118,13 +142,18 @@ describe('UserPicker', () => {
 
   it('renders img in mobile bottom-sheet option when member has imageUrl', async () => {
     const members = [
-      makeMember({ id: 'user-1', displayName: 'Alice', imageUrl: 'https://example.com/alice.jpg' }),
+      makeMember({
+        id: 'user-1',
+        displayName: 'Alice',
+        imageUrl: 'https://example.com/alice.jpg',
+      }),
     ];
     const wrapper = mountComponent({ modelValue: '', members });
 
     // Open dropdown
     const trigger = wrapper.find('button[aria-label="Select who paid"]');
     await trigger.trigger('click');
+    await flushPromises();
 
     // Mobile option shows image
     const mobileOptions = wrapper.findAll('.fixed.inset-0 .flex.h-7.w-7');

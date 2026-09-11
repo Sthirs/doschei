@@ -3,17 +3,24 @@
 // throwing — a silent failure no other CategoryPicker test would catch.
 import { describe, it, expect } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { createRouter, createMemoryHistory } from 'vue-router';
 
 import CategoryPicker from '@/components/CategoryPicker.vue';
 import { i18n } from '@/i18n';
 
 describe('CategoryPicker outside-click dismissal (template ref binding)', () => {
   it('closes the panel when a click lands outside trigger and panel', async () => {
+    // CategoryPicker's open/close state is a routed overlay
+    // (useRoutedOverlay('category'), ADR-0024), so it needs a real router.
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', name: 'home', component: { template: '<div />' } }],
+    });
     const wrapper = mount(CategoryPicker, {
       props: { modelValue: 'general' },
       attachTo: document.body,
       global: {
-        plugins: [i18n],
+        plugins: [i18n, router],
         stubs: {
           Teleport: { template: '<div class="teleport-stub"><slot /></div>' },
         },

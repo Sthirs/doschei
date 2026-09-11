@@ -11,8 +11,10 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
+import { goBackTo } from '@/lib/backNavigation';
 import { computeSettleUpDefaults, settlementAmountFor } from '@/lib/settleUp';
 import { currentPageTitle, sharedGroup } from '@/router';
+import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
 import type { GroupDetail } from '@/types/group';
 
 export type UseSettleUpFormReturn = {
@@ -27,11 +29,13 @@ export type UseSettleUpFormReturn = {
   errorMessage: Ref<string>;
   submitting: Ref<boolean>;
   amountTouched: Ref<boolean>;
-  showDeleteConfirm: Ref<boolean>;
+  showDeleteConfirm: ComputedRef<boolean>;
   isValid: ComputedRef<boolean>;
   validationMessage: ComputedRef<string>;
   goBack: () => void;
   submit: () => Promise<void>;
+  startDelete: () => void;
+  cancelDelete: () => void;
   deleteSettlement: () => Promise<void>;
 };
 
@@ -88,7 +92,12 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
   const errorMessage = ref('');
   const submitting = ref(false);
   const amountTouched = ref(false);
-  const showDeleteConfirm = ref(false);
+  const {
+    isOpen: showDeleteConfirm,
+    open: startDelete,
+    close: cancelDelete,
+    closeBeforeLeaving: closeDeleteConfirmBeforeLeaving,
+  } = useRoutedOverlay('delete');
 
   const initialise = () => {
     if (!group.value) return;
@@ -184,7 +193,7 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
   });
 
   const goToGroupDetail = () => {
-    router.push({
+    goBackTo(router, {
       name: 'group-detail',
       params: { id: groupId.value },
       state: { groupName: group.value?.name },
@@ -223,6 +232,9 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
     errorMessage.value = '';
     try {
       await api.delete(`/groups/${groupId.value}/settlements/${sid.value}`);
+      // The overlay's own entry points at this now-deleted settlement, so it
+      // must be dropped (replace), not popped, before goToGroupDetail() pops.
+      await closeDeleteConfirmBeforeLeaving();
       goToGroupDetail();
     } catch {
       errorMessage.value = t('settleUp.deleteError');
@@ -248,6 +260,8 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
     validationMessage,
     goBack: goToGroupDetail,
     submit,
+    startDelete,
+    cancelDelete,
     deleteSettlement,
   };
 };

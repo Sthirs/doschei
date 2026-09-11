@@ -10,7 +10,9 @@ import ExportModal from '@/components/group-detail/ExportModal.vue';
 import TopbarBackButton from '@/components/group-detail/TopbarBackButton.vue';
 import TopbarSettingsButtons from '@/components/group-detail/TopbarSettingsButtons.vue';
 import TotalsModal from '@/components/group-detail/TotalsModal.vue';
+import { useGroupDetailOverlays } from '@/composables/useGroupDetailOverlays';
 import { api } from '@/lib/api';
+import { goBackTo } from '@/lib/backNavigation';
 import { fromDateValue, getExpenseDateValue } from '@/lib/expenseDate';
 import { currentPageTitle, sharedGroup } from '@/router';
 import { useAuthStore } from '@/stores/auth';
@@ -29,8 +31,14 @@ const authStore = useAuthStore();
 const group = ref<GroupDetail | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
-const showExportModal = ref(false);
-const showTotalsModal = ref(false);
+const {
+  showTotalsModal,
+  openTotals,
+  closeTotals,
+  showExportModal,
+  openExport,
+  closeExport,
+} = useGroupDetailOverlays();
 
 const groupId = computed(() => route.params.id as string);
 
@@ -65,7 +73,7 @@ const loadGroup = async () => {
 };
 
 const goBack = () => {
-  router.push({ name: 'groups' });
+  goBackTo(router, { name: 'groups' });
 };
 
 const navigateToExpenseNew = () => {
@@ -144,14 +152,9 @@ const groupExpensesByMonth = computed(() => {
   return groups;
 });
 
-const groupSettingsTitle = (name: string): string =>
-  t('groupDetail.settingsTitleSuffix', { name });
-
 onMounted(() => {
   if (history.state.groupName) {
-    currentPageTitle.value = groupSettingsTitle(
-      String(history.state.groupName),
-    );
+    currentPageTitle.value = String(history.state.groupName);
   }
   loadGroup();
 });
@@ -188,8 +191,8 @@ onBeforeUnmount(() => {
           <ActionRow
             :member-count="group.members.length"
             @settle-up="navigateToSettleUpNew()"
-            @open-export="showExportModal = true"
-            @open-totals="showTotalsModal = true"
+            @open-export="openExport"
+            @open-totals="openTotals"
           />
         </div>
 
@@ -250,7 +253,7 @@ onBeforeUnmount(() => {
           v-if="showExportModal"
           :group-id="groupId"
           :group-name="group.name"
-          @close="showExportModal = false"
+          @close="closeExport"
         />
 
         <!-- Totals modal -->
@@ -258,7 +261,7 @@ onBeforeUnmount(() => {
           v-if="showTotalsModal"
           :expenses="group.expenses"
           :current-user-id="group.balance.currentUserId"
-          @close="showTotalsModal = false"
+          @close="closeTotals"
         />
       </template>
 

@@ -19,9 +19,43 @@ vi.mock('@/router', () => ({
   currentPageTitle: { value: null as string | null },
 }));
 
+// `back`/`replace`/`afterEach`/`options.history.state` exist only because
+// goBackOr (lib/backNavigation.ts, ADR-0024) is NOT mocked here and runs for
+// real against these. `historyBack` is reassigned per-test: goBackOr pops
+// whenever it is non-null (Account is reachable from every screen via the
+// topbar avatar, so unlike goBackTo it does not check WHERE the user came
+// from) and only replaces with the `/groups` fallback when it is null (a
+// deep link straight into /account).
 const routerPush = vi.fn();
+const afterEachCallbacks: Array<() => void> = [];
+const routerBack = vi.fn(() => {
+  queueMicrotask(() => afterEachCallbacks.forEach((cb) => cb()));
+});
+const routerReplace = vi.fn(() => {
+  queueMicrotask(() => afterEachCallbacks.forEach((cb) => cb()));
+  return Promise.resolve(undefined);
+});
+let historyBack: string | null = null;
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: routerPush }),
+  useRouter: () => ({
+    push: routerPush,
+    back: routerBack,
+    replace: routerReplace,
+    resolve: () => ({ fullPath: '/groups' }),
+    afterEach: (cb: () => void) => {
+      afterEachCallbacks.push(cb);
+      return () => {};
+    },
+    options: {
+      history: {
+        state: {
+          get back() {
+            return historyBack;
+          },
+        },
+      },
+    },
+  }),
 }));
 
 // happy-dom lacks localStorage, which the real auth store reads on init.
@@ -29,16 +63,32 @@ const memStore: Record<string, string> = {};
 beforeEach(() => {
   vi.stubGlobal('localStorage', {
     getItem: (k: string) => (k in memStore ? memStore[k] : null),
-    setItem: (k: string, v: string) => { memStore[k] = String(v); },
-    removeItem: (k: string) => { delete memStore[k]; },
-    clear: () => { for (const k of Object.keys(memStore)) delete memStore[k]; },
+    setItem: (k: string, v: string) => {
+      memStore[k] = String(v);
+    },
+    removeItem: (k: string) => {
+      delete memStore[k];
+    },
+    clear: () => {
+      for (const k of Object.keys(memStore)) delete memStore[k];
+    },
   });
+  afterEachCallbacks.length = 0;
+  historyBack = null;
 });
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const mountView = async (userOverrides: Partial<{ id: string; email: string; displayName: string; language: string; imageUrl: string | null }> = {}) => {
+const mountView = async (
+  userOverrides: Partial<{
+    id: string;
+    email: string;
+    displayName: string;
+    language: string;
+    imageUrl: string | null;
+  }> = {},
+) => {
   const pinia = createPinia();
   setActivePinia(pinia);
   const store = useAuthStore();
@@ -68,7 +118,13 @@ describe('AccountView language selector', () => {
   });
 
   it('does not PATCH while selecting; persists only when Save is pressed and applies the locale then', async () => {
-    const patchUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'it', imageUrl: null };
+    const patchUser = {
+      id: 'u1',
+      email: 'demo@doschei.local',
+      displayName: 'Demo User',
+      language: 'it',
+      imageUrl: null,
+    };
     vi.mocked(api.patch).mockResolvedValue({ data: { user: patchUser } });
     const wrapper = await mountView();
 
@@ -85,7 +141,13 @@ describe('AccountView language selector', () => {
   });
 
   it('sends displayName and language together when both changed', async () => {
-    const patchUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Nuovo Nome', language: 'it', imageUrl: null };
+    const patchUser = {
+      id: 'u1',
+      email: 'demo@doschei.local',
+      displayName: 'Nuovo Nome',
+      language: 'it',
+      imageUrl: null,
+    };
     vi.mocked(api.patch).mockResolvedValue({ data: { user: patchUser } });
     const wrapper = await mountView();
 
@@ -115,10 +177,14 @@ describe('AccountView language selector', () => {
 
   it('Save stays disabled until something changed', async () => {
     const wrapper = await mountView();
-    expect(wrapper.find('[data-testid="account-save"]').attributes('disabled')).toBeDefined();
+    expect(
+      wrapper.find('[data-testid="account-save"]').attributes('disabled'),
+    ).toBeDefined();
 
     await wrapper.find('[data-testid="account-language"]').setValue('it');
-    expect(wrapper.find('[data-testid="account-save"]').attributes('disabled')).toBeUndefined();
+    expect(
+      wrapper.find('[data-testid="account-save"]').attributes('disabled'),
+    ).toBeUndefined();
   });
 });
 
@@ -131,25 +197,35 @@ describe('AccountView avatar picker', () => {
 
   it('renders edit badge with edit.svg and correct aria-label', async () => {
     const wrapper = await mountView();
-    const editBadge = wrapper.find('[data-testid="account-avatar-wrapper"] label');
+    const editBadge = wrapper.find(
+      '[data-testid="account-avatar-wrapper"] label',
+    );
     expect(editBadge.exists()).toBe(true);
     expect(editBadge.attributes('aria-label')).toBe('Change photo');
     const img = editBadge.find('img');
     const src = img.attributes('src');
     expect(src).toBeDefined();
     // Vite may inline SVG as data URL or serve as /icons/edit.svg
-    expect(src === '/icons/edit.svg' || src?.startsWith('data:image/svg+xml')).toBe(true);
+    expect(
+      src === '/icons/edit.svg' || src?.startsWith('data:image/svg+xml'),
+    ).toBe(true);
   });
 
   it('shows user initial when no imageUrl', async () => {
-    const wrapper = await mountView({ displayName: 'Demo User', imageUrl: null });
+    const wrapper = await mountView({
+      displayName: 'Demo User',
+      imageUrl: null,
+    });
     const avatar = wrapper.find('[data-testid="account-avatar"]');
     expect(avatar.text()).toContain('D');
     expect(avatar.find('img').exists()).toBe(false);
   });
 
   it('shows image when imageUrl is present', async () => {
-    const wrapper = await mountView({ displayName: 'Demo User', imageUrl: 'https://example.com/avatar.png' });
+    const wrapper = await mountView({
+      displayName: 'Demo User',
+      imageUrl: 'https://example.com/avatar.png',
+    });
     const avatar = wrapper.find('[data-testid="account-avatar"]');
     const img = avatar.find('img');
     expect(img.exists()).toBe(true);
@@ -158,7 +234,13 @@ describe('AccountView avatar picker', () => {
   });
 
   it('dispatches change on hidden input and posts FormData to /auth/me/image', async () => {
-    const updatedUser = { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'en', imageUrl: 'https://example.com/new-avatar.png' };
+    const updatedUser = {
+      id: 'u1',
+      email: 'demo@doschei.local',
+      displayName: 'Demo User',
+      language: 'en',
+      imageUrl: 'https://example.com/new-avatar.png',
+    };
     vi.mocked(api.post).mockResolvedValue({ data: { user: updatedUser } });
 
     const wrapper = await mountView();
@@ -190,20 +272,26 @@ describe('AccountView avatar picker', () => {
     await fileInput.trigger('change');
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="account-upload-error"]').text()).toContain('Please select a valid image file');
+    expect(
+      wrapper.find('[data-testid="account-upload-error"]').text(),
+    ).toContain('Please select a valid image file');
     expect(api.post).not.toHaveBeenCalled();
   });
 
   it('shows error for file too large', async () => {
     const wrapper = await mountView();
     const fileInput = wrapper.find('#avatar-upload');
-    const largeFile = new File(['x'.repeat(6 * 1024 * 1024)], 'large.png', { type: 'image/png' });
+    const largeFile = new File(['x'.repeat(6 * 1024 * 1024)], 'large.png', {
+      type: 'image/png',
+    });
     Object.defineProperty(fileInput.element, 'files', { value: [largeFile] });
 
     await fileInput.trigger('change');
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="account-upload-error"]').text()).toContain('5 MB or smaller');
+    expect(
+      wrapper.find('[data-testid="account-upload-error"]').text(),
+    ).toContain('5 MB or smaller');
     expect(api.post).not.toHaveBeenCalled();
   });
 
@@ -217,12 +305,16 @@ describe('AccountView avatar picker', () => {
     await fileInput.trigger('change');
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="account-upload-error"]').text()).toContain('Could not upload the photo');
+    expect(
+      wrapper.find('[data-testid="account-upload-error"]').text(),
+    ).toContain('Could not upload the photo');
   });
 
   it('shows uploading state during upload', async () => {
     let resolveUpload: (value: unknown) => void;
-    const uploadPromise = new Promise((resolve) => { resolveUpload = resolve; });
+    const uploadPromise = new Promise((resolve) => {
+      resolveUpload = resolve;
+    });
     vi.mocked(api.post).mockReturnValue(uploadPromise as any);
 
     const wrapper = await mountView();
@@ -232,13 +324,29 @@ describe('AccountView avatar picker', () => {
 
     await fileInput.trigger('change');
 
-    expect(wrapper.find('[data-testid="account-uploading"]').text()).toContain('Uploading photo');
-    expect(wrapper.find('[data-testid="account-upload-error"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="account-uploading"]').text()).toContain(
+      'Uploading photo',
+    );
+    expect(wrapper.find('[data-testid="account-upload-error"]').exists()).toBe(
+      false,
+    );
 
-    resolveUpload!({ data: { user: { id: 'u1', email: 'demo@doschei.local', displayName: 'Demo User', language: 'en', imageUrl: 'https://example.com/new.png' } } });
+    resolveUpload!({
+      data: {
+        user: {
+          id: 'u1',
+          email: 'demo@doschei.local',
+          displayName: 'Demo User',
+          language: 'en',
+          imageUrl: 'https://example.com/new.png',
+        },
+      },
+    });
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="account-uploading"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="account-uploading"]').exists()).toBe(
+      false,
+    );
   });
 });
 
@@ -263,5 +371,65 @@ describe('AccountView version display', () => {
     const versionLine = wrapper.find('[data-testid="account-version"]');
     expect(versionLine.exists()).toBe(true);
     expect(versionLine.text()).toMatch(/Version dev/);
+  });
+});
+
+// Account is reachable from every screen via the topbar avatar
+// (AppTopbar.vue), so its back arrow uses goBackOr, not goBackTo (ADR-0024):
+// it pops to wherever the user actually came from rather than checking that
+// the previous entry is a specific route.
+describe('AccountView back navigation (ADR-0024)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setAppLocale('en');
+    globalThis.localStorage?.clear();
+  });
+
+  it('renders a generic "Back" label, not "Back to groups"', async () => {
+    const wrapper = await mountView();
+    const backButton = wrapper
+      .findAll('button')
+      .find((b) => b.attributes('aria-label') === 'Back')!;
+    expect(backButton).toBeTruthy();
+  });
+
+  it('pops history when there is any previous entry, regardless of what it is', async () => {
+    historyBack = '/groups/g1'; // came from a group, not from /groups itself
+    const wrapper = await mountView();
+
+    const backButton = wrapper
+      .findAll('button')
+      .find((b) => b.attributes('aria-label') === 'Back')!;
+    await backButton.trigger('click');
+    await flushPromises();
+
+    expect(routerBack).toHaveBeenCalledTimes(1);
+    expect(routerReplace).not.toHaveBeenCalled();
+  });
+
+  it('replaces with /groups when there is no previous entry (a deep link)', async () => {
+    historyBack = null;
+    const wrapper = await mountView();
+
+    const backButton = wrapper
+      .findAll('button')
+      .find((b) => b.attributes('aria-label') === 'Back')!;
+    await backButton.trigger('click');
+    await flushPromises();
+
+    expect(routerReplace).toHaveBeenCalledWith({ name: 'groups' });
+    expect(routerBack).not.toHaveBeenCalled();
+  });
+
+  it('logout still pushes /login (unaffected by the back-navigation change)', async () => {
+    const wrapper = await mountView();
+
+    const logoutButton = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Sign Out'))!;
+    await logoutButton.trigger('click');
+    await flushPromises();
+
+    expect(routerPush).toHaveBeenCalledWith('/login');
   });
 });

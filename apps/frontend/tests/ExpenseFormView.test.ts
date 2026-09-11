@@ -134,7 +134,11 @@ const makeGroupWithBusTrainHistory = () =>
     ],
   });
 
-const makeMember = (id: string, name: string, imageUrl: string | null = null) => ({
+const makeMember = (
+  id: string,
+  name: string,
+  imageUrl: string | null = null,
+) => ({
   id,
   displayName: name,
   email: `${id}@test.com`,
@@ -215,13 +219,19 @@ describe('ExpenseFormView', () => {
     // instead of fetching it. Seed it so the group is available; tests that
     // need different data override `mocks.sharedGroup.value` themselves.
     mocks.sharedGroup.value = makeGroup() as any;
-    (api.post as unknown as { mockResolvedValue: (v: unknown) => unknown }).mockResolvedValue({
+    (
+      api.post as unknown as { mockResolvedValue: (v: unknown) => unknown }
+    ).mockResolvedValue({
       data: {},
     });
-    (api.patch as unknown as { mockResolvedValue: (v: unknown) => unknown }).mockResolvedValue({
+    (
+      api.patch as unknown as { mockResolvedValue: (v: unknown) => unknown }
+    ).mockResolvedValue({
       data: {},
     });
-    (api.delete as unknown as { mockResolvedValue: (v: unknown) => unknown }).mockResolvedValue({
+    (
+      api.delete as unknown as { mockResolvedValue: (v: unknown) => unknown }
+    ).mockResolvedValue({
       data: {},
     });
   });
@@ -269,6 +279,13 @@ describe('ExpenseFormView', () => {
         splits: expect.any(Array),
       }),
     );
+    // The save exit goes through goBackTo (lib/backNavigation.ts, ADR-0024),
+    // which pops when the previous history entry already is group-detail and
+    // otherwise `replace`s. `createMemoryHistory()` never populates
+    // `state.back` (unlike the real browser history it stands in for here),
+    // so this router always takes the `replace` fallback — this assertion
+    // holds under either branch, since both land on group-detail. The pop
+    // branch itself is proven directly in backNavigation.test.ts.
     expect(router.currentRoute.value.name).toBe('group-detail');
   });
 
@@ -287,7 +304,9 @@ describe('ExpenseFormView', () => {
 
     // Edit mode DOES show the "Paid by" section — the label is rendered as a
     // <span> with that exact text, and member buttons are present.
-    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    const paidByLabel = wrapper
+      .findAll('span')
+      .find((s) => s.text() === 'Paid by');
     expect(paidByLabel).toBeDefined();
     // The Paid-by section renders a button per group member (2 members in test).
     const paidBySection = paidByLabel!.element.parentElement!;
@@ -310,6 +329,8 @@ describe('ExpenseFormView', () => {
         paidByUserId: expect.any(String),
       }),
     );
+    // See the create-mode test above: this router only ever exercises
+    // goBackTo's `replace` fallback (memory history has no `state.back`).
     expect(router.currentRoute.value.name).toBe('group-detail');
   });
 
@@ -353,10 +374,9 @@ describe('ExpenseFormView category auto-selection', () => {
 
   it('create mode: typing a known description auto-picks the matching category after the debounce window', async () => {
     mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
-    const { wrapper } = await mountAt(
-      '/groups/g1/expenses/new',
-      { CategoryPicker: CategoryPickerStub },
-    );
+    const { wrapper } = await mountAt('/groups/g1/expenses/new', {
+      CategoryPicker: CategoryPickerStub,
+    });
     const picker = wrapper.findComponent(CategoryPickerStub);
     expect(picker.props('modelValue')).toBe('general');
 
@@ -376,10 +396,9 @@ describe('ExpenseFormView category auto-selection', () => {
 
   it('create mode guard: a manual pick on the picker is preserved across subsequent description inputs', async () => {
     mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
-    const { wrapper } = await mountAt(
-      '/groups/g1/expenses/new',
-      { CategoryPicker: CategoryPickerStub },
-    );
+    const { wrapper } = await mountAt('/groups/g1/expenses/new', {
+      CategoryPicker: CategoryPickerStub,
+    });
     const picker = wrapper.findComponent(CategoryPickerStub);
 
     // Simulate the user picking a category from the picker: the parent v-model
@@ -407,10 +426,9 @@ describe('ExpenseFormView category auto-selection', () => {
         }),
       ],
     }) as any;
-    const { wrapper } = await mountAt(
-      '/groups/g1/expenses/e-hotel/edit',
-      { CategoryPicker: CategoryPickerStub },
-    );
+    const { wrapper } = await mountAt('/groups/g1/expenses/e-hotel/edit', {
+      CategoryPicker: CategoryPickerStub,
+    });
     const picker = wrapper.findComponent(CategoryPickerStub);
 
     // Immediately after init the picker reflects the stored category with no
@@ -429,10 +447,9 @@ describe('ExpenseFormView category auto-selection', () => {
 
   it('gibberish description produces no suggestion: category stays at its current value', async () => {
     mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
-    const { wrapper } = await mountAt(
-      '/groups/g1/expenses/new',
-      { CategoryPicker: CategoryPickerStub },
-    );
+    const { wrapper } = await mountAt('/groups/g1/expenses/new', {
+      CategoryPicker: CategoryPickerStub,
+    });
     const picker = wrapper.findComponent(CategoryPickerStub);
 
     const textInputs = wrapper.findAll('input[type="text"]');
@@ -451,10 +468,9 @@ describe('ExpenseFormView category auto-selection', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      const { wrapper } = await mountAt(
-        '/groups/g1/expenses/new',
-        { CategoryPicker: CategoryPickerStub },
-      );
+      const { wrapper } = await mountAt('/groups/g1/expenses/new', {
+        CategoryPicker: CategoryPickerStub,
+      });
       const textInputs = wrapper.findAll('input[type="text"]');
       await textInputs[0].setValue('Venice train tickets');
 
@@ -477,7 +493,9 @@ describe('ExpenseFormView category auto-selection', () => {
     const { wrapper } = await mountAt('/groups/g1/expenses/new');
 
     // Paid-by section renders a button per group member
-    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    const paidByLabel = wrapper
+      .findAll('span')
+      .find((s) => s.text() === 'Paid by');
     expect(paidByLabel).toBeDefined();
     const paidBySection = paidByLabel!.element.parentElement!;
     const paidByButtons = Array.from(paidBySection.querySelectorAll('button'));
@@ -511,13 +529,19 @@ describe('ExpenseFormView payer default', () => {
     vi.clearAllMocks();
     currentPageTitle.value = null;
     mocks.sharedGroup.value = makeGroup() as any;
-    (api.post as unknown as { mockResolvedValue: (v: unknown) => unknown }).mockResolvedValue({
+    (
+      api.post as unknown as { mockResolvedValue: (v: unknown) => unknown }
+    ).mockResolvedValue({
       data: {},
     });
-    (api.patch as unknown as { mockResolvedValue: (v: unknown) => unknown }).mockResolvedValue({
+    (
+      api.patch as unknown as { mockResolvedValue: (v: unknown) => unknown }
+    ).mockResolvedValue({
       data: {},
     });
-    (api.delete as unknown as { mockResolvedValue: (v: unknown) => unknown }).mockResolvedValue({
+    (
+      api.delete as unknown as { mockResolvedValue: (v: unknown) => unknown }
+    ).mockResolvedValue({
       data: {},
     });
   });
@@ -525,20 +549,29 @@ describe('ExpenseFormView payer default', () => {
   it('me-not-first: current user is not members[0] → their chip is selected and payload uses their id', async () => {
     mocks.sharedGroup.value = makeGroup({
       members: [makeMember('user-2', 'Bob'), makeMember('user-1', 'Alice')],
-      balance: { currentUserId: 'user-1', currentUserName: 'Alice', netForCurrentUser: 0, perUser: [] },
+      balance: {
+        currentUserId: 'user-1',
+        currentUserName: 'Alice',
+        netForCurrentUser: 0,
+        perUser: [],
+      },
     }) as any;
 
     const { wrapper } = await mountAt('/groups/g1/expenses/new');
 
     // Locate paid-by chips via 'Paid by' span → parentElement → buttons
-    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    const paidByLabel = wrapper
+      .findAll('span')
+      .find((s) => s.text() === 'Paid by');
     expect(paidByLabel).toBeDefined();
     const paidBySection = paidByLabel!.element.parentElement!;
     const paidByButtons = Array.from(paidBySection.querySelectorAll('button'));
     expect(paidByButtons.length).toBe(2);
 
     // Alice (user-1) should have the ring class, Bob should not
-    const aliceButton = paidByButtons.find((b) => b.textContent?.includes('Alice'));
+    const aliceButton = paidByButtons.find((b) =>
+      b.textContent?.includes('Alice'),
+    );
     const bobButton = paidByButtons.find((b) => b.textContent?.includes('Bob'));
     expect(aliceButton).toBeDefined();
     expect(bobButton).toBeDefined();
@@ -578,12 +611,19 @@ describe('ExpenseFormView payer default', () => {
 
   it('fallback: currentUserId not in members → members[0] chip is selected (legacy default preserved)', async () => {
     mocks.sharedGroup.value = makeGroup({
-      balance: { currentUserId: 'user-99', currentUserName: 'Unknown', netForCurrentUser: 0, perUser: [] },
+      balance: {
+        currentUserId: 'user-99',
+        currentUserName: 'Unknown',
+        netForCurrentUser: 0,
+        perUser: [],
+      },
     }) as any;
 
     const { wrapper } = await mountAt('/groups/g1/expenses/new');
 
-    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    const paidByLabel = wrapper
+      .findAll('span')
+      .find((s) => s.text() === 'Paid by');
     expect(paidByLabel).toBeDefined();
     const paidBySection = paidByLabel!.element.parentElement!;
     const paidByButtons = Array.from(paidBySection.querySelectorAll('button'));
@@ -602,14 +642,18 @@ describe('ExpenseFormView payer default', () => {
 
     const { wrapper } = await mountAt('/groups/g1/expenses/e1/edit');
 
-    const paidByLabel = wrapper.findAll('span').find((s) => s.text() === 'Paid by');
+    const paidByLabel = wrapper
+      .findAll('span')
+      .find((s) => s.text() === 'Paid by');
     expect(paidByLabel).toBeDefined();
     const paidBySection = paidByLabel!.element.parentElement!;
     const paidByButtons = Array.from(paidBySection.querySelectorAll('button'));
     expect(paidByButtons.length).toBe(2);
 
     // Bob (user-2) should have the ring class, Alice should not
-    const aliceButton = paidByButtons.find((b) => b.textContent?.includes('Alice'));
+    const aliceButton = paidByButtons.find((b) =>
+      b.textContent?.includes('Alice'),
+    );
     const bobButton = paidByButtons.find((b) => b.textContent?.includes('Bob'));
     expect(aliceButton).toBeDefined();
     expect(bobButton).toBeDefined();

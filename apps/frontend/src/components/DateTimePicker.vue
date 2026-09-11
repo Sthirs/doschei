@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n';
 
 import { DatePicker } from 'v-calendar';
 
+import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
+
 const { t } = useI18n();
 
 interface Props {
@@ -21,7 +23,11 @@ const emit = defineEmits<Emits>();
 // Compute today's ISO date once in setup (not per-render).
 const todayIso = new Date().toISOString().slice(0, 10);
 
-const isOpen = ref(false);
+const {
+  isOpen,
+  open: openOverlay,
+  close: closeOverlay,
+} = useRoutedOverlay('date');
 const draft = ref(props.modelValue || todayIso);
 
 // Reset draft to the committed modelValue whenever the sheet opens, so a
@@ -49,18 +55,18 @@ function formatDate(ymd: string): string {
 
 function openSheet(): void {
   draft.value = props.modelValue || todayIso;
-  isOpen.value = true;
+  openOverlay();
 }
 
 function apply(): void {
   const value = draft.value; // capture before closing
-  isOpen.value = false;
+  closeOverlay();
   emit('update:modelValue', value);
   emit('close');
 }
 
 function cancel(): void {
-  isOpen.value = false;
+  closeOverlay();
   emit('close');
 }
 </script>

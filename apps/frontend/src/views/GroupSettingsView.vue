@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
+import { goBackTo } from '@/lib/backNavigation';
 import GroupSettingsPanel from '@/components/GroupSettingsPanel.vue';
 import { currentPageTitle } from '@/router';
 import type { GroupDetail } from '@/types/group';
@@ -23,9 +24,13 @@ const loadGroup = async () => {
   errorMessage.value = '';
 
   try {
-    const { data } = await api.get<{ group: GroupDetail }>(`/groups/${groupId.value}`);
+    const { data } = await api.get<{ group: GroupDetail }>(
+      `/groups/${groupId.value}`,
+    );
     group.value = data.group;
-    currentPageTitle.value = t('groupDetail.settingsTitleSuffix', { name: data.group.name });
+    currentPageTitle.value = t('groupDetail.settingsTitleSuffix', {
+      name: data.group.name,
+    });
   } catch {
     errorMessage.value = t('groupDetail.loadFailed');
   } finally {
@@ -34,7 +39,11 @@ const loadGroup = async () => {
 };
 
 const goBack = () => {
-  router.push({ name: 'group-detail', params: { id: groupId.value }, state: { groupName: group.value?.name } });
+  goBackTo(router, {
+    name: 'group-detail',
+    params: { id: groupId.value },
+    state: { groupName: group.value?.name },
+  });
 };
 
 onMounted(() => {
@@ -72,7 +81,10 @@ onBeforeUnmount(() => {
 
   <main class="flex-1 overflow-y-auto text-slate-50 sm:px-6 lg:px-8">
     <div class="mx-auto flex max-w-5xl flex-col gap-4">
-      <section v-if="isLoading" class="glass-panel rounded-md px-6 py-5 text-slate-300 sm:px-8">
+      <section
+        v-if="isLoading"
+        class="glass-panel rounded-md px-6 py-5 text-slate-300 sm:px-8"
+      >
         {{ t('groupSettings.loading') }}
       </section>
 

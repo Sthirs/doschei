@@ -8,6 +8,7 @@ import {
   type Ref,
 } from 'vue';
 
+import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
 import { CATEGORIES_GROUPED, type CategoryFamily } from '@/lib/categories';
 
 /**
@@ -20,7 +21,7 @@ export type CategoryPickerLabels = {
 };
 
 export type UseCategoryPickerReturn = {
-  isOpen: Ref<boolean>;
+  isOpen: ComputedRef<boolean>;
   triggerRef: Ref<HTMLButtonElement | null>;
   panelRef: Ref<HTMLDivElement | null>;
   desktopSearchInputRef: Ref<HTMLInputElement | null>;
@@ -44,7 +45,11 @@ export const useCategoryPicker = (
   labels: CategoryPickerLabels,
   onSelect: (key: string) => void,
 ): UseCategoryPickerReturn => {
-  const isOpen = ref(false);
+  const {
+    isOpen,
+    open: openOverlay,
+    close: closeOverlay,
+  } = useRoutedOverlay('category');
   const triggerRef = ref<HTMLButtonElement | null>(null);
   const panelRef = ref<HTMLDivElement | null>(null);
   const desktopSearchInputRef = ref<HTMLInputElement | null>(null);
@@ -68,7 +73,7 @@ export const useCategoryPicker = (
 
   const open = (): void => {
     searchQuery.value = '';
-    isOpen.value = true;
+    openOverlay();
     nextTick(() => {
       desktopSearchInputRef.value?.focus();
       mobileSearchInputRef.value?.focus();
@@ -76,7 +81,7 @@ export const useCategoryPicker = (
   };
 
   const close = (): void => {
-    isOpen.value = false;
+    closeOverlay();
     triggerRef.value?.focus();
   };
 
@@ -88,6 +93,11 @@ export const useCategoryPicker = (
   const onKeydown = (event: KeyboardEvent): void => {
     if (event.key === 'Escape') {
       event.preventDefault();
+      // Stop the routed overlay's own window-level Escape listener from
+      // also firing for the same keypress — it doesn't know about the
+      // clear-search-first stage below, so letting it through would close
+      // the panel a keypress early.
+      event.stopPropagation();
       if (searchQuery.value) {
         searchQuery.value = '';
         return;

@@ -52,3 +52,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0021](0021-module-size-ceiling-and-split-convention.md) | Module size ceiling of 250 pure LOC and the responsibility-split convention | 🟢 accepted |
 | [ADR-0022](0022-group-monthly-spend-totals.md) | Group monthly spend totals — client-side aggregation, dependency-free bars | 🟢 accepted |
 | [ADR-0023](0023-refresh-token-rotation.md) | Refresh token rotation — short-lived access JWT + rotating httpOnly refresh cookie | 🟡 proposed |
+| [ADR-0024](0024-browser-back-as-dismiss-and-up-navigation.md) | Browser Back as dismiss-or-go-up, via history pops and routed overlays | 🟡 proposed |
