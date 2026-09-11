@@ -1,6 +1,6 @@
 # ADR-0023: Refresh token rotation — short-lived access JWT + rotating httpOnly refresh cookie
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-09-07
 - **Deciders:** Sthirs
 

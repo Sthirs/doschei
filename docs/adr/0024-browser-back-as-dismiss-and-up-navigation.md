@@ -1,6 +1,6 @@
 # ADR-0024: Browser Back as dismiss-or-go-up, via history pops and routed overlays
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-09-10
 - **Deciders:** Sthirs
 
