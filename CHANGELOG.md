@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/Sthirs/doschei/compare/v1.8.0...v1.8.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* keep mobile category picker open when tapping its search input ([80b636b](https://github.com/Sthirs/doschei/commit/80b636badd5212bd867f316a1583679e0e62a98a))
+
 ## [1.8.0](https://github.com/Sthirs/doschei/compare/v1.7.0...v1.8.0) (2026-09-11)
 
 
