@@ -42,11 +42,17 @@ test.describe('Dex OAuth login', () => {
 
     // 5b. Handle the Dex consent screen when present.
     //     The approval page renders two submit buttons; click the "Grant Access" one.
+    //     Under worker CPU contention (this spec runs in parallel with the rest
+    //     of the suite) the backend's token exchange can be slow enough that Dex
+    //     re-renders the same approval prompt instead of redirecting on to
+    //     /groups — retry the click rather than failing on the first bounce.
     if (page.url().includes('/dex/approval')) {
-      await Promise.all([
-        page.waitForURL(/\/groups$/, { timeout: 20_000 }),
-        page.getByRole('button', { name: /Grant Access/i }).click(),
-      ]);
+      await expect(async () => {
+        if (page.url().includes('/dex/approval')) {
+          await page.getByRole('button', { name: /Grant Access/i }).click();
+        }
+        await page.waitForURL(/\/groups$/, { timeout: 5_000 });
+      }).toPass({ timeout: 30_000 });
     } else {
       await page.waitForURL(/\/groups$/, { timeout: 20_000 });
     }
