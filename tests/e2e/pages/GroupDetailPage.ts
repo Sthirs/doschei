@@ -178,6 +178,26 @@ export class GroupDetailPage {
     await this.categoryDialog.getByRole('button', { name: label }).click();
   }
 
+  async openCategoryPicker(): Promise<void> {
+    await this.categoryPicker.click();
+    await expect(this.categoryDialog).toBeVisible();
+  }
+
+  // Regression coverage for the mobile document-click-outside bug
+  // (useCategoryPicker.ts's onDocumentClick only knew about the desktop
+  // popover's panelRef, so a real click anywhere in the Teleport'd mobile
+  // sheet — including its own search input — read as "outside" and closed
+  // the picker). `.fill()` does not reproduce this: Playwright fills by
+  // focusing the element directly, without dispatching the click the bug
+  // depends on, so this helper issues a real `.click()`.
+  async clickCategorySearchInput(): Promise<void> {
+    await this.categorySearchInput.click();
+  }
+
+  async expectCategoryPickerOpen(): Promise<void> {
+    await expect(this.categoryDialog).toBeVisible();
+  }
+
   // CategoryPicker.vue:79-87 — Enter on the search input with a non-empty
   // query calls `select(filteredGroups[0].entries[0].key)` which emits
   // update:modelValue and closes the picker. The grid-click helper

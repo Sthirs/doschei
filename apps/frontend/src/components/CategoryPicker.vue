@@ -33,6 +33,7 @@ const {
   isOpen,
   triggerRef,
   panelRef,
+  mobilePanelRef,
   desktopSearchInputRef,
   mobileSearchInputRef,
   searchQuery,
@@ -155,6 +156,7 @@ const {
         @keydown="onKeydown"
       >
         <div
+          ref="mobilePanelRef"
           class="bg-[#1E1E26] max-h-[85vh] overflow-y-auto rounded-t-xl"
           role="dialog"
           aria-modal="true"

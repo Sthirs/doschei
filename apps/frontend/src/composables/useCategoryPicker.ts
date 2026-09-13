@@ -24,6 +24,7 @@ export type UseCategoryPickerReturn = {
   isOpen: ComputedRef<boolean>;
   triggerRef: Ref<HTMLButtonElement | null>;
   panelRef: Ref<HTMLDivElement | null>;
+  mobilePanelRef: Ref<HTMLDivElement | null>;
   desktopSearchInputRef: Ref<HTMLInputElement | null>;
   mobileSearchInputRef: Ref<HTMLInputElement | null>;
   searchQuery: Ref<string>;
@@ -52,6 +53,12 @@ export const useCategoryPicker = (
   } = useRoutedOverlay('category');
   const triggerRef = ref<HTMLButtonElement | null>(null);
   const panelRef = ref<HTMLDivElement | null>(null);
+  // The mobile sheet is Teleport'd to <body>, so it is never a DOM
+  // descendant of `panelRef` (the desktop popover, itself CSS-`hidden`
+  // below the `sm` breakpoint but still mounted). Without its own ref here,
+  // onDocumentClick below has no way to recognise a click inside the mobile
+  // sheet as "inside" and treats it as an outside click instead.
+  const mobilePanelRef = ref<HTMLDivElement | null>(null);
   const desktopSearchInputRef = ref<HTMLInputElement | null>(null);
   const mobileSearchInputRef = ref<HTMLInputElement | null>(null);
   const searchQuery = ref('');
@@ -123,15 +130,12 @@ export const useCategoryPicker = (
   };
 
   const onDocumentClick = (event: MouseEvent): void => {
-    if (
-      isOpen.value &&
-      triggerRef.value &&
-      panelRef.value &&
-      !triggerRef.value.contains(event.target as Node) &&
-      !panelRef.value.contains(event.target as Node)
-    ) {
-      close();
-    }
+    if (!isOpen.value || !triggerRef.value) return;
+    const target = event.target as Node;
+    if (triggerRef.value.contains(target)) return;
+    if (panelRef.value?.contains(target)) return;
+    if (mobilePanelRef.value?.contains(target)) return;
+    close();
   };
 
   onMounted(() => {
@@ -146,6 +150,7 @@ export const useCategoryPicker = (
     isOpen,
     triggerRef,
     panelRef,
+    mobilePanelRef,
     desktopSearchInputRef,
     mobileSearchInputRef,
     searchQuery,
