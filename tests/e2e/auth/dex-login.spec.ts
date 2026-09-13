@@ -42,14 +42,20 @@ test.describe('Dex OAuth login', () => {
 
     // 5b. Handle the Dex consent screen when present.
     //     The approval page renders two submit buttons; click the "Grant Access" one.
-    //     Under worker CPU contention (this spec runs in parallel with the rest
-    //     of the suite) the backend's token exchange can be slow enough that Dex
-    //     re-renders the same approval prompt instead of redirecting on to
-    //     /groups — retry the click rather than failing on the first bounce.
+    //     This spec is CI-flaky (see git history) for a reason not yet confirmed by
+    //     evidence — CI's Playwright HTML report/trace and the backend pod logs
+    //     were both silently broken (see the fixes to playwright.config.ts,
+    //     scripts/test-playwright.sh and .github/workflows/tests.yaml), so nobody
+    //     has actually seen what happens at the moment of failure yet.
+    //     Key off the Grant Access button's visibility rather than re-checking
+    //     `page.url()`: the URL alone only catches the exact `/dex/approval`
+    //     bounce and does nothing if Dex or the callback lands somewhere else
+    //     transient before reaching /groups.
     if (page.url().includes('/dex/approval')) {
+      const grantButton = page.getByRole('button', { name: /Grant Access/i });
       await expect(async () => {
-        if (page.url().includes('/dex/approval')) {
-          await page.getByRole('button', { name: /Grant Access/i }).click();
+        if (await grantButton.isVisible().catch(() => false)) {
+          await grantButton.click();
         }
         await page.waitForURL(/\/groups$/, { timeout: 5_000 });
       }).toPass({ timeout: 30_000 });
