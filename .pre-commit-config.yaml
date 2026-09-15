@@ -42,7 +42,7 @@ repos:
           - --ignore-words-list=expres,afterall
 
   - repo: https://github.com/kjanat/actionlint
-    rev: 662318dd6bbd9c0c120e35b03168bc1be69bf428 # frozen: v1.16.1
+    rev: 722799fa4b8cc6734debb97bae24aca9e0dbaf59 # frozen: v1.17
     hooks:
       - id: actionlint
 
@@ -60,7 +60,7 @@ repos:
       - id: ruff-format
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 4f783b6470be305483837130a5be2e21ed7ff52b # frozen: 0.12.13
+    rev: eec2b3c4f52295313b08b04f928ab2479e468b5c # frozen: 0.12.15
     hooks:
       - id: uv-lock
 
@@ -81,7 +81,7 @@ repos:
         exclude: CHANGELOG\.md$
 
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 69c9dd1e5fd2e52428f30d336ea2ea39bdead5fb # frozen: 44.82.0
+    rev: cea9f0116f479bbf29095962781446b326b96825 # frozen: 44.93.5
     hooks:
       - id: renovate-config-validator
         args: [--strict]

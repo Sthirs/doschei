@@ -26,7 +26,7 @@
     "sharp": "0.35.4",
     "typeorm": "1.1.1",
     "web-push": "3.6.7",
-    "zod": "4.5.4"
+    "zod": "4.6.2"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -35,7 +35,7 @@
     "@types/express": "5.0.6",
     "@types/jsonwebtoken": "9.0.10",
     "@types/multer": "2.2.0",
-    "@types/node": "26.5.0",
+    "@types/node": "26.5.1",
     "@types/supertest": "7.2.1",
     "@types/web-push": "3.6.4",
     "@typescript/native": "npm:typescript@7.0.2",
