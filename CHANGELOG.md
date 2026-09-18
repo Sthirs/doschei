@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.2](https://github.com/Sthirs/doschei/compare/v1.8.1...v1.8.2) (2026-09-18)
+
+
+### Bug Fixes
+
+* **deps:** update minor and patch updates ([#125](https://github.com/Sthirs/doschei/issues/125)) ([adc83e2](https://github.com/Sthirs/doschei/commit/adc83e21f3a6b1da09b86ec1ec39bd3f4d10501c))
+
 ## [1.8.1](https://github.com/Sthirs/doschei/compare/v1.8.0...v1.8.1) (2026-09-13)
 
 
