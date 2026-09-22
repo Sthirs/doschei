@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.8.2](https://github.com/Sthirs/doschei/compare/v1.8.1...v1.8.2) (2026-09-22)
+
+
+### Bug Fixes
+
+* **deps:** update dependency dotenv to v18 ([#130](https://github.com/Sthirs/doschei/issues/130)) ([33ada38](https://github.com/Sthirs/doschei/commit/33ada388c89222e60de5a1fae78597907362a33d))
+* **deps:** update minor and patch updates ([#125](https://github.com/Sthirs/doschei/issues/125)) ([adc83e2](https://github.com/Sthirs/doschei/commit/adc83e21f3a6b1da09b86ec1ec39bd3f4d10501c))
+* **deps:** update minor and patch updates ([#131](https://github.com/Sthirs/doschei/issues/131)) ([e2014d2](https://github.com/Sthirs/doschei/commit/e2014d2a14cbc8f7b03a9f2e8bdd713fb2dfff76))
+
 ## [1.8.1](https://github.com/Sthirs/doschei/compare/v1.8.0...v1.8.1) (2026-09-13)
 
 
