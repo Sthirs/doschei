@@ -33,6 +33,7 @@ export const oauthInitiate = async (req: Request, res: Response): Promise<void> 
   const provider = 'oauth';
   try {
     const { url, stateCookie } = await oauthService.initiate(provider);
+    // codeql[js/clear-text-storage-of-sensitive-data] httpOnly, short-lived OAuth state; the cookie is its only home.
     res.cookie('doschei.oauth.state', stateCookie, {
       httpOnly: true,
       sameSite: 'lax',

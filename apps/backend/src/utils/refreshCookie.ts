@@ -38,6 +38,7 @@ const cookieOptions = () => ({
  * with the database row.
  */
 export const setRefreshCookie = (response: Response, raw: string): void => {
+  // codeql[js/clear-text-storage-of-sensitive-data] ADR-0023: the httpOnly cookie is where the refresh secret belongs.
   response.cookie(REFRESH_COOKIE_NAME, raw, {
     ...cookieOptions(),
     maxAge: env.REFRESH_TOKEN_TTL_SECONDS * 1000,
