@@ -1,0 +1,7 @@
+# Picked up automatically by the repo-commons CodeQL scan, which fails on any
+# non-suppressed alert. Neither the default nor the security-and-quality suite
+# runs the alert-suppression query, so without it the in-source
+# `// codeql[<rule-id>]` comments are ignored and suppressed alerts still count.
+packs:
+  javascript:
+    - codeql/javascript-queries:AlertSuppression.ql
