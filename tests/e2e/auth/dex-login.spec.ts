@@ -12,6 +12,13 @@ test.describe('Dex OAuth login', () => {
     await seedBuildId(page);
     await page.goto('/login');
 
+    // Wait for the service worker to take control before leaving the app. A
+    // real user's browser almost always has it by now; skipping this left the
+    // spec racing worker activation against the Dex pages below, and it only
+    // failed (in CI, under load) when the worker won — which is exactly the
+    // case a /dex/ navigation-denylist regression in src/sw.ts would break.
+    await page.evaluate(() => navigator.serviceWorker.ready);
+
     // 2. Wait for the OAuth config fetch to complete and the button to render.
     //    LoginView.vue:118-127 renders an <a href="/api/auth/oauth"> with text from
     //    oauthConfig.buttonText ("Sign in with Dex").
@@ -42,23 +49,11 @@ test.describe('Dex OAuth login', () => {
 
     // 5b. Handle the Dex consent screen when present.
     //     The approval page renders two submit buttons; click the "Grant Access" one.
-    //     This spec is CI-flaky (see git history) for a reason not yet confirmed by
-    //     evidence — CI's Playwright HTML report/trace and the backend pod logs
-    //     were both silently broken (see the fixes to playwright.config.ts,
-    //     scripts/test-playwright.sh and .github/workflows/tests.yaml), so nobody
-    //     has actually seen what happens at the moment of failure yet.
-    //     Key off the Grant Access button's visibility rather than re-checking
-    //     `page.url()`: the URL alone only catches the exact `/dex/approval`
-    //     bounce and does nothing if Dex or the callback lands somewhere else
-    //     transient before reaching /groups.
     if (page.url().includes('/dex/approval')) {
-      const grantButton = page.getByRole('button', { name: /Grant Access/i });
-      await expect(async () => {
-        if (await grantButton.isVisible().catch(() => false)) {
-          await grantButton.click();
-        }
-        await page.waitForURL(/\/groups$/, { timeout: 5_000 });
-      }).toPass({ timeout: 30_000 });
+      await Promise.all([
+        page.waitForURL(/\/groups$/, { timeout: 20_000 }),
+        page.getByRole('button', { name: /Grant Access/i }).click(),
+      ]);
     } else {
       await page.waitForURL(/\/groups$/, { timeout: 20_000 });
     }

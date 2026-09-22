@@ -180,8 +180,8 @@ jobs:
           echo "=== Pod status ==="
           kubectl -n doschei get pods
           echo "=== Pod logs (backend) ==="
-          kubectl -n doschei logs -l app=doschei-backend --tail=50 || true
+          kubectl -n doschei logs -l app.kubernetes.io/component=backend --tail=200 || true
           echo "=== Pod logs (frontend) ==="
-          kubectl -n doschei logs -l app=doschei-frontend --tail=50 || true
+          kubectl -n doschei logs -l app.kubernetes.io/component=frontend --tail=50 || true
           echo "=== Events ==="
           kubectl -n doschei get events --sort-by=.lastTimestamp | tail -20 || true
