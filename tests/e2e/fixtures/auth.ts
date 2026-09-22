@@ -228,6 +228,7 @@ async function loginAndCacheStorageState(
 
   mkdirSync(dirname(storagePath), { recursive: true });
   const tmpPath = `${storagePath}.tmp-${process.pid}-${Date.now()}`;
+  // codeql[js/http-to-file-access] Test-only: caches the login response from our own backend as Playwright storageState.
   writeFileSync(tmpPath, JSON.stringify(storageState, null, 2), 'utf8');
   renameSync(tmpPath, storagePath);
 

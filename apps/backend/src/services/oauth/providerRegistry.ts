@@ -66,6 +66,7 @@ export async function initOAuthProviders(): Promise<void> {
   if (provider.isInitialized()) {
     providerRegistry.register(provider);
     console.log(
+      // codeql[js/clear-text-logging] issuerUrl is a public URL, not the client secret.
       `[oauth] OAuth provider initialized (${env.OAUTH_CONFIG!.issuerUrl}).`,
     );
   } else {

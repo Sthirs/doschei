@@ -120,6 +120,7 @@ export class OidcProvider implements OAuthProvider {
       // responsible for logging + skipping registration.
       console.warn(
         '[oauth] OAuth discovery failed; provider will be unavailable until restart.',
+        // codeql[js/clear-text-logging] issuer is a public URL, not the client secret.
         { issuer: this.issuer, error },
       );
     }

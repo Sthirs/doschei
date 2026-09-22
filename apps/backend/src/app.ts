@@ -39,6 +39,10 @@ export const createApp = () => {
     }),
   );
   app.use(express.json());
+  // No CSRF token, by design (ADR-0023): the refresh cookie is sameSite
+  // 'strict' and CORS never allows a foreign origin; the OAuth state cookie is
+  // itself the anti-CSRF check for the callback.
+  // codeql[js/missing-token-validation]
   app.use(cookieParser());
 
   app.get('/api/health', healthHandler);
