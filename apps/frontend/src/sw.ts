@@ -21,9 +21,15 @@ cleanupOutdatedCaches();
 // — which must reach the backend to issue the OAuth redirect to the IdP.
 // This mirrors the `workbox.navigateFallbackDenylist` option that only
 // applies under the `generateSW` strategy (see vite.config.ts).
+// `/dex/` is the dev-mode IdP served on this same origin by the ingress
+// (helm/doschei/templates/dex-configmap.yaml). Its login and approval pages
+// are top-level navigations too, so without the entry the worker answers
+// them with index.html — the SPA has no /dex route and renders a blank page,
+// stranding the sign-in mid-flow. A production IdP on another origin never
+// reaches this worker, so the entry is inert there.
 registerRoute(
   new NavigationRoute(createHandlerBoundToURL('index.html'), {
-    denylist: [/^\/api\//],
+    denylist: [/^\/api\//, /^\/dex\//],
   }),
 );
 
