@@ -44,7 +44,7 @@ const mockupExpenses: Expense[] = [
 const mountModal = (expenses: Expense[] = mockupExpenses) =>
   mount(TotalsModal, {
     props: { expenses, currentUserId: CURRENT_USER },
-    global: { plugins: [i18n], stubs: { Teleport: true } },
+    global: { plugins: [i18n] },
   });
 
 // Inline `height: NN%` of each matching element, as a number.
@@ -215,13 +215,14 @@ describe('TotalsModal', () => {
     expect(userSegments[0]).toBeGreaterThan(0);
   });
 
-  it('emits close from the header button and from the scrim', async () => {
+  it('emits close from the header button', async () => {
+    // The scrim itself lives in BottomSheet.vue now (ADR-0027) and is
+    // covered there, not here — TotalsModal only owns its header button.
     const wrapper = mountModal();
 
     await wrapper.get('[aria-label="Close totals"]').trigger('click');
-    await wrapper.get('.backdrop-blur-\\[2px\\]').trigger('click');
 
-    expect(wrapper.emitted('close')).toHaveLength(2);
+    expect(wrapper.emitted('close')).toHaveLength(1);
   });
 
   it('translates its chrome into Italian', () => {

@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import BottomSheet from '@/components/BottomSheet.vue';
+import SheetHeader from '@/components/SheetHeader.vue';
 import { useCategoryPicker } from '@/composables/useCategoryPicker';
 import { getCategory, type CategoryFamily } from '@/lib/categories';
 
@@ -42,7 +44,6 @@ const {
   close,
   select,
   onKeydown,
-  onBackdropClick,
 } = useCategoryPicker({ family: familyLabel, item: itemLabel }, (key) =>
   emit('update:modelValue', key),
 );
@@ -148,98 +149,84 @@ const {
     </div>
 
     <!-- Mobile full-screen sheet (visible only on mobile) -->
-    <Teleport to="body">
+    <BottomSheet
+      :open="isOpen"
+      mobile-only
+      :label="t('categoryPicker.dialogAriaLabel')"
+      panel-class="flex w-full flex-col rounded-t-xl bg-[#1E1E26]"
+      @close="close"
+    >
       <div
-        v-if="isOpen"
-        class="fixed inset-0 z-50 flex flex-col justify-end bg-black/50 backdrop-blur-sm sm:hidden"
-        @click="onBackdropClick"
+        ref="mobilePanelRef"
+        class="flex max-h-[85vh] flex-col"
         @keydown="onKeydown"
       >
-        <div
-          ref="mobilePanelRef"
-          class="bg-[#1E1E26] max-h-[85vh] overflow-y-auto rounded-t-xl"
-          role="dialog"
-          aria-modal="true"
-          :aria-label="t('categoryPicker.dialogAriaLabel')"
-          @click.stop
-        >
-          <div class="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#1E1E26] px-4 py-3">
-            <h3 class="text-sm font-medium text-[#E5E0ED]">{{ t('categoryPicker.selectCategoryHeading') }}</h3>
+        <SheetHeader :close-label="t('common.close')" @close="close">
+          <h3 class="text-sm font-medium text-[#E5E0ED]">{{ t('categoryPicker.selectCategoryHeading') }}</h3>
+        </SheetHeader>
+
+        <div class="overflow-y-auto px-2 py-2">
+          <div class="sticky top-0 z-10 bg-[#1E1E26] px-2 py-2">
+            <input
+              ref="mobileSearchInputRef"
+              v-model="searchQuery"
+              type="text"
+              :placeholder="t('categoryPicker.searchPlaceholder')"
+              :aria-label="t('categoryPicker.searchAriaLabel')"
+              autocomplete="off"
+              class="w-full rounded-md bg-white/5 px-3 py-2 text-sm text-[#E5E0ED] placeholder:text-[#C8C4D7]/50 outline-none focus:ring-1 focus:ring-white/20"
+            />
+          </div>
+          <div v-if="filteredGroups.length === 0" class="px-3 py-4 text-center text-sm text-[#C8C4D7]">
+            <p role="status">{{ t('categoryPicker.noMatchingCategory') }}</p>
+          </div>
+          <div v-for="group in filteredGroups" :key="group.family" class="py-1">
+            <p class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">
+              {{ familyLabel(group.family) }}
+            </p>
             <button
+              v-for="cat in group.entries"
+              :key="cat.key"
               type="button"
-              class="rounded-md p-1 text-[#C8C4D7] hover:text-[#E5E0ED]"
-              :aria-label="t('common.close')"
-              @click="close"
+              :class="[
+                'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition',
+                cat.key === modelValue
+                  ? 'bg-white/5'
+                  : 'text-[#E5E0ED] hover:bg-white/5',
+              ]"
+              @click="select(cat.key)"
             >
-              <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
-                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+              <span
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                :style="{
+                  backgroundColor: `${cat.color}33`,
+                  border: `1px solid ${cat.color}4D`,
+                }"
+              >
+                <img
+                  :src="cat.iconPath"
+                  :alt="itemLabel(cat.key)"
+                  class="h-4 w-4"
+                  aria-hidden="true"
+                />
+              </span>
+              <span class="flex-1">{{ itemLabel(cat.key) }}</span>
+              <svg
+                v-if="cat.key === modelValue"
+                viewBox="0 0 20 20"
+                class="h-4 w-4 fill-current"
+                :style="{ color: cat.color }"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                  clip-rule="evenodd"
+                />
               </svg>
             </button>
           </div>
-
-          <div class="px-2 py-2">
-            <div class="sticky top-0 z-10 bg-[#1E1E26] px-2 py-2">
-              <input
-                ref="mobileSearchInputRef"
-                v-model="searchQuery"
-                type="text"
-                :placeholder="t('categoryPicker.searchPlaceholder')"
-                :aria-label="t('categoryPicker.searchAriaLabel')"
-                autocomplete="off"
-                class="w-full rounded-md bg-white/5 px-3 py-2 text-sm text-[#E5E0ED] placeholder:text-[#C8C4D7]/50 outline-none focus:ring-1 focus:ring-white/20"
-              />
-            </div>
-            <div v-if="filteredGroups.length === 0" class="px-3 py-4 text-center text-sm text-[#C8C4D7]">
-              <p role="status">{{ t('categoryPicker.noMatchingCategory') }}</p>
-            </div>
-            <div v-for="group in filteredGroups" :key="group.family" class="py-1">
-              <p class="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[#C8C4D7]">
-                {{ familyLabel(group.family) }}
-              </p>
-              <button
-                v-for="cat in group.entries"
-                :key="cat.key"
-                type="button"
-                :class="[
-                  'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition',
-                  cat.key === modelValue
-                    ? 'bg-white/5'
-                    : 'text-[#E5E0ED] hover:bg-white/5',
-                ]"
-                @click="select(cat.key)"
-              >
-                <span
-                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-                  :style="{
-                    backgroundColor: `${cat.color}33`,
-                    border: `1px solid ${cat.color}4D`,
-                  }"
-                >
-                  <img
-                    :src="cat.iconPath"
-                    :alt="itemLabel(cat.key)"
-                    class="h-4 w-4"
-                    aria-hidden="true"
-                  />
-                </span>
-                <span class="flex-1">{{ itemLabel(cat.key) }}</span>
-                <svg
-                  v-if="cat.key === modelValue"
-                  viewBox="0 0 20 20"
-                  class="h-4 w-4 fill-current"
-                  :style="{ color: cat.color }"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
-    </Teleport>
+    </BottomSheet>
   </div>
 </template>

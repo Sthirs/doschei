@@ -71,6 +71,17 @@ async function buildRouter(initialPath: string): Promise<Router> {
   return router;
 }
 
+// BottomSheet's <Transition> (ADR-0027) keeps a closing dialog mounted for
+// its 110ms leave animation (`--duration-fast-02`), timed via a real
+// `setTimeout` rather than a `transitionend` listener — `flushPromises()`
+// alone does not advance it. This file doesn't mock timers (its router
+// navigations are real promises), so tests that assert a dialog is gone
+// after closing it must wait out that duration first.
+const SHEET_LEAVE_DURATION_MS = 110;
+async function awaitSheetLeave(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, SHEET_LEAVE_DURATION_MS + 20));
+}
+
 async function mountAt(path: string) {
   const router = await buildRouter(path);
   const wrapper = mount(GroupDetailView, {
@@ -210,6 +221,8 @@ describe('GroupDetailView overlay routes', () => {
     await flushPromises();
 
     expect(router.currentRoute.value.query.overlay).toBeUndefined();
+
+    await awaitSheetLeave();
     expect(wrapper.find('[role="dialog"][aria-label="Totals"]').exists()).toBe(
       false,
     );
@@ -235,6 +248,8 @@ describe('GroupDetailView overlay routes', () => {
     await flushPromises();
 
     expect(router.currentRoute.value.query.overlay).toBeUndefined();
+
+    await awaitSheetLeave();
     expect(
       wrapper.find('[role="dialog"][aria-label="Category details"]').exists(),
     ).toBe(false);

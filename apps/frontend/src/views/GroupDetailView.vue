@@ -5,12 +5,10 @@ import { useRoute, useRouter } from 'vue-router';
 
 import ActionRow from '@/components/group-detail/ActionRow.vue';
 import BalanceCard from '@/components/group-detail/BalanceCard.vue';
-import CategoryRecapModal from '@/components/group-detail/CategoryRecapModal.vue';
 import ExpenseRow from '@/components/group-detail/ExpenseRow.vue';
-import ExportModal from '@/components/group-detail/ExportModal.vue';
+import GroupDetailSheets from '@/components/group-detail/GroupDetailSheets.vue';
 import TopbarBackButton from '@/components/group-detail/TopbarBackButton.vue';
 import TopbarSettingsButtons from '@/components/group-detail/TopbarSettingsButtons.vue';
-import TotalsModal from '@/components/group-detail/TotalsModal.vue';
 import { useGroupDetailOverlays } from '@/composables/useGroupDetailOverlays';
 import { api } from '@/lib/api';
 import { goBackTo } from '@/lib/backNavigation';
@@ -253,28 +251,16 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <!-- Export modal -->
-        <ExportModal
-          v-if="showExportModal"
+        <!-- Export, Totals and Category recap sheets -->
+        <GroupDetailSheets
+          :group="group"
           :group-id="groupId"
-          :group-name="group.name"
-          @close="closeExport"
-        />
-
-        <!-- Totals modal -->
-        <TotalsModal
-          v-if="showTotalsModal"
-          :expenses="group.expenses"
-          :current-user-id="group.balance.currentUserId"
-          @close="closeTotals"
-        />
-
-        <!-- Category recap modal -->
-        <CategoryRecapModal
-          v-if="showCategoryRecapModal"
-          :expenses="group.expenses"
-          :current-user-id="group.balance.currentUserId"
-          @close="closeCategoryRecap"
+          :show-totals="showTotalsModal"
+          :show-export="showExportModal"
+          :show-categories="showCategoryRecapModal"
+          @close-totals="closeTotals"
+          @close-export="closeExport"
+          @close-categories="closeCategoryRecap"
         />
       </template>
 

@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /**
  * GroupDetailPage — page object for the routed expense/settle-up forms that
@@ -93,6 +93,61 @@ export class GroupDetailPage {
   private categoryRecapNextButton = this.categoryRecapDialog.getByRole('button', { name: 'Next month' });
 
   constructor(private page: Page) {}
+
+  // ---------------------------------------------------------------------------
+  // Sheet drag-to-dismiss (ADR-0027)
+  // ---------------------------------------------------------------------------
+
+  // BottomSheet.vue tracks pointer events (not touch-specific ones), so a
+  // real mouse drag on `[data-sheet-drag]` — the panel's own handle, or a
+  // caller's header — exercises the same code path a touch drag would.
+  // useSheetDrag.ts dismisses once the drag passes 30% of the panel's own
+  // height OR the release velocity is fast enough; `pauseBeforeReleaseMs`
+  // lets a caller hold the final position so a short drag reads as slow
+  // (velocity-based dismissal only matters for the "long/fast flick" case).
+  private async dragSheetDown(
+    dialog: Locator,
+    distancePx: number,
+    options: { pauseBeforeReleaseMs?: number } = {},
+  ): Promise<void> {
+    // Every sheet has BottomSheet's own handle (`sm:hidden`, so hidden above
+    // the mobile breakpoint) AND the caller's header, both carrying
+    // `data-sheet-drag` — `:visible` picks whichever one the current
+    // viewport actually shows instead of assuming DOM order. Wait out the
+    // 110ms Carbon enter transition (ADR-0027) first: dragging while the
+    // panel is still sliding in would read its bounding box mid-animation.
+    await this.page.waitForTimeout(200);
+    const handle = dialog.locator('[data-sheet-drag]:visible').first();
+    const box = await handle.boundingBox();
+    if (!box) throw new Error('Sheet drag handle is not visible');
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await this.page.mouse.move(x, y);
+    await this.page.mouse.down();
+    await this.page.mouse.move(x, y + distancePx, { steps: 10 });
+    if (options.pauseBeforeReleaseMs) {
+      await this.page.waitForTimeout(options.pauseBeforeReleaseMs);
+    }
+    await this.page.mouse.up();
+  }
+
+  async dragTotalsSheetDown(
+    distancePx: number,
+    options?: { pauseBeforeReleaseMs?: number },
+  ): Promise<void> {
+    await this.dragSheetDown(this.totalsDialog, distancePx, options);
+  }
+
+  async dragDateTimeSheetDown(
+    distancePx: number,
+    options?: { pauseBeforeReleaseMs?: number },
+  ): Promise<void> {
+    await this.dragSheetDown(
+      this.page.getByRole('dialog', { name: 'Select date' }),
+      distancePx,
+      options,
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Navigation: routed pages (ADR-0012)

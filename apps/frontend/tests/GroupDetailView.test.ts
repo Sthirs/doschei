@@ -640,13 +640,31 @@ describe('GroupDetailView DOM-invariance snapshot', () => {
           <div class="relative shrink-0 px-4">
             <!-- Gradient fade overlay above button -->
             <div class="absolute inset-x-0 bottom-full h-4 bg-gradient-to-t from-[#13121B] via-[#13121B]/50 to-transparent pointer-events-none"></div><button type="button" class="w-full mb-4 rounded-xl bg-[#6554E7] py-4 text-[18px] font-normal text-[#F0EBFF] transition hover:bg-[#5a44cf] active:scale-[0.98]" style="line-height: 27px;">+ Add expense</button>
-          </div><!-- Export modal -->
-          <!--v-if-->
-          <!-- Totals modal -->
-          <!--v-if-->
-          <!-- Category recap modal -->
-          <!--v-if-->
-          <!-- Error -->
+          </div><!-- Export, Totals and Category recap sheets -->
+          <teleport-stub data-v-4053a7e3="" to="body">
+            <!-- \`:duration\` makes Vue time the leave phase itself instead of
+               listening for \`transitionend\`, which stays free for \`onTransitionEnd\`
+               above to watch the unrelated drag-settle transition. -->
+            <transition-stub data-v-4053a7e3="" name="sheet" duration="110" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub>
+          <teleport-stub data-v-4053a7e3="" to="body">
+            <!-- \`:duration\` makes Vue time the leave phase itself instead of
+               listening for \`transitionend\`, which stays free for \`onTransitionEnd\`
+               above to watch the unrelated drag-settle transition. -->
+            <transition-stub data-v-4053a7e3="" name="sheet" duration="110" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub>
+          <teleport-stub data-v-4053a7e3="" to="body">
+            <!-- \`:duration\` makes Vue time the leave phase itself instead of
+               listening for \`transitionend\`, which stays free for \`onTransitionEnd\`
+               above to watch the unrelated drag-settle transition. -->
+            <transition-stub data-v-4053a7e3="" name="sheet" duration="110" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub><!-- Error -->
           <!--v-if-->
         </div>
       </main>"

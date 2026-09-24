@@ -33,7 +33,6 @@ export type UseCategoryPickerReturn = {
   close: () => void;
   select: (key: string) => void;
   onKeydown: (event: KeyboardEvent) => void;
-  onBackdropClick: (event: MouseEvent) => void;
 };
 
 /**
@@ -123,12 +122,6 @@ export const useCategoryPicker = (
     }
   };
 
-  const onBackdropClick = (event: MouseEvent): void => {
-    if (event.target === event.currentTarget) {
-      close();
-    }
-  };
-
   const onDocumentClick = (event: MouseEvent): void => {
     if (!isOpen.value || !triggerRef.value) return;
     const target = event.target as Node;
@@ -159,6 +152,5 @@ export const useCategoryPicker = (
     close,
     select,
     onKeydown,
-    onBackdropClick,
   };
 };

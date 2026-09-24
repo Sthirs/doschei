@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n';
 
 import { DatePicker } from 'v-calendar';
 
+import BottomSheet from '@/components/BottomSheet.vue';
+import SheetHeader from '@/components/SheetHeader.vue';
 import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
 
 const { t } = useI18n();
@@ -122,93 +124,62 @@ function cancel(): void {
     </div>
   </div>
 
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      role="dialog"
-      :aria-label="t('dateTimePicker.selectDateAria')"
-      class="fixed inset-0 z-50"
-    >
-      <!-- Scrim -->
-      <div
-        class="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-[2px]"
-        @click="cancel"
-      ></div>
-      <!-- Card -->
-      <div
-        class="absolute bottom-0 inset-x-0 max-w-[390px] mx-auto bg-[#1C1B23] rounded-t-[24px] border-t border-[rgba(255,255,255,0.1)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
-      >
-        <!-- Handle -->
-        <div class="flex justify-center pt-3 pb-1">
-          <div class="w-12 h-1.5 rounded-full bg-[rgba(200,196,215,0.3)]"></div>
-        </div>
-        <!-- Outer Header -->
-        <div
-          class="flex justify-between items-center px-5 pt-2 pb-4 border-b border-[rgba(255,255,255,0.05)]"
+  <BottomSheet
+    :open="isOpen"
+    :center-on-desktop="false"
+    :label="t('dateTimePicker.selectDateAria')"
+    panel-class="w-full max-w-[390px] bg-[#1C1B23] rounded-t-[24px] border-t border-[rgba(255,255,255,0.1)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+    @close="cancel"
+  >
+    <!-- Outer Header -->
+    <SheetHeader :close-label="t('common.close')" @close="cancel">
+      <div class="flex flex-col">
+        <span
+          class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C6BFFF]"
+          >{{ t('dateTimePicker.selectDateHeading') }}</span
         >
-          <div class="flex flex-col">
-            <span
-              class="font-display text-[10px] font-medium uppercase tracking-[0.05em] text-[#C6BFFF]"
-              >{{ t('dateTimePicker.selectDateHeading') }}</span
-            >
-            <span class="text-2xl font-bold text-[#E5E0ED]">{{
-              formatDate(draft)
-            }}</span>
-          </div>
-          <button class="px-2 py-1" @click="cancel">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              fill="none"
-              stroke="#C8C4D7"
-              stroke-width="2"
-              stroke-linecap="round"
-            >
-              <line x1="2" y1="2" x2="12" y2="12" />
-              <line x1="12" y1="2" x2="2" y2="12" />
-            </svg>
-          </button>
-        </div>
-        <!-- v-calendar DatePicker (INLINE, no popover slot). The `.string`
-             v-model modifier is REQUIRED: v-calendar 3.1.2 derives the emitted
-             value type only from modelModifiers (model-config is ignored), and
-             without it the day-click emits a Date object instead of a string. -->
-        <div class="px-5 py-2">
-          <DatePicker
-            v-model.string="draft"
-            mode="date"
-            is-dark
-            :color="'#6554E7'"
-            :first-day-of-week="1"
-            :masks="{ title: 'MMMM YYYY', modelValue: 'YYYY-MM-DD' }"
-            :select-attribute="selectAttribute"
-            trim-weeks
-            borderless
-          />
-        </div>
-        <!-- Footer Actions -->
-        <div
-          class="flex justify-end gap-2 px-5 py-4 border-t border-[rgba(255,255,255,0.05)]"
-        >
-          <button
-            type="button"
-            class="rounded-full px-6 py-3 text-[12px] font-medium tracking-[0.05em] text-[#C8C4D7]"
-            @click="cancel"
-          >
-            {{ t('dateTimePicker.cancel') }}
-          </button>
-          <button
-            type="button"
-            class="rounded-full px-6 py-3 text-[12px] font-medium tracking-[0.05em] text-[#F0EBFF] bg-[#6554E7]"
-            @click="apply"
-          >
-            {{ t('dateTimePicker.apply') }}
-          </button>
-        </div>
+        <span class="text-2xl font-bold text-[#E5E0ED]">{{
+          formatDate(draft)
+        }}</span>
       </div>
+    </SheetHeader>
+    <!-- v-calendar DatePicker (INLINE, no popover slot). The `.string`
+         v-model modifier is REQUIRED: v-calendar 3.1.2 derives the emitted
+         value type only from modelModifiers (model-config is ignored), and
+         without it the day-click emits a Date object instead of a string. -->
+    <div class="px-5 py-2">
+      <DatePicker
+        v-model.string="draft"
+        mode="date"
+        is-dark
+        :color="'#6554E7'"
+        :first-day-of-week="1"
+        :masks="{ title: 'MMMM YYYY', modelValue: 'YYYY-MM-DD' }"
+        :select-attribute="selectAttribute"
+        trim-weeks
+        borderless
+      />
     </div>
-  </Teleport>
+    <!-- Footer Actions -->
+    <div
+      class="flex justify-end gap-2 px-5 py-4 border-t border-[rgba(255,255,255,0.05)]"
+    >
+      <button
+        type="button"
+        class="rounded-full px-6 py-3 text-[12px] font-medium tracking-[0.05em] text-[#C8C4D7]"
+        @click="cancel"
+      >
+        {{ t('dateTimePicker.cancel') }}
+      </button>
+      <button
+        type="button"
+        class="rounded-full px-6 py-3 text-[12px] font-medium tracking-[0.05em] text-[#F0EBFF] bg-[#6554E7]"
+        @click="apply"
+      >
+        {{ t('dateTimePicker.apply') }}
+      </button>
+    </div>
+  </BottomSheet>
 </template>
 
 <style scoped>
