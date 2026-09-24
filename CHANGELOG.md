@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.9.0](https://github.com/Sthirs/doschei/compare/v1.8.2...v1.9.0) (2026-09-24)
+
+
+### Features
+
+* add monthly category recap ([#133](https://github.com/Sthirs/doschei/issues/133)) ([685c2d6](https://github.com/Sthirs/doschei/commit/685c2d60d4a742a192a2845f4f087ab4e7e78e54))
+* **frontend:** add motion to modals ([#135](https://github.com/Sthirs/doschei/issues/135)) ([a712189](https://github.com/Sthirs/doschei/commit/a712189f9441a2636869088ebaeac1f66b51938f))
+
+
+### Bug Fixes
+
+* **frontend:** use dvh for mobile phones ([0d7a821](https://github.com/Sthirs/doschei/commit/0d7a821811245eaf18153eab2660f9777fe716b0))
+
 ## [1.8.2](https://github.com/Sthirs/doschei/compare/v1.8.1...v1.8.2) (2026-09-22)
 
 
