@@ -62,7 +62,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="flex min-h-screen items-center justify-center px-4 py-12 text-slate-50">
+  <main class="flex min-h-dvh items-center justify-center px-4 py-12 text-slate-50">
     <div class="glass-panel rounded-md p-10 text-center shadow-2xl" v-if="!error">
       <p class="text-lg font-medium">{{ t('auth.signingIn') }}</p>
       <div class="mt-4 h-1 w-48 mx-auto rounded-full bg-white/10 overflow-hidden">

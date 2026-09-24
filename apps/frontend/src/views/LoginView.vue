@@ -68,7 +68,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="flex min-h-screen items-center justify-center px-5 py-8">
+  <main class="flex min-h-dvh items-center justify-center px-5 py-8">
     <div class="w-full max-w-[390px]">
       <img src="/logo.svg" alt="Do Schèi logo" class="mx-auto h-35 w-35" />
       <h1 class="mt-4 text-center text-5xl font-bold text-[#C6BFFF]">Do Schèi</h1>

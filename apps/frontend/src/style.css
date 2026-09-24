@@ -33,14 +33,14 @@
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at top, rgba(101, 84, 231, 0.15), transparent 35%),
     linear-gradient(180deg, #13121B 0%, #13121B 100%);
 }
 
 #app {
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .glass-panel {
