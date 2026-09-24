@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/Sthirs/doschei/compare/v1.9.0...v1.9.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **frontend:** improve UI on mobile phones ([#136](https://github.com/Sthirs/doschei/issues/136)) ([86a51bb](https://github.com/Sthirs/doschei/commit/86a51bb474b1db6041a7b761104b3ed70174263b))
+
 ## [1.9.0](https://github.com/Sthirs/doschei/compare/v1.8.2...v1.9.0) (2026-09-24)
 
 
