@@ -1,7 +1,7 @@
 // Happy path for the group category recap modal: create a group, invite Alice
 // so splits have two members, add a food and a transportation expense in the
 // current month plus a settle-up (excluded), and a home expense in the month
-// before, then open Categories and assert all seven families always render —
+// before, then open Stats and assert all seven families always render —
 // the two/one with spend, and the rest at €0.00 — in the same fixed family
 // order every month, and the one-month-at-a-time stepper. Uses the
 // authenticatedPage fixture (no UI login).
@@ -131,9 +131,8 @@ test('view a month of group spend broken down by category family', async ({
 
   // The settle-up is excluded, so the total is 90 + 30, not 90 + 30 + 15.
   expect(await groupDetailPage.getCategoryRecapTotal()).toBe('€120.00');
-  expect(await groupDetailPage.getCategoryRecapSummary()).toBe(
-    '2 expenses · your share €60.00',
-  );
+  expect(await groupDetailPage.getCategoryRecapCount()).toBe('2 expenses');
+  expect(await groupDetailPage.getCategoryRecapShare()).toBe('your share €60.00');
 
   // The month never runs past the current one.
   await groupDetailPage.expectCategoryRecapCannotGoForward();

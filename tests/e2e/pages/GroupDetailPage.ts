@@ -84,9 +84,9 @@ export class GroupDetailPage {
   private totalsNextButton = this.totalsDialog.getByRole('button', { name: 'Next period' });
 
   // Category recap controls (GroupDetailView.vue → ActionRow.vue — the
-  // "Categories" button next to "Totals" opens CategoryRecapModal, a teleported
+  // "Stats" button next to "Totals" opens CategoryRecapModal, a teleported
   // role="dialog" holding the per-family rows and a one-month stepper).
-  private categoryRecapTriggerButton = this.page.getByRole('button', { name: /^Categories$/, exact: true });
+  private categoryRecapTriggerButton = this.page.getByRole('button', { name: /^Stats$/, exact: true });
   private categoryRecapDialog = this.page.getByRole('dialog', { name: 'Category details' });
   private categoryRecapMonth = this.categoryRecapDialog.getByTestId('category-recap-month');
   private categoryRecapPreviousButton = this.categoryRecapDialog.getByRole('button', { name: 'Previous month' });
@@ -700,8 +700,12 @@ export class GroupDetailPage {
     return (await this.categoryRecapDialog.getByTestId('category-recap-total').innerText()).trim();
   }
 
-  async getCategoryRecapSummary(): Promise<string> {
-    return (await this.categoryRecapDialog.getByTestId('category-recap-summary').innerText()).trim();
+  async getCategoryRecapCount(): Promise<string> {
+    return (await this.categoryRecapDialog.getByTestId('category-recap-count').innerText()).trim();
+  }
+
+  async getCategoryRecapShare(): Promise<string> {
+    return (await this.categoryRecapDialog.getByTestId('category-recap-share').innerText()).trim();
   }
 
   async getCategoryRecapMonth(): Promise<string> {

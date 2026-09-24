@@ -45,14 +45,19 @@ const monthLabel = computed(() =>
 
 // Plural selection uses `Intl.PluralRules` rather than vue-i18n's pipe syntax,
 // matching how the rest of the app leaves pluralization to Intl (ADR-0018).
-const summaryText = computed(() => {
-  const { expenseCount: n, userCents } = recap.value;
-  const share = formatEur(userCents / 100, locale.value);
-  if (n === 0) return t('groupDetail.categoryRecapSummaryZero', { share });
+const countText = computed(() => {
+  const n = recap.value.expenseCount;
+  if (n === 0) return t('groupDetail.categoryRecapCountZero');
   const rule = new Intl.PluralRules(locale.value).select(n);
-  const key = rule === 'one' ? 'categoryRecapSummaryOne' : 'categoryRecapSummaryOther';
-  return t(`groupDetail.${key}`, { n, share });
+  const key = rule === 'one' ? 'categoryRecapCountOne' : 'categoryRecapCountOther';
+  return t(`groupDetail.${key}`, { n });
 });
+
+const shareText = computed(() =>
+  t('groupDetail.categoryRecapShare', {
+    share: formatEur(recap.value.userCents / 100, locale.value),
+  }),
+);
 </script>
 
 <template>
@@ -118,12 +123,13 @@ const summaryText = computed(() => {
         {{ formatEur(recap.totalCents / 100, locale) }}
       </p>
     </div>
-    <p
-      class="text-[14px] leading-5 text-[#C8C4D7]"
+    <div
+      class="text-right text-[14px] leading-5 text-[#C8C4D7]"
       data-testid="category-recap-summary"
     >
-      {{ summaryText }}
-    </p>
+      <p data-testid="category-recap-count">{{ countText }}</p>
+      <p data-testid="category-recap-share">{{ shareText }}</p>
+    </div>
   </div>
 
   <!-- Period selector -->

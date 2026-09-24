@@ -141,6 +141,19 @@ export function useSheetDrag(
     window.addEventListener('pointercancel', onPointerCancel);
   };
 
+  // `touch-action: none` on the drag zone stops native scrolling, but Chrome
+  // on Android still runs its own gesture recognition on the unconsumed
+  // touches: a quick flick-to-dismiss ends in a fling, and the next tap
+  // anywhere is swallowed as "the tap that stopped the fling" — so the
+  // button that just opened the sheet seemed dead right after a flick.
+  // Consuming the `touchmove`s of a tracked drag keeps them away from that
+  // recognizer entirely. `touchmove` fires after its `pointermove`, so
+  // `pointerId` is already set; `touchstart` is left alone so a tap on the
+  // header's close button still produces its click.
+  const onTouchMove = (event: TouchEvent): void => {
+    if (pointerId !== null && event.cancelable) event.preventDefault();
+  };
+
   const onTransitionEnd = (event: TransitionEvent): void => {
     if (event.propertyName === 'translate') settling.value = false;
   };
@@ -152,5 +165,12 @@ export function useSheetDrag(
     settling.value = false;
   };
 
-  return { dragY, settling, onPointerDown, onTransitionEnd, reset };
+  return {
+    dragY,
+    settling,
+    onPointerDown,
+    onTouchMove,
+    onTransitionEnd,
+    reset,
+  };
 }
