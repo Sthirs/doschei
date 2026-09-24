@@ -1,6 +1,6 @@
 # ADR-0027: Bottom-sheet motion and drag-to-dismiss — Carbon productive tokens, hand-written
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-09-24
 - **Deciders:** Sthirs
 
