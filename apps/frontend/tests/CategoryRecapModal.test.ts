@@ -109,8 +109,11 @@ describe('CategoryRecapModal', () => {
     expect(wrapper.find('[data-testid="category-recap-total"]').text()).toBe(
       '€480.00',
     );
-    expect(wrapper.find('[data-testid="category-recap-summary"]').text()).toBe(
-      '8 expenses · your share €240.00',
+    expect(wrapper.find('[data-testid="category-recap-count"]').text()).toBe(
+      '8 expenses',
+    );
+    expect(wrapper.find('[data-testid="category-recap-share"]').text()).toBe(
+      'your share €240.00',
     );
   });
 
@@ -166,8 +169,11 @@ describe('CategoryRecapModal', () => {
     expect(wrapper.find('[data-testid="category-recap-total"]').text()).toBe(
       '€0.00',
     );
-    expect(wrapper.find('[data-testid="category-recap-summary"]').text()).toBe(
-      'no expenses · your share €0.00',
+    expect(wrapper.find('[data-testid="category-recap-count"]').text()).toBe(
+      'no expenses',
+    );
+    expect(wrapper.find('[data-testid="category-recap-share"]').text()).toBe(
+      'your share €0.00',
     );
   });
 
@@ -206,8 +212,11 @@ describe('CategoryRecapModal', () => {
     );
     // Whitespace before the symbol differs across runtimes (regular space vs
     // U+00A0), so match on substance rather than exact spacing.
-    expect(wrapper.find('[data-testid="category-recap-summary"]').text()).toMatch(
-      /^1 spesa · la tua quota 50,10\s?€$/,
+    expect(wrapper.find('[data-testid="category-recap-count"]').text()).toBe(
+      '1 spesa',
+    );
+    expect(wrapper.find('[data-testid="category-recap-share"]').text()).toMatch(
+      /^la tua quota 50,10\s?€$/,
     );
   });
 });

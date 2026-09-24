@@ -29,7 +29,7 @@ const props = withDefaults(
 const emit = defineEmits<{ close: [] }>();
 
 const panelRef = ref<HTMLDivElement | null>(null);
-const { dragY, settling, onPointerDown, onTransitionEnd, reset } =
+const { dragY, settling, onPointerDown, onTouchMove, onTransitionEnd, reset } =
   useSheetDrag(panelRef, () => emit('close'));
 
 // A reopen must start from a clean slate — otherwise a sheet closed by
@@ -74,6 +74,7 @@ const DEFAULT_PANEL_CLASS =
           aria-modal="true"
           :aria-label="label"
           @pointerdown="onPointerDown"
+          @touchmove="onTouchMove"
           @transitionend="onTransitionEnd"
           @click.stop
         >

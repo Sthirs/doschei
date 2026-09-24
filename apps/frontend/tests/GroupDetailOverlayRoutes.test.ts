@@ -166,12 +166,12 @@ describe('GroupDetailView overlay routes', () => {
     expect(selects[1].findAll('option')).toHaveLength(5);
   });
 
-  it('clicking Categories pushes ?overlay=categories and renders the category recap dialog', async () => {
+  it('clicking Stats pushes ?overlay=categories and renders the category recap dialog', async () => {
     const { wrapper, router } = await mountAt('/groups/group-1');
 
     const categoriesButton = wrapper
       .findAll('button')
-      .find((b) => b.text().trim() === 'Categories')!;
+      .find((b) => b.text().trim() === 'Stats')!;
     await categoriesButton.trigger('click');
     await flushPromises();
 
