@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 
 import MonthlyTotalsChart from '@/components/group-detail/MonthlyTotalsChart.vue';
 import PeriodStepper from '@/components/group-detail/PeriodStepper.vue';
+import SheetHeader from '@/components/SheetHeader.vue';
 import { fromDateValue } from '@/lib/expenseDate';
 import {
   aggregateMonthlyTotals,
@@ -53,66 +54,28 @@ const rangeLabel = computed(() => {
 </script>
 
 <template>
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
-    >
-      <!-- Scrim -->
-      <div
-        class="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-[2px]"
-        @click="emit('close')"
-      ></div>
-      <!-- Bottom sheet on phones, centred popup from sm: up -->
-      <div
-        class="relative w-full max-w-[390px] rounded-t-[24px] border-t border-white/10 bg-[#1C1B25] pb-6 shadow-[0_-12px_20px_rgba(0,0,0,0.6)] sm:rounded-[24px] sm:border sm:pb-5 sm:shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="t('groupDetail.totalsModalTitle')"
-      >
-        <!-- Header -->
-        <div
-          class="flex items-center justify-between border-b border-white/[0.06] px-5 pb-[17px] pt-5"
-        >
-          <h2
-            class="text-[18px] font-bold leading-7 tracking-[-0.45px] text-white"
-          >
-            {{ t('groupDetail.totalsModalTitle') }}
-          </h2>
-          <button
-            type="button"
-            class="flex size-9 items-center justify-center rounded-full text-[#C8C4D7] transition hover:bg-white/10 hover:text-[#E5E0ED]"
-            :aria-label="t('groupDetail.totalsClose')"
-            @click="emit('close')"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              class="h-5 w-5 fill-none stroke-current"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <path d="M6 6l12 12M6 18L18 6" stroke-linecap="round" />
-            </svg>
-          </button>
-        </div>
+  <!-- Header -->
+  <SheetHeader :close-label="t('groupDetail.totalsClose')" @close="emit('close')">
+    <h2 class="text-[18px] font-bold leading-7 tracking-[-0.45px] text-white">
+      {{ t('groupDetail.totalsModalTitle') }}
+    </h2>
+  </SheetHeader>
 
-        <!-- Chart -->
-        <div class="px-5 pb-2 pt-4">
-          <MonthlyTotalsChart :months="months" />
-        </div>
+  <!-- Chart -->
+  <div class="px-5 pb-2 pt-4">
+    <MonthlyTotalsChart :months="months" />
+  </div>
 
-        <!-- Period selector -->
-        <div class="px-5 pt-3">
-          <PeriodStepper
-            :label="rangeLabel"
-            label-test-id="totals-range"
-            :previous-label="t('groupDetail.totalsPreviousPeriod')"
-            :next-label="t('groupDetail.totalsNextPeriod')"
-            :can-go-forward="canGoForward"
-            @previous="step(-1)"
-            @next="step(1)"
-          />
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  <!-- Period selector -->
+  <div class="px-5 pt-3">
+    <PeriodStepper
+      :label="rangeLabel"
+      label-test-id="totals-range"
+      :previous-label="t('groupDetail.totalsPreviousPeriod')"
+      :next-label="t('groupDetail.totalsNextPeriod')"
+      :can-go-forward="canGoForward"
+      @previous="step(-1)"
+      @next="step(1)"
+    />
+  </div>
 </template>

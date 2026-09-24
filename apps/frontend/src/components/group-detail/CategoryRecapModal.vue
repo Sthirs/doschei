@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import PeriodStepper from '@/components/group-detail/PeriodStepper.vue';
+import SheetHeader from '@/components/SheetHeader.vue';
 import { aggregateCategoryRecap } from '@/lib/categoryRecap';
 import { CATEGORY_FAMILY_COLORS } from '@/lib/categories';
 import { fromDateValue } from '@/lib/expenseDate';
@@ -55,124 +56,86 @@ const summaryText = computed(() => {
 </script>
 
 <template>
-  <Teleport to="body">
+  <!-- Header -->
+  <SheetHeader :close-label="t('groupDetail.categoryRecapClose')" @close="emit('close')">
+    <h2 class="text-[18px] font-bold leading-7 tracking-[-0.45px] text-white">
+      {{ t('groupDetail.categoryRecapTitle') }}
+    </h2>
+  </SheetHeader>
+
+  <!-- Rows: always all seven families, in the same fixed family order
+       every month (ADR-0026) -->
+  <div class="flex flex-col gap-4 px-5 pb-2 pt-5">
     <div
-      class="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
+      v-for="row in recap.rows"
+      :key="row.family"
+      data-testid="category-recap-row"
+      :data-family="row.family"
+      class="flex flex-col gap-2"
     >
-      <!-- Scrim -->
-      <div
-        class="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-[2px]"
-        @click="emit('close')"
-      ></div>
-      <!-- Bottom sheet on phones, centred popup from sm: up -->
-      <div
-        class="relative w-full max-w-[390px] rounded-t-[24px] border-t border-white/10 bg-[#1C1B25] pb-6 shadow-[0_-12px_20px_rgba(0,0,0,0.6)] sm:rounded-[24px] sm:border sm:pb-5 sm:shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="t('groupDetail.categoryRecapTitle')"
-      >
-        <!-- Header -->
+      <div class="flex items-baseline justify-between gap-3">
+        <span class="flex items-baseline gap-2.5">
+          <span
+            class="size-2 shrink-0 self-center rounded-full"
+            :style="{ backgroundColor: CATEGORY_FAMILY_COLORS[row.family] }"
+            aria-hidden="true"
+          ></span>
+          <span class="text-[16px] leading-6 text-[#E5E0ED]">
+            {{ t(`categories.families.${row.family}`) }}
+          </span>
+          <span class="text-[12px] leading-4 tracking-[0.6px] text-[#C8C4D7]">
+            {{ formatPercentTenths(row.shareTenths, locale) }}
+          </span>
+        </span>
+        <span class="whitespace-nowrap text-[16px] font-semibold leading-6 text-white">
+          {{ formatEur(row.cents / 100, locale) }}
+        </span>
+      </div>
+      <div class="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
         <div
-          class="flex items-center justify-between border-b border-white/[0.06] px-5 pb-[17px] pt-5"
-        >
-          <h2
-            class="text-[18px] font-bold leading-7 tracking-[-0.45px] text-white"
-          >
-            {{ t('groupDetail.categoryRecapTitle') }}
-          </h2>
-          <button
-            type="button"
-            class="flex size-9 items-center justify-center rounded-full text-[#C8C4D7] transition hover:bg-white/10 hover:text-[#E5E0ED]"
-            :aria-label="t('groupDetail.categoryRecapClose')"
-            @click="emit('close')"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              class="h-5 w-5 fill-none stroke-current"
-              stroke-width="2"
-              aria-hidden="true"
-            >
-              <path d="M6 6l12 12M6 18L18 6" stroke-linecap="round" />
-            </svg>
-          </button>
-        </div>
-
-        <!-- Rows: always all seven families, in the same fixed family order
-             every month (ADR-0026) -->
-        <div class="flex flex-col gap-4 px-5 pb-2 pt-5">
-          <div
-            v-for="row in recap.rows"
-            :key="row.family"
-            data-testid="category-recap-row"
-            :data-family="row.family"
-            class="flex flex-col gap-2"
-          >
-            <div class="flex items-baseline justify-between gap-3">
-              <span class="flex items-baseline gap-2.5">
-                <span
-                  class="size-2 shrink-0 self-center rounded-full"
-                  :style="{ backgroundColor: CATEGORY_FAMILY_COLORS[row.family] }"
-                  aria-hidden="true"
-                ></span>
-                <span class="text-[16px] leading-6 text-[#E5E0ED]">
-                  {{ t(`categories.families.${row.family}`) }}
-                </span>
-                <span class="text-[12px] leading-4 tracking-[0.6px] text-[#C8C4D7]">
-                  {{ formatPercentTenths(row.shareTenths, locale) }}
-                </span>
-              </span>
-              <span class="whitespace-nowrap text-[16px] font-semibold leading-6 text-white">
-                {{ formatEur(row.cents / 100, locale) }}
-              </span>
-            </div>
-            <div class="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-              <div
-                class="h-full rounded-full"
-                :style="{
-                  width: `${row.shareTenths / 10}%`,
-                  backgroundColor: CATEGORY_FAMILY_COLORS[row.family],
-                }"
-              ></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div
-          class="flex items-end justify-between border-t border-white/[0.06] px-5 pb-2 pt-4"
-        >
-          <div>
-            <p class="text-[10px] uppercase leading-4 tracking-[1px] text-[#C8C4D7]">
-              {{ t('groupDetail.categoryRecapTotalSpent') }}
-            </p>
-            <p
-              class="text-[24px] font-bold leading-8 text-[#E5E0ED]"
-              data-testid="category-recap-total"
-            >
-              {{ formatEur(recap.totalCents / 100, locale) }}
-            </p>
-          </div>
-          <p
-            class="text-[14px] leading-5 text-[#C8C4D7]"
-            data-testid="category-recap-summary"
-          >
-            {{ summaryText }}
-          </p>
-        </div>
-
-        <!-- Period selector -->
-        <div class="px-5 pt-3">
-          <PeriodStepper
-            :label="monthLabel"
-            label-test-id="category-recap-month"
-            :previous-label="t('groupDetail.categoryRecapPreviousMonth')"
-            :next-label="t('groupDetail.categoryRecapNextMonth')"
-            :can-go-forward="canGoForward"
-            @previous="step(-1)"
-            @next="step(1)"
-          />
-        </div>
+          class="h-full rounded-full"
+          :style="{
+            width: `${row.shareTenths / 10}%`,
+            backgroundColor: CATEGORY_FAMILY_COLORS[row.family],
+          }"
+        ></div>
       </div>
     </div>
-  </Teleport>
+  </div>
+
+  <!-- Footer -->
+  <div
+    class="flex items-end justify-between border-t border-white/[0.06] px-5 pb-2 pt-4"
+  >
+    <div>
+      <p class="text-[10px] uppercase leading-4 tracking-[1px] text-[#C8C4D7]">
+        {{ t('groupDetail.categoryRecapTotalSpent') }}
+      </p>
+      <p
+        class="text-[24px] font-bold leading-8 text-[#E5E0ED]"
+        data-testid="category-recap-total"
+      >
+        {{ formatEur(recap.totalCents / 100, locale) }}
+      </p>
+    </div>
+    <p
+      class="text-[14px] leading-5 text-[#C8C4D7]"
+      data-testid="category-recap-summary"
+    >
+      {{ summaryText }}
+    </p>
+  </div>
+
+  <!-- Period selector -->
+  <div class="px-5 pt-3">
+    <PeriodStepper
+      :label="monthLabel"
+      label-test-id="category-recap-month"
+      :previous-label="t('groupDetail.categoryRecapPreviousMonth')"
+      :next-label="t('groupDetail.categoryRecapNextMonth')"
+      :can-go-forward="canGoForward"
+      @previous="step(-1)"
+      @next="step(1)"
+    />
+  </div>
 </template>

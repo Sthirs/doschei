@@ -321,8 +321,15 @@ describe('GroupDetailView', () => {
     await vi.dynamicImportSettled();
     await wrapper.vm.$nextTick();
 
+    // The breakdown list stays mounted at all times so its wrapper's height
+    // can animate open/closed (a `grid-template-rows` transition needs the
+    // content present to measure against); collapsed state is instead
+    // asserted via `aria-hidden`, not DOM absence.
     expect(wrapper.html()).toContain('See breakdown');
-    expect(wrapper.html()).not.toContain('Bob owes you');
+    expect(wrapper.html()).toContain('Bob owes you');
+    expect(
+      wrapper.find('[data-testid="balance-breakdown"]').attributes('aria-hidden'),
+    ).toBe('true');
 
     const breakdownButton = wrapper
       .findAll('button')
@@ -331,13 +338,17 @@ describe('GroupDetailView', () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.html()).toContain('Hide breakdown');
-    expect(wrapper.html()).toContain('Bob owes you');
+    expect(
+      wrapper.find('[data-testid="balance-breakdown"]').attributes('aria-hidden'),
+    ).toBe('false');
 
     await breakdownButton.trigger('click');
     await wrapper.vm.$nextTick();
 
     expect(wrapper.html()).toContain('See breakdown');
-    expect(wrapper.html()).not.toContain('Bob owes you');
+    expect(
+      wrapper.find('[data-testid="balance-breakdown"]').attributes('aria-hidden'),
+    ).toBe('true');
   });
 
   // The Export modal is now opened via a real ?overlay=export navigation
@@ -600,7 +611,15 @@ describe('GroupDetailView DOM-invariance snapshot', () => {
                 <!--v-if-->
               </div><!-- Breakdown toggle -->
               <!--v-if-->
-              <!-- Breakdown list -->
+              <!-- Breakdown list: a \`grid-template-rows\` 0fr/1fr trick rather than a
+               Vue <Transition>, so the card's own box height animates open/closed
+               along with the list content — a plain enter/leave transition on the
+               \`<ul>\` alone left the section snapping to its new height instantly.
+               Carbon's fast-01 (70ms, "micro-interactions such as button and
+               toggle") pairs with \`standard-productive\`, the same combination
+               \`BottomSheet\`'s drag snap-back uses (ADR-0027), since this is that
+               same kind of short, corrective toggle rather than a sheet's own
+               open/close. -->
               <!--v-if-->
             </section><!-- Action row -->
             <div class="flex gap-2"><button type="button" class="rounded-xl bg-[#6554E7] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-white transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-40" title="Record a payment between members">Settle Up</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Export</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Totals</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Categories</button></div>
@@ -640,13 +659,31 @@ describe('GroupDetailView DOM-invariance snapshot', () => {
           <div class="relative shrink-0 px-4">
             <!-- Gradient fade overlay above button -->
             <div class="absolute inset-x-0 bottom-full h-4 bg-gradient-to-t from-[#13121B] via-[#13121B]/50 to-transparent pointer-events-none"></div><button type="button" class="w-full mb-4 rounded-xl bg-[#6554E7] py-4 text-[18px] font-normal text-[#F0EBFF] transition hover:bg-[#5a44cf] active:scale-[0.98]" style="line-height: 27px;">+ Add expense</button>
-          </div><!-- Export modal -->
-          <!--v-if-->
-          <!-- Totals modal -->
-          <!--v-if-->
-          <!-- Category recap modal -->
-          <!--v-if-->
-          <!-- Error -->
+          </div><!-- Export, Totals and Category recap sheets -->
+          <teleport-stub data-v-4053a7e3="" to="body">
+            <!-- \`:duration\` makes Vue time the leave phase itself instead of
+               listening for \`transitionend\`, which stays free for \`onTransitionEnd\`
+               above to watch the unrelated drag-settle transition. -->
+            <transition-stub data-v-4053a7e3="" name="sheet" duration="110" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub>
+          <teleport-stub data-v-4053a7e3="" to="body">
+            <!-- \`:duration\` makes Vue time the leave phase itself instead of
+               listening for \`transitionend\`, which stays free for \`onTransitionEnd\`
+               above to watch the unrelated drag-settle transition. -->
+            <transition-stub data-v-4053a7e3="" name="sheet" duration="110" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub>
+          <teleport-stub data-v-4053a7e3="" to="body">
+            <!-- \`:duration\` makes Vue time the leave phase itself instead of
+               listening for \`transitionend\`, which stays free for \`onTransitionEnd\`
+               above to watch the unrelated drag-settle transition. -->
+            <transition-stub data-v-4053a7e3="" name="sheet" duration="110" appear="false" persisted="false" css="true">
+              <!--v-if-->
+            </transition-stub>
+          </teleport-stub><!-- Error -->
           <!--v-if-->
         </div>
       </main>"

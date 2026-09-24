@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import BottomSheet from '@/components/BottomSheet.vue';
+import SheetHeader from '@/components/SheetHeader.vue';
 import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
 import type { GroupMember } from '@/types/group';
 
@@ -57,12 +59,6 @@ const onKeydown = (event: KeyboardEvent) => {
     // Stop the routed overlay's own window-level Escape listener from also
     // firing for the same keypress, which would otherwise race this close().
     event.stopPropagation();
-    close();
-  }
-};
-
-const onBackdropClick = (event: MouseEvent) => {
-  if (event.target === event.currentTarget) {
     close();
   }
 };
@@ -179,83 +175,62 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <Teleport to="body">
-      <div
-        v-if="isOpen"
-        class="fixed inset-0 z-50 flex flex-col justify-end bg-black/60 backdrop-blur-sm sm:hidden"
-        @click="onBackdropClick"
-        @keydown="onKeydown"
-      >
-        <div
-          class="max-h-[85vh] overflow-y-auto rounded-t-2xl bg-[#1E1E26] border-t border-white/[0.08]"
-          role="dialog"
-          aria-modal="true"
-          :aria-label="t('userPicker.triggerAriaLabel')"
-          @click.stop
-        >
-          <div
-            class="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.08] bg-[#1E1E26] px-4 py-3"
-          >
-            <h3 class="text-sm font-medium text-[#E5E0ED]">
-              {{ t('userPicker.selectPayerHeading') }}
-            </h3>
-            <button
-              type="button"
-              class="rounded-md p-1 text-[#C8C4D7] hover:text-[#E5E0ED]"
-              :aria-label="t('common.close')"
-              @click="close"
-            >
-              <svg viewBox="0 0 20 20" class="h-5 w-5 fill-current">
-                <path
-                  d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
-                />
-              </svg>
-            </button>
-          </div>
+    <BottomSheet
+      :open="isOpen"
+      mobile-only
+      :label="t('userPicker.triggerAriaLabel')"
+      panel-class="flex w-full flex-col rounded-t-2xl border-t border-white/[0.08] bg-[#1E1E26]"
+      @close="close"
+    >
+      <div class="flex max-h-[85vh] flex-col" @keydown="onKeydown">
+        <SheetHeader :close-label="t('common.close')" @close="close">
+          <h3 class="text-sm font-medium text-[#E5E0ED]">
+            {{ t('userPicker.selectPayerHeading') }}
+          </h3>
+        </SheetHeader>
 
-          <div class="px-2 py-2">
-            <button
-              v-for="member in sortedMembers"
-              :key="member.id"
-              type="button"
-              :class="[
-                'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition',
-                member.id === modelValue
-                  ? 'bg-[#6554E7]/10 text-[#6554E7]'
-                  : 'text-[#E5E0ED] hover:bg-white/5',
-              ]"
-              @click="select(member.id)"
+        <div class="overflow-y-auto px-2 py-2">
+          <button
+            v-for="member in sortedMembers"
+            :key="member.id"
+            type="button"
+            :class="[
+              'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition',
+              member.id === modelValue
+                ? 'bg-[#6554E7]/10 text-[#6554E7]'
+                : 'text-[#E5E0ED] hover:bg-white/5',
+            ]"
+            @click="select(member.id)"
+          >
+            <span
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/20 text-xs font-semibold text-[#6554E7]"
             >
-              <span
-                class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#6554E7]/20 text-xs font-semibold text-[#6554E7]"
-              >
-                <img
-                  v-if="member.imageUrl"
-                  :src="member.imageUrl"
-                  alt=""
-                  aria-hidden="true"
-                  class="h-full w-full rounded-full object-cover"
-                />
-                <span v-else>{{ initial(member.displayName) }}</span>
-              </span>
-              <span class="min-w-0 flex-1 truncate">{{
-                member.displayName
-              }}</span>
-              <svg
-                v-if="member.id === modelValue"
-                viewBox="0 0 20 20"
-                class="h-4 w-4 shrink-0 fill-current"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            </button>
-          </div>
+              <img
+                v-if="member.imageUrl"
+                :src="member.imageUrl"
+                alt=""
+                aria-hidden="true"
+                class="h-full w-full rounded-full object-cover"
+              />
+              <span v-else>{{ initial(member.displayName) }}</span>
+            </span>
+            <span class="min-w-0 flex-1 truncate">{{
+              member.displayName
+            }}</span>
+            <svg
+              v-if="member.id === modelValue"
+              viewBox="0 0 20 20"
+              class="h-4 w-4 shrink-0 fill-current"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
         </div>
       </div>
-    </Teleport>
+    </BottomSheet>
   </div>
 </template>

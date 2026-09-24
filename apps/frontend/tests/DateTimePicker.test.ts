@@ -187,8 +187,9 @@ describe('DateTimePicker', () => {
     await wrapper.find('[data-test-id="dtp"]').trigger('click');
     await flushPromises();
 
-    // The scrim is the first direct child div of the dialog.
-    const scrim = wrapper.find('[role="dialog"] > div');
+    // `role="dialog"` now sits on BottomSheet's panel itself (ADR-0027); the
+    // scrim is its sibling, identified by its own class.
+    const scrim = wrapper.find('.sheet-scrim');
     expect(scrim.exists()).toBe(true);
     await scrim.trigger('click');
 

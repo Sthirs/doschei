@@ -82,9 +82,11 @@ test('DateTimePicker bottom-sheet: open, navigate, select+apply, cancel reverts,
     await expect(weekdays.filter({ hasText: letter }).first()).toBeVisible();
   }
 
-  // Scrim — DateTimePicker.vue:72 — backdrop div with backdrop-blur-[2px].
-  // Assert the scrim (backdrop blur) is visible.
-  const scrim = dialog.locator('[class*="backdrop-blur"]');
+  // Scrim — BottomSheet.vue's `.sheet-scrim` (backdrop-blur-[2px]). Under the
+  // ADR-0027 BottomSheet architecture, `role="dialog"` sits on the panel
+  // itself, so the scrim is its sibling rather than a descendant — locate it
+  // from `page`, not from `dialog`.
+  const scrim = page.locator('.sheet-scrim');
   await expect(scrim).toBeVisible();
 
   // --- happy-B: Navigate ---
