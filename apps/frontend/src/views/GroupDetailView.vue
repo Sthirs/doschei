@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import ActionRow from '@/components/group-detail/ActionRow.vue';
 import BalanceCard from '@/components/group-detail/BalanceCard.vue';
+import CategoryRecapModal from '@/components/group-detail/CategoryRecapModal.vue';
 import ExpenseRow from '@/components/group-detail/ExpenseRow.vue';
 import ExportModal from '@/components/group-detail/ExportModal.vue';
 import TopbarBackButton from '@/components/group-detail/TopbarBackButton.vue';
@@ -38,6 +39,9 @@ const {
   showExportModal,
   openExport,
   closeExport,
+  showCategoryRecapModal,
+  openCategoryRecap,
+  closeCategoryRecap,
 } = useGroupDetailOverlays();
 
 const groupId = computed(() => route.params.id as string);
@@ -193,6 +197,7 @@ onBeforeUnmount(() => {
             @settle-up="navigateToSettleUpNew()"
             @open-export="openExport"
             @open-totals="openTotals"
+            @open-categories="openCategoryRecap"
           />
         </div>
 
@@ -262,6 +267,14 @@ onBeforeUnmount(() => {
           :expenses="group.expenses"
           :current-user-id="group.balance.currentUserId"
           @close="closeTotals"
+        />
+
+        <!-- Category recap modal -->
+        <CategoryRecapModal
+          v-if="showCategoryRecapModal"
+          :expenses="group.expenses"
+          :current-user-id="group.balance.currentUserId"
+          @close="closeCategoryRecap"
         />
       </template>
 

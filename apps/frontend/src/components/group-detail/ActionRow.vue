@@ -2,7 +2,7 @@
 import { useI18n } from 'vue-i18n';
 
 defineProps<{ memberCount: number }>();
-defineEmits<{ settleUp: []; openExport: []; openTotals: [] }>();
+defineEmits<{ settleUp: []; openExport: []; openTotals: []; openCategories: [] }>();
 
 const { t } = useI18n();
 </script>
@@ -35,6 +35,13 @@ const { t } = useI18n();
       @click="$emit('openTotals')"
     >
       {{ t('groupDetail.totals') }}
+    </button>
+    <button
+      type="button"
+      class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]"
+      @click="$emit('openCategories')"
+    >
+      {{ t('groupDetail.categories') }}
     </button>
   </div>
 </template>

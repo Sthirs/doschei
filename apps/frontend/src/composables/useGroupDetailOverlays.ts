@@ -1,14 +1,15 @@
 import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
 
 /**
- * Wires `GroupDetailView`'s two routed overlays (Totals, Export) into the
- * renamed bindings its template already uses. Split out of the view itself
- * so the two `useRoutedOverlay` calls don't push it over the ADR-0021 pure
+ * Wires `GroupDetailView`'s three routed overlays (Totals, Export, Categories)
+ * into the renamed bindings its template already uses. Split out of the view
+ * itself so the `useRoutedOverlay` calls don't push it over the ADR-0021 pure
  * LOC ceiling.
  */
 export function useGroupDetailOverlays() {
   const totals = useRoutedOverlay('totals');
   const exportOverlay = useRoutedOverlay('export');
+  const categories = useRoutedOverlay('categories');
 
   return {
     showTotalsModal: totals.isOpen,
@@ -17,5 +18,8 @@ export function useGroupDetailOverlays() {
     showExportModal: exportOverlay.isOpen,
     openExport: exportOverlay.open,
     closeExport: exportOverlay.close,
+    showCategoryRecapModal: categories.isOpen,
+    openCategoryRecap: categories.open,
+    closeCategoryRecap: categories.close,
   };
 }

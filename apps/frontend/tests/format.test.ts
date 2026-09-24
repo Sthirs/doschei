@@ -4,6 +4,7 @@ import {
   formatEur,
   formatEurAxis,
   formatEurWhole,
+  formatPercentTenths,
   balanceChipKind,
   balanceColorClass,
   groupInitials,
@@ -71,6 +72,24 @@ describe('formatEurAxis', () => {
 
   it('it locale abbreviates with a comma decimal separator', () => {
     expect(formatEurAxis(120_000, 'it')).toMatch(/1,2k/);
+  });
+});
+
+describe('formatPercentTenths', () => {
+  it('formats integer tenths of a percent with one decimal (en locale default)', () => {
+    expect(formatPercentTenths(388)).toBe('38.8%');
+    expect(formatPercentTenths(388, 'en')).toBe('38.8%');
+  });
+
+  it('formats zero and a whole number with a trailing .0', () => {
+    expect(formatPercentTenths(0)).toBe('0.0%');
+    expect(formatPercentTenths(1000)).toBe('100.0%');
+  });
+
+  it('it locale uses a comma decimal separator and a space before the symbol', () => {
+    // Whitespace before the symbol differs across runtimes (regular space vs
+    // U+00A0), so match on substance rather than exact spacing.
+    expect(formatPercentTenths(388, 'it')).toMatch(/38,8\s?%/);
   });
 });
 
