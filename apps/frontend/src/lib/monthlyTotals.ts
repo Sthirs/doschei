@@ -22,8 +22,10 @@ export type Axis = {
 export const WINDOW_MONTHS = 3;
 
 // Per ADR-0006 all money arithmetic runs on integer cents; the `/ 100` happens
-// only where a value is formatted for display.
-const toCents = (value: number): number => Math.round(Number(value) * 100);
+// only where a value is formatted for display. Exported for reuse by
+// `categoryRecap.ts` (ADR-0026), which shares this module's month-key and
+// cent-conversion helpers rather than duplicating them.
+export const toCents = (value: number): number => Math.round(Number(value) * 100);
 
 export const monthKeyOf = (date: Date): MonthKey =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;

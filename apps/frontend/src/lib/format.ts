@@ -42,6 +42,16 @@ export const formatEurAxis = (cents: number, locale: string = 'en'): string => {
     .replace(/[KMBT]/g, (unit) => unit.toLowerCase());
 };
 
+// Format integer tenths of a percent (e.g. 388) as "38.8%", delegating locale
+// punctuation to Intl the same way formatEur does ("38,8 %" in Italian).
+export const formatPercentTenths = (tenths: number, locale: string = 'en'): string => {
+  return new Intl.NumberFormat(normalizeLocale(locale), {
+    style: 'percent',
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(tenths / 1000);
+};
+
 // Map netForCurrentUser to balance chip kind
 export const balanceChipKind = (netForCurrentUser: number): 'owed' | 'owe' | 'settled' => {
   if (netForCurrentUser > 0) return 'owed';

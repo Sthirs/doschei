@@ -83,6 +83,15 @@ export class GroupDetailPage {
   private totalsPreviousButton = this.totalsDialog.getByRole('button', { name: 'Previous period' });
   private totalsNextButton = this.totalsDialog.getByRole('button', { name: 'Next period' });
 
+  // Category recap controls (GroupDetailView.vue → ActionRow.vue — the
+  // "Categories" button next to "Totals" opens CategoryRecapModal, a teleported
+  // role="dialog" holding the per-family rows and a one-month stepper).
+  private categoryRecapTriggerButton = this.page.getByRole('button', { name: /^Categories$/, exact: true });
+  private categoryRecapDialog = this.page.getByRole('dialog', { name: 'Category details' });
+  private categoryRecapMonth = this.categoryRecapDialog.getByTestId('category-recap-month');
+  private categoryRecapPreviousButton = this.categoryRecapDialog.getByRole('button', { name: 'Previous month' });
+  private categoryRecapNextButton = this.categoryRecapDialog.getByRole('button', { name: 'Next month' });
+
   constructor(private page: Page) {}
 
   // ---------------------------------------------------------------------------
@@ -596,6 +605,70 @@ export class GroupDetailPage {
     const before = await this.getTotalsRange();
     await this.totalsNextButton.click();
     await expect(this.totalsRange).not.toHaveText(before);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Category recap modal
+  // ---------------------------------------------------------------------------
+
+  async openCategoryRecapModal(): Promise<void> {
+    await this.categoryRecapTriggerButton.click();
+    await expect(this.categoryRecapDialog).toBeVisible();
+  }
+
+  // Category is now a `?overlay=categories` route navigation (useRoutedOverlay,
+  // ADR-0024): the X button pops the entry `open()` pushed.
+  async closeCategoryRecapModal(): Promise<void> {
+    await this.categoryRecapDialog.getByRole('button', { name: 'Close category details' }).click();
+    await expect(this.categoryRecapDialog).not.toBeVisible();
+  }
+
+  // One row per family, always all seven, in the same fixed family order
+  // every month (ADR-0026). Each entry is `{ family, text }`, where `text` is
+  // the row's full inner text so a test can assert the family label,
+  // percentage and amount together without three separate locators.
+  async getCategoryRecapRows(): Promise<Array<{ family: string; text: string }>> {
+    const rows = this.categoryRecapDialog.getByTestId('category-recap-row');
+    const count = await rows.count();
+    const out: Array<{ family: string; text: string }> = [];
+    for (let i = 0; i < count; i++) {
+      const row = rows.nth(i);
+      out.push({
+        family: (await row.getAttribute('data-family')) ?? '',
+        text: (await row.innerText()).trim(),
+      });
+    }
+    return out;
+  }
+
+  async getCategoryRecapTotal(): Promise<string> {
+    return (await this.categoryRecapDialog.getByTestId('category-recap-total').innerText()).trim();
+  }
+
+  async getCategoryRecapSummary(): Promise<string> {
+    return (await this.categoryRecapDialog.getByTestId('category-recap-summary').innerText()).trim();
+  }
+
+  async getCategoryRecapMonth(): Promise<string> {
+    return (await this.categoryRecapMonth.innerText()).trim();
+  }
+
+  async expectCategoryRecapCannotGoForward(): Promise<void> {
+    await expect(this.categoryRecapNextButton).toBeDisabled();
+  }
+
+  // Steps the month and waits for the label to change, so the assertion that
+  // follows cannot race the re-render.
+  async categoryRecapPreviousMonth(): Promise<void> {
+    const before = await this.getCategoryRecapMonth();
+    await this.categoryRecapPreviousButton.click();
+    await expect(this.categoryRecapMonth).not.toHaveText(before);
+  }
+
+  async categoryRecapNextMonth(): Promise<void> {
+    const before = await this.getCategoryRecapMonth();
+    await this.categoryRecapNextButton.click();
+    await expect(this.categoryRecapMonth).not.toHaveText(before);
   }
 
   async clickExportAndExpectDownload(): Promise<{ filename: string; text: string }> {

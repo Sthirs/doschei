@@ -133,6 +133,16 @@ export const it = {
     totalsPreviousPeriod: 'Periodo precedente',
     totalsNextPeriod: 'Periodo successivo',
     totalsClose: 'Chiudi totali',
+    // Category recap modal.
+    categories: 'Categorie',
+    categoryRecapTitle: 'Dettaglio categorie',
+    categoryRecapTotalSpent: 'Totale speso',
+    categoryRecapSummaryZero: 'nessuna spesa · la tua quota {share}',
+    categoryRecapSummaryOne: '{n} spesa · la tua quota {share}',
+    categoryRecapSummaryOther: '{n} spese · la tua quota {share}',
+    categoryRecapPreviousMonth: 'Mese precedente',
+    categoryRecapNextMonth: 'Mese successivo',
+    categoryRecapClose: 'Chiudi dettaglio categorie',
   },
 
   groupSettings: {

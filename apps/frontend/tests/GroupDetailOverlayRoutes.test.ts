@@ -155,6 +155,21 @@ describe('GroupDetailView overlay routes', () => {
     expect(selects[1].findAll('option')).toHaveLength(5);
   });
 
+  it('clicking Categories pushes ?overlay=categories and renders the category recap dialog', async () => {
+    const { wrapper, router } = await mountAt('/groups/group-1');
+
+    const categoriesButton = wrapper
+      .findAll('button')
+      .find((b) => b.text().trim() === 'Categories')!;
+    await categoriesButton.trigger('click');
+    await flushPromises();
+
+    expect(router.currentRoute.value.query.overlay).toBe('categories');
+    expect(
+      wrapper.find('[role="dialog"][aria-label="Category details"]').exists(),
+    ).toBe(true);
+  });
+
   it('a deep link with ?overlay=totals renders the Totals dialog on load', async () => {
     const { wrapper } = await mountAt('/groups/group-1?overlay=totals');
 
@@ -167,6 +182,14 @@ describe('GroupDetailView overlay routes', () => {
     const { wrapper } = await mountAt('/groups/group-1?overlay=export');
 
     expect(wrapper.html()).toContain('Select Period');
+  });
+
+  it('a deep link with ?overlay=categories renders the category recap dialog on load', async () => {
+    const { wrapper } = await mountAt('/groups/group-1?overlay=categories');
+
+    expect(
+      wrapper.find('[role="dialog"][aria-label="Category details"]').exists(),
+    ).toBe(true);
   });
 
   it('closing Totals via the X button clears the overlay query', async () => {
@@ -190,6 +213,31 @@ describe('GroupDetailView overlay routes', () => {
     expect(wrapper.find('[role="dialog"][aria-label="Totals"]').exists()).toBe(
       false,
     );
+  });
+
+  it('closing the category recap via the X button clears the overlay query', async () => {
+    const { wrapper, router } = await mountAt(
+      '/groups/group-1?overlay=categories',
+    );
+    expect(
+      wrapper.find('[role="dialog"][aria-label="Category details"]').exists(),
+    ).toBe(true);
+
+    const closeButton = wrapper
+      .find('[role="dialog"][aria-label="Category details"]')
+      .findAll('button')
+      .find(
+        (b) =>
+          b.attributes('aria-label') ===
+          i18n.global.t('groupDetail.categoryRecapClose'),
+      )!;
+    await closeButton.trigger('click');
+    await flushPromises();
+
+    expect(router.currentRoute.value.query.overlay).toBeUndefined();
+    expect(
+      wrapper.find('[role="dialog"][aria-label="Category details"]').exists(),
+    ).toBe(false);
   });
 
   it('opening Totals then Export replaces rather than stacking a second history entry', async () => {

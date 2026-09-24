@@ -135,6 +135,16 @@ export const en = {
     totalsPreviousPeriod: 'Previous period',
     totalsNextPeriod: 'Next period',
     totalsClose: 'Close totals',
+    // Category recap modal.
+    categories: 'Categories',
+    categoryRecapTitle: 'Category details',
+    categoryRecapTotalSpent: 'Total spent',
+    categoryRecapSummaryZero: 'no expenses · your share {share}',
+    categoryRecapSummaryOne: '{n} expense · your share {share}',
+    categoryRecapSummaryOther: '{n} expenses · your share {share}',
+    categoryRecapPreviousMonth: 'Previous month',
+    categoryRecapNextMonth: 'Next month',
+    categoryRecapClose: 'Close category details',
   },
 
   groupSettings: {

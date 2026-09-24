@@ -47,6 +47,9 @@ you know exactly who needs to pay whom — no spreadsheet required.
   <img src="docs/screenshots/04-totals.png"
        alt="Three months of group spending compared"
        width="190">
+  <img src="docs/screenshots/05-categories.png"
+       alt="A month's spending broken down by category family"
+       width="190">
 </p>
 
 ## Features

@@ -603,7 +603,7 @@ describe('GroupDetailView DOM-invariance snapshot', () => {
               <!-- Breakdown list -->
               <!--v-if-->
             </section><!-- Action row -->
-            <div class="flex gap-2"><button type="button" class="rounded-xl bg-[#6554E7] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-white transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-40" title="Record a payment between members">Settle Up</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Export</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Totals</button></div>
+            <div class="flex gap-2"><button type="button" class="rounded-xl bg-[#6554E7] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-white transition hover:bg-[#5a44cf] disabled:cursor-not-allowed disabled:opacity-40" title="Record a payment between members">Settle Up</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Export</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Totals</button><button type="button" class="rounded-xl border border-white/[0.05] bg-[rgba(42,42,42,0.6)] px-3 py-2 font-display text-xs font-medium tracking-[0.05em] text-[#C8C4D7] backdrop-blur-[4px] transition hover:bg-[rgba(42,42,42,0.8)]">Categories</button></div>
           </div><!-- Scrollable: expenses list -->
           <div class="flex-1 overflow-y-auto px-4">
             <!-- Month header -->
@@ -643,6 +643,8 @@ describe('GroupDetailView DOM-invariance snapshot', () => {
           </div><!-- Export modal -->
           <!--v-if-->
           <!-- Totals modal -->
+          <!--v-if-->
+          <!-- Category recap modal -->
           <!--v-if-->
           <!-- Error -->
           <!--v-if-->

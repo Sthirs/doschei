@@ -23,6 +23,7 @@ const SHOTS = {
   detail: '02-group-detail.png',
   settleUp: '03-settle-up.png',
   totals: '04-totals.png',
+  categories: '05-categories.png',
 } as const;
 
 /** A blank or truncated render must never reach the repo. */
@@ -178,6 +179,23 @@ test('monthly totals', async () => {
   await expect(page.getByTestId('totals-period-total')).toContainText('204');
 
   await capture(page, SHOTS.totals);
+});
+
+test('category recap', async () => {
+  const detail = new GroupDetailPage(page);
+
+  await page.goto(`/groups/${data.veniceId}`);
+  await detail.openCategoryRecapModal();
+
+  // November's three expenses split across two families: Morning coffee
+  // (dining-out) and Spritz round (liquor) are both Food & Drink, Vaporetto
+  // pass (bus-train) is Transportation — the same 64.00 total as the Totals
+  // sheet's Nov bar.
+  const rows = await detail.getCategoryRecapRows();
+  expect(rows).toHaveLength(7);
+  await expect(page.getByTestId('category-recap-total')).toContainText('64');
+
+  await capture(page, SHOTS.categories);
 });
 
 test('captured files look sane', () => {
