@@ -5,6 +5,11 @@ import { ref, type Ref } from 'vue';
 // mobile bottom sheets commonly use (e.g. iOS/Material sheets).
 const DISMISS_HEIGHT_RATIO = 0.3;
 const DISMISS_VELOCITY_PX_PER_MS = 0.5;
+// `velocity` is sampled only on pointermove, so a pointer held still before
+// release would otherwise keep the speed of its last move — a fast drag that
+// stops and then lets go would still read as a flick. Past this long without
+// movement, the release counts as stationary.
+const VELOCITY_STALE_MS = 100;
 // Below this many pixels of vertical movement, the gesture isn't treated as
 // a drag yet — this both absorbs a plain tap and lets a mostly-horizontal
 // gesture (irrelevant here, but cheap to guard) fall through untouched.
@@ -97,6 +102,7 @@ export function useSheetDrag(
 
     armClickSwallow();
 
+    if (performance.now() - lastT > VELOCITY_STALE_MS) velocity = 0;
     const panelHeight = panelRef.value?.getBoundingClientRect().height || 1;
     const shouldDismiss =
       dragY.value > panelHeight * DISMISS_HEIGHT_RATIO ||

@@ -116,6 +116,35 @@ describe('BottomSheet', () => {
     wrapper.unmount();
   });
 
+  it('a short, fast drag held still before release snaps back without closing', async () => {
+    const wrapper = mountSheet();
+    stubPanelHeight(wrapper);
+    const handle = wrapper.get('[data-sheet-drag]').element;
+
+    // Moves dispatched back-to-back read as a flick on their own; the hold
+    // before pointerup must cancel that out, as it does for a real finger.
+    handle.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        pointerId: 1,
+        button: 0,
+        clientX: 0,
+        clientY: 0,
+        bubbles: true,
+      }),
+    );
+    for (const clientY of [10, 20, 30, 40]) {
+      window.dispatchEvent(
+        new PointerEvent('pointermove', { pointerId: 1, clientX: 0, clientY }),
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }));
+
+    expect(wrapper.emitted('close')).toBeUndefined();
+
+    wrapper.unmount();
+  });
+
   it('a drag-dismiss with no trailing click (e.g. touch) does not swallow a later, unrelated click', async () => {
     const wrapper = mountSheet();
     stubPanelHeight(wrapper);

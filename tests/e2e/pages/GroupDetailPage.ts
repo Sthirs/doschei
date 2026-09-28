@@ -110,10 +110,9 @@ export class GroupDetailPage {
     distancePx: number,
     options: { pauseBeforeReleaseMs?: number } = {},
   ): Promise<void> {
-    // Every sheet has BottomSheet's own handle (`sm:hidden`, so hidden above
-    // the mobile breakpoint) AND the caller's header, both carrying
-    // `data-sheet-drag` — `:visible` picks whichever one the current
-    // viewport actually shows instead of assuming DOM order. Wait out the
+    // Every sheet has BottomSheet's own handle AND the caller's header, both
+    // carrying `data-sheet-drag` — `:visible` skips any a sheet hides
+    // instead of assuming DOM order. Wait out the
     // 110ms Carbon enter transition (ADR-0027) first: dragging while the
     // panel is still sliding in would read its bounding box mid-animation.
     await this.page.waitForTimeout(200);
