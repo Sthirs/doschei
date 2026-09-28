@@ -2,6 +2,7 @@
 
 - **Status:** 🟢 accepted
 - **Date:** 2026-09-24
+- **Amended:** 2026-09-28 — the drag handle is shown at every viewport size, not only below `sm:`
 - **Deciders:** Sthirs
 
 ## Context
@@ -29,8 +30,7 @@ into `GroupDetailView.vue`, `CategoryPicker.vue`, etc.
 ADR-0022 §9 and ADR-0026 §10 previously decided Totals and the category recap sheet carry **no**
 drag handle, reasoning that "the sheet is not draggable... and a handle would advertise a gesture
 that does not exist." This ADR reverses that reasoning for both: the sheet *is* now draggable, so
-a handle (and, on wider viewports where the handle is hidden, the header itself) advertising that
-gesture is correct. Per `AGENTS.md` §3.4, only a human reviewer can mark ADR-0022/ADR-0026
+a handle advertising that gesture is correct. Per `AGENTS.md` §3.4, only a human reviewer can mark ADR-0022/ADR-0026
 superseded; this ADR's Consequences section flags that follow-up rather than performing it.
 
 ## Decision
@@ -74,8 +74,9 @@ drag-to-dismiss, and migrate all six existing sheets onto it as their only overl
   Vue's default nested-transition detection would otherwise race it), and it is what makes the
   leave phase resolve deterministically in Vitest, since `@vue/test-utils` does not stub
   `<Transition>` by default and jsdom/happy-dom never fire a real `transitionend` event.
-  `BottomSheet` also renders its own drag handle (hidden at `sm:` and up), matching the handle
-  `DateTimePicker.vue` already had before this change.
+  `BottomSheet` also renders its own drag handle, matching the handle `DateTimePicker.vue` already
+  had before this change. The handle is shown at every viewport size, including the centred
+  desktop popup: the sheet is draggable there too, so the gesture is advertised there too.
 
 - **Drag-to-dismiss** (`apps/frontend/src/composables/useSheetDrag.ts`) tracks pointer events
   starting only on a descendant carrying `[data-sheet-drag]` — the handle `BottomSheet` renders,

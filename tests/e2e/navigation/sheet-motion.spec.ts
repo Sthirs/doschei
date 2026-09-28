@@ -62,6 +62,27 @@ test('a short drag on the Totals header snaps back without dismissing it', async
   await expect(page).toHaveURL(new RegExp(`/groups/${groupId}$`));
 });
 
+test('the Totals sheet shows its drag handle on a desktop viewport', async ({
+  authenticatedPage: page,
+}) => {
+  const groupsPage = new GroupsPage(page);
+  const groupDetailPage = new GroupDetailPage(page);
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  await page.goto('/groups');
+  const groupName = 'e2e-sheet-motion-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+  await groupsPage.createGroup(groupName);
+  await groupsPage.openGroup(groupName);
+  createdGroupId = await groupDetailPage.getGroupId();
+
+  await groupDetailPage.openTotalsModal();
+
+  // BottomSheet's handle is its first `[data-sheet-drag]`, ahead of the header.
+  const handle = page.getByRole('dialog', { name: 'Totals' }).locator('[data-sheet-drag]').first();
+  await expect(handle).toBeVisible();
+});
+
 test('dragging the DateTimePicker handle down past the threshold closes it on a mobile viewport', async ({
   authenticatedPage: page,
 }) => {

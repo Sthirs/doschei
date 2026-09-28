@@ -78,7 +78,7 @@ const DEFAULT_PANEL_CLASS =
           @transitionend="onTransitionEnd"
           @click.stop
         >
-          <div data-sheet-drag class="flex justify-center pt-3 pb-1 sm:hidden">
+          <div data-sheet-drag class="flex justify-center pt-3 pb-1">
             <div
               class="h-1.5 w-12 rounded-full bg-[rgba(200,196,215,0.3)]"
               aria-hidden="true"
