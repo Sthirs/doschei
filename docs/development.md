@@ -130,8 +130,8 @@ kubectl -n doschei rollout status deployment/doschei-frontend --timeout=180s
   `localhost:5173` directly.
 - Vite HMR is configured for the ingress host so the frontend keeps working
   behind a Telepresence intercept.
-- TypeORM uses schema synchronization in development (`DB_SYNC=true`); there are
-  no migrations.
+- TypeORM uses schema synchronization (`DB_SYNC=true`) in every environment;
+  there are no migrations (ADR-0029).
 - Seed data is created by the in-cluster backend startup path.
 
 ## Configuration

@@ -57,3 +57,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0026](0026-group-monthly-category-recap.md) | Group monthly category recap — family-level, client-side, sharing ADR-0022's rules | 🟢 accepted |
 | [ADR-0027](0027-motion-tokens-and-bottom-sheet.md) | Bottom-sheet motion and drag-to-dismiss — Carbon productive tokens, hand-written | 🟢 accepted |
 | [ADR-0028](0028-stats-label-for-category-recap-action.md) | "Stats" as the label of the category recap action | 🟢 accepted |
+| [ADR-0029](0029-db-sync-enabled-in-every-environment.md) | DB_SYNC enabled in every environment; NODE_ENV defaults to production | 🟡 proposed |

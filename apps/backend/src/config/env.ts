@@ -6,7 +6,9 @@ dotenv.config();
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // Production unless told otherwise: every development entry point
+  // (scripts/dev-backend.sh, .env.example, Helm devMode) sets it explicitly.
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
   DATABASE_URL: z.string().optional(),
   JWT_SECRET: z.string().default('change-me-in-real-environments'),
   DB_HOSTNAME: z.string().optional(),

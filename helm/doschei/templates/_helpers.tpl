@@ -42,7 +42,6 @@ dev
 {{- $key := .key -}}
 {{- if $root.Values.devMode.enabled -}}
 {{- if eq $key "NODE_ENV" -}}development
-{{- else if eq $key "DB_SYNC" -}}true
 {{- else if eq $key "SEED_ON_STARTUP" -}}true
 {{- else if eq $key "JWT_SECRET" -}}change-me-dev-secret
 {{- else if eq $key "FRONTEND_URL" -}}{{ printf "http://%s" $root.Values.ingress.host }}

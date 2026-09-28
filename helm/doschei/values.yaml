@@ -31,8 +31,14 @@ backend:
     targetPort: 3000
   env:
     PORT: "3000"
+    # Always "production" unless overridden. devMode switches it to
+    # "development" (see doschei.backendEnvValue in _helpers.tpl); set it
+    # explicitly here for any other non-production install.
     NODE_ENV: production
-    DB_SYNC: "false"
+    # TypeORM schema synchronization. "true" everywhere, production included —
+    # there are no migrations, so this is how the schema is created and kept
+    # in step with the entities. Not overridden by devMode.
+    DB_SYNC: "true"
     SEED_ON_STARTUP: "false"
     AUTH_LOCAL_LOGIN_ENABLED: "true"
     AUTH_LOCAL_REGISTRATION_ENABLED: "true"

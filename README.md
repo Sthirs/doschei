@@ -88,6 +88,7 @@ you know exactly who needs to pay whom — no spreadsheet required.
 | Document | Description |
 | --- | --- |
 | [Development guide](docs/development.md) | How to run and work on the project |
+| [Deployment guide](docs/deployment.md) | Helm values reference and a production install example |
 | [Specification](docs/specifications.md) | The canonical product specification |
 | [Architecture decision records](docs/adr/README.md) | Why things are the way they are |
 | [Contribution methodology](AGENTS.md) | The process for making changes |

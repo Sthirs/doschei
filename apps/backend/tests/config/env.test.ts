@@ -52,3 +52,31 @@ describe('VAPID_AUTO_GENERATE', () => {
     expect(env.VAPID_PRIVATE_KEY).toBe('configured-private-key');
   });
 });
+
+describe('NODE_ENV', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // ADR-0029: an unset NODE_ENV must get the secure (production) behaviour;
+  // every development entry point sets `development` explicitly.
+  it('defaults to production when unset', async () => {
+    vi.stubEnv('NODE_ENV', undefined);
+
+    const { env } = await import('../../src/config/env');
+
+    expect(env.NODE_ENV).toBe('production');
+  });
+
+  it('keeps an explicit development value', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+
+    const { env } = await import('../../src/config/env');
+
+    expect(env.NODE_ENV).toBe('development');
+  });
+});
