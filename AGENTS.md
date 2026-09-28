@@ -76,6 +76,10 @@ Quick rules to follow on every change:
   1. `npm run lint` — must pass.
   2. `npm run test` — unit + integration tests must pass.
   3. `scripts/test-playwright.sh` — for any user-facing change.
+
+  The [`verify-changes`](.claude/skills/verify-changes/SKILL.md) skill runs
+  these checks (plus typecheck, the ADR-0021 size limit and the Helm chart)
+  and says which tier a change needs.
 - **Cite `Implements ADR-NNNN`** in the commit message when realising an
   accepted ADR.
 - **Testing a change against the local cluster:** rebuilding an image and
