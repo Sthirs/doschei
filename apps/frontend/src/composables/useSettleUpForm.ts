@@ -12,6 +12,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
 import { goBackTo } from '@/lib/backNavigation';
+import { hasStorablePrecision } from '@/lib/money';
 import { computeSettleUpDefaults, settlementAmountFor } from '@/lib/settleUp';
 import { currentPageTitle, sharedGroup } from '@/router';
 import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
@@ -174,7 +175,8 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
       payeeId.value !== '' &&
       payerId.value !== payeeId.value &&
       typeof amount.value === 'number' &&
-      amount.value > 0
+      amount.value > 0 &&
+      hasStorablePrecision(amount.value)
     );
   });
 
@@ -188,6 +190,9 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
     }
     if (typeof amount.value !== 'number' || amount.value <= 0) {
       return t('settleUp.amountGreaterThanZero');
+    }
+    if (!hasStorablePrecision(amount.value)) {
+      return t('common.amountPrecision');
     }
     return '';
   });

@@ -1,4 +1,14 @@
 import { createJsonRequest, ensureBackendAvailable, registerUser, uniqueValue } from './helpers/api';
+import {
+  bearer,
+  createGroupWithMembers,
+  createSoloGroup,
+  equalSplits,
+  fetchGroup,
+  newUser,
+  postExpense,
+  UNKNOWN_ID,
+} from './helpers/groups';
 
 describe('Expenses Endpoints', () => {
   beforeAll(async () => {
@@ -485,6 +495,182 @@ describe('Expenses Endpoints', () => {
         headers: { Authorization: `Bearer ${author.body.token}` },
       });
       expect(groupVerifyRes.body.group.expenses).toHaveLength(0);
+    });
+  });
+
+  describe('access control and group scoping', () => {
+    it('returns 404 when a non-member creates, updates, or deletes an expense', async () => {
+      const { groupId, members } = await createGroupWithMembers('expense-nonmember', 1);
+      const outsider = await newUser('expense-nonmember-outsider');
+      const created = await postExpense(members[0].token, groupId, { amount: 20, splits: equalSplits(members) });
+      const expenseId = created.body.expense.id;
+
+      const createRes = await postExpense(outsider.token, groupId, { amount: 20, splits: equalSplits(members) });
+      expect(createRes.status).toBe(404);
+
+      const patchRes = await createJsonRequest(`/api/groups/${groupId}/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: bearer(outsider.token),
+        body: JSON.stringify({ description: 'hijacked', splits: equalSplits(members) }),
+      });
+      expect(patchRes.status).toBe(404);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${groupId}/expenses/${expenseId}`, {
+        method: 'DELETE',
+        headers: bearer(outsider.token),
+      });
+      expect(deleteRes.status).toBe(404);
+
+      const group = await fetchGroup(members[0].token, groupId);
+      expect(group.expenses).toHaveLength(1);
+      expect(group.expenses[0]).toMatchObject({ id: expenseId, description: 'Test expense' });
+    });
+
+    it('returns 401 for unauthenticated PATCH and DELETE', async () => {
+      const patchRes = await createJsonRequest(`/api/groups/${UNKNOWN_ID}/expenses/${UNKNOWN_ID}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ description: 'x' }),
+      });
+      expect(patchRes.status).toBe(401);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${UNKNOWN_ID}/expenses/${UNKNOWN_ID}`, {
+        method: 'DELETE',
+      });
+      expect(deleteRes.status).toBe(401);
+    });
+
+    it('returns 404 for an unknown expense id on PATCH and DELETE', async () => {
+      const { groupId, owner } = await createSoloGroup('expense-unknown');
+      const splits = equalSplits([owner]);
+
+      const patchRes = await createJsonRequest(`/api/groups/${groupId}/expenses/${UNKNOWN_ID}`, {
+        method: 'PATCH',
+        headers: bearer(owner.token),
+        body: JSON.stringify({ description: 'x', splits }),
+      });
+      expect(patchRes.status).toBe(404);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${groupId}/expenses/${UNKNOWN_ID}`, {
+        method: 'DELETE',
+        headers: bearer(owner.token),
+      });
+      expect(deleteRes.status).toBe(404);
+    });
+
+    it("cannot reach another group's expense through a group the caller belongs to", async () => {
+      const victim = await createSoloGroup('expense-xgroup-victim');
+      const attacker = await createSoloGroup('expense-xgroup-attacker');
+      const created = await postExpense(victim.owner.token, victim.groupId, {
+        description: 'Victim rent',
+        amount: 500,
+        splits: equalSplits([victim.owner]),
+      });
+      const expenseId = created.body.expense.id;
+
+      const patchRes = await createJsonRequest(`/api/groups/${attacker.groupId}/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: bearer(attacker.owner.token),
+        body: JSON.stringify({ description: 'hijacked', splits: equalSplits([attacker.owner]) }),
+      });
+      expect(patchRes.status).toBe(404);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${attacker.groupId}/expenses/${expenseId}`, {
+        method: 'DELETE',
+        headers: bearer(attacker.owner.token),
+      });
+      expect(deleteRes.status).toBe(404);
+
+      const group = await fetchGroup(victim.owner.token, victim.groupId);
+      expect(group.expenses).toHaveLength(1);
+      expect(group.expenses[0]).toMatchObject({ id: expenseId, description: 'Victim rent', amount: 500 });
+    });
+  });
+
+  describe('amount precision', () => {
+    it.each([
+      ['more than two decimals', 10.005],
+      ['a sub-cent value', 0.001],
+      ['more than decimal(10,2) can hold', 100_000_000],
+    ])('POST rejects %s with 400 instead of rounding or overflowing', async (_label, amount) => {
+      const { groupId, owner } = await createSoloGroup('expense-precision');
+
+      const response = await postExpense(owner.token, groupId, { amount, splits: equalSplits([owner]) });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/at most two decimal places/i);
+      expect((await fetchGroup(owner.token, groupId)).expenses).toHaveLength(0);
+    });
+
+    it('POST rejects a numeric string amount with 400', async () => {
+      const { groupId, owner } = await createSoloGroup('expense-string-amount');
+
+      const response = await postExpense(owner.token, groupId, { amount: '10', splits: equalSplits([owner]) });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('accepts the largest amount the ledger column can hold', async () => {
+      const { groupId, owner } = await createSoloGroup('expense-max-amount');
+
+      const response = await postExpense(owner.token, groupId, { amount: 99_999_999.99, splits: equalSplits([owner]) });
+
+      expect(response.status).toBe(201);
+      expect(response.body.expense.amount).toBe(99_999_999.99);
+    });
+
+    it('PATCH rejects an amount with more than two decimals and leaves the expense unchanged', async () => {
+      const { groupId, owner } = await createSoloGroup('expense-precision-patch');
+      const created = await postExpense(owner.token, groupId, { amount: 12.5, splits: equalSplits([owner]) });
+
+      const response = await createJsonRequest<{ message: string }>(
+        `/api/groups/${groupId}/expenses/${created.body.expense.id}`,
+        {
+          method: 'PATCH',
+          headers: bearer(owner.token),
+          body: JSON.stringify({ amount: 12.505, splits: equalSplits([owner]) }),
+        },
+      );
+
+      expect(response.status).toBe(400);
+      expect((await fetchGroup(owner.token, groupId)).expenses[0].amount).toBe(12.5);
+    });
+  });
+
+  describe('balance recalculation', () => {
+    it('recomputes both members\' balances after an expense is edited and after it is deleted', async () => {
+      const { groupId, members } = await createGroupWithMembers('expense-rebalance', 1);
+      const [payer, other] = members;
+      const created = await postExpense(payer.token, groupId, { amount: 40, splits: equalSplits(members) });
+      const expenseId = created.body.expense.id;
+
+      expect((await fetchGroup(payer.token, groupId)).balance.netForCurrentUser).toBe(20);
+      expect((await fetchGroup(other.token, groupId)).balance.netForCurrentUser).toBe(-20);
+
+      // Edit: new amount AND the other member becomes the payer.
+      const patchRes = await createJsonRequest(`/api/groups/${groupId}/expenses/${expenseId}`, {
+        method: 'PATCH',
+        headers: bearer(other.token),
+        body: JSON.stringify({ amount: 30, paidByUserId: other.user.id, splits: equalSplits(members) }),
+      });
+      expect(patchRes.status).toBe(200);
+
+      const afterEditPayer = await fetchGroup(payer.token, groupId);
+      expect(afterEditPayer.balance.netForCurrentUser).toBe(-15);
+      expect(afterEditPayer.balance.perUser).toEqual([
+        expect.objectContaining({ userId: other.user.id, netForCurrentUser: -15 }),
+      ]);
+      expect((await fetchGroup(other.token, groupId)).balance.netForCurrentUser).toBe(15);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${groupId}/expenses/${expenseId}`, {
+        method: 'DELETE',
+        headers: bearer(payer.token),
+      });
+      expect(deleteRes.status).toBe(204);
+
+      const afterDelete = await fetchGroup(payer.token, groupId);
+      expect(afterDelete.balance.netForCurrentUser).toBe(0);
+      expect(afterDelete.balance.perUser).toEqual([]);
+      expect((await fetchGroup(other.token, groupId)).balance.netForCurrentUser).toBe(0);
     });
   });
 });

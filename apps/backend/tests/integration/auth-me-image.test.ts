@@ -125,3 +125,48 @@ describe('POST /api/auth/me/image', () => {
     expect(response.status).toBe(422);
   });
 });
+
+describe('DELETE /api/auth/me/image', () => {
+  const smallPngBuffer = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64',
+  );
+
+  it('clears the profile picture, and GET /me then reports no image', async () => {
+    const registerResponse = await registerUser('me-image-delete');
+    const token = registerResponse.body.token;
+    const formData = new FormData();
+    formData.append('image', new Blob([smallPngBuffer], { type: 'image/png' }), 'avatar.png');
+    expect((await createMultipartRequest('/api/auth/me/image', formData, token)).status).toBe(200);
+
+    const response = await createJsonRequest<{ user: { imageUrl: string | null } }>('/api/auth/me/image', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.user.imageUrl).toBeNull();
+    const meResponse = await createJsonRequest<{ user: { imageUrl: string | null } }>('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(meResponse.body.user.imageUrl).toBeNull();
+  });
+
+  it('is a no-op success when no picture is set', async () => {
+    const registerResponse = await registerUser('me-image-delete-none');
+
+    const response = await createJsonRequest<{ user: { imageUrl: string | null } }>('/api/auth/me/image', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${registerResponse.body.token}` },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.user.imageUrl).toBeNull();
+  });
+
+  it('rejects unauthenticated requests with 401', async () => {
+    const response = await createJsonRequest('/api/auth/me/image', { method: 'DELETE' });
+
+    expect(response.status).toBe(401);
+  });
+});

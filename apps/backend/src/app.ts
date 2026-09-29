@@ -65,8 +65,31 @@ export const createApp = () => {
       response.status(415).json({ message: error.message });
       return;
     }
-    // Let Express default handler deal with everything else
-    _next(error);
+    if (response.headersSent) {
+      _next(error);
+      return;
+    }
+    // Client errors raised by middleware (malformed JSON body, oversize
+    // payload) keep their status; `expose` marks messages safe to return.
+    const { status, expose, message } = (error ?? {}) as {
+      status?: unknown;
+      expose?: unknown;
+      message?: unknown;
+    };
+    if (typeof status === 'number' && status >= 400 && status < 500) {
+      response.status(status).json({
+        message:
+          expose === true && typeof message === 'string'
+            ? message
+            : 'Bad request.',
+      });
+      return;
+    }
+    // Anything else is a bug: log it, and answer in JSON like every other
+    // endpoint instead of Express's HTML page (which includes the stack trace
+    // outside production).
+    console.error('[api] Unhandled error', error);
+    response.status(500).json({ message: 'Internal server error.' });
   });
 
   return app;

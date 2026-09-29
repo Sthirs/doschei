@@ -2,6 +2,7 @@ import { computed, type ComputedRef, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import type { ExpenseSplitState } from '@/composables/useExpenseSplit';
+import { hasStorablePrecision } from '@/lib/money';
 
 export type ExpenseFormValidationInput = {
   description: Ref<string>;
@@ -30,6 +31,7 @@ export const useExpenseFormValidation = ({
   const isFormValid = computed(() => {
     if (!description.value) return false;
     if (typeof amount.value !== 'number' || amount.value <= 0) return false;
+    if (!hasStorablePrecision(amount.value)) return false;
     if (!date.value) return false;
     if (!paidByUserId.value) return false;
     if (!split.isSplitValid) return false;
@@ -42,6 +44,9 @@ export const useExpenseFormValidation = ({
     }
     if (typeof amount.value !== 'number' || amount.value <= 0) {
       return t('expenseForm.validationDescriptionAmount');
+    }
+    if (!hasStorablePrecision(amount.value)) {
+      return t('common.amountPrecision');
     }
     if (!date.value) {
       return t('expenseForm.validationDescriptionDateAmount');

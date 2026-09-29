@@ -328,4 +328,18 @@ describe('useSettleUpForm — back navigation (ADR-0024)', () => {
     // group-detail.
     expect(mocks.back).toHaveBeenCalledTimes(1);
   });
+
+  it('is invalid for an amount with more than two decimals, and says why', async () => {
+    const { form } = await mountForm(makeGroup(-1));
+    form.amountTouched.value = true;
+    form.amount.value = 10.005;
+
+    expect(form.isValid.value).toBe(false);
+    expect(form.validationMessage.value).toBe(
+      'Enter an amount with at most two decimals, up to 99,999,999.99.',
+    );
+
+    form.amount.value = 10.01;
+    expect(form.isValid.value).toBe(true);
+  });
 });

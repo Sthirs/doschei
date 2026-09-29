@@ -47,6 +47,26 @@ export class GroupSettingsPage {
     await expect(this.page.getByText(email, { exact: true })).toBeVisible();
   }
 
+  // GroupSettingsPanel.vue — each member <li> shows the display name and the
+  // email; the email is unique, so rows are anchored on it.
+  private memberRow(email: string) {
+    return this.page.getByRole('listitem').filter({ has: this.page.getByText(email, { exact: true }) });
+  }
+
+  /** Clicks the row's "Remove member" button (rendered for everyone but the current user). */
+  async removeMember(email: string) {
+    await this.memberRow(email).getByRole('button', { name: 'Remove member' }).click();
+  }
+
+  async expectMemberRowGone(email: string) {
+    await expect(this.memberRow(email)).toHaveCount(0);
+  }
+
+  /** The member's avatar is their uploaded picture, not the initials fallback. */
+  async expectMemberAvatarImage(email: string, imageUrl: string) {
+    await expect(this.memberRow(email).locator('img')).toHaveAttribute('src', imageUrl);
+  }
+
   // -- Pending invitation selectors (GroupSettingsPanel.vue:228-266) --
 
   /**
@@ -69,6 +89,19 @@ export class GroupSettingsPage {
     await expect(
       this.pendingInvitationsSection().getByText(displayName, { exact: true }),
     ).not.toBeVisible();
+  }
+
+  /** Clicks the pending row's "Cancel invitation" button, as the inviter would. */
+  async cancelInvitationViaUi(email: string) {
+    await this.pendingInvitationsSection()
+      .getByRole('listitem')
+      .filter({ hasText: email })
+      .getByRole('button', { name: 'Cancel invitation' })
+      .click();
+  }
+
+  async expectPendingInvitationsSectionHidden() {
+    await expect(this.pendingInvitationsSection()).toHaveCount(0);
   }
 
   /**
