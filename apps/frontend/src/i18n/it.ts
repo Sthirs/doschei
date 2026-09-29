@@ -41,6 +41,7 @@ export const it = {
     balanceOwed: 'Ti devono {amount}',
     balanceOwe: 'Devi {amount}',
     balanceSettled: 'In pari',
+    amountPrecision: 'Inserisci un importo con al massimo due decimali, fino a 99.999.999,99.',
   },
 
   app: {

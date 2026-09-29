@@ -29,6 +29,8 @@ export const en = {
     balanceOwed: 'You are owed {amount}',
     balanceOwe: 'You owe {amount}',
     balanceSettled: 'Settled',
+    // Shared by the expense and settle-up forms; mirrors the API's decimal(10,2) limit.
+    amountPrecision: 'Enter an amount with at most two decimals, up to 99,999,999.99.',
   },
 
   app: {
