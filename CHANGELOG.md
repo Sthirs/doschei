@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.3](https://github.com/Sthirs/doschei/compare/v1.9.2...v1.9.3) (2026-09-29)
+
+
+### Bug Fixes
+
+* **backend:** harden group routes against malformed ids and unstorable amounts ([#142](https://github.com/Sthirs/doschei/issues/142)) ([44e689c](https://github.com/Sthirs/doschei/commit/44e689cbabbe9a21775564d64fc4a278ce21ded3))
+
 ## [1.9.2](https://github.com/Sthirs/doschei/compare/v1.9.1...v1.9.2) (2026-09-28)
 
 
