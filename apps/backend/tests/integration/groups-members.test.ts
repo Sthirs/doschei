@@ -1,4 +1,5 @@
 import { createJsonRequest, ensureBackendAvailable, registerUser, uniqueValue } from './helpers/api';
+import { bearer, createGroupWithMembers, fetchGroup, newUser } from './helpers/groups';
 
 describe('Group Members Endpoints', () => {
   beforeAll(async () => {
@@ -231,6 +232,22 @@ describe('Group Members Endpoints', () => {
       expect(groupDetail.body.group.memberCount).toBe(1);
       expect(groupDetail.body.group.members).not.toEqual(
         expect.arrayContaining([expect.objectContaining({ id: member.body.user.id })]),
+      );
+    });
+
+    it('returns 404 when a non-member tries to remove a member, and the member stays', async () => {
+      const { groupId, members } = await createGroupWithMembers('members-del-by-outsider', 1);
+      const outsider = await newUser('members-del-by-outsider-caller');
+
+      const response = await createJsonRequest<{ message: string }>(
+        `/api/groups/${groupId}/members/${members[1].user.id}`,
+        { method: 'DELETE', headers: bearer(outsider.token) },
+      );
+
+      expect(response.status).toBe(404);
+      const group = await fetchGroup(members[0].token, groupId);
+      expect(group.members.map((member) => member.id).sort()).toEqual(
+        members.map((member) => member.user.id).sort(),
       );
     });
 

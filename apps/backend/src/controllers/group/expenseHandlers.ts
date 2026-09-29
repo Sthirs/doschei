@@ -2,6 +2,10 @@ import { Response } from 'express';
 
 import { AuthedRequest, AuthenticatedRequest } from '../../middleware/auth';
 import {
+  isStorableMoneyAmount,
+  MONEY_AMOUNT_FORMAT_MESSAGE,
+} from '../../utils/money';
+import {
   isValidExpenseDate,
   VALID_EXPENSE_CATEGORIES,
 } from './expenseValidation';
@@ -36,6 +40,11 @@ export const createExpense = async (
     response
       .status(400)
       .json({ message: 'Valid amount greater than 0 is required.' });
+    return;
+  }
+
+  if (!isStorableMoneyAmount(amount)) {
+    response.status(400).json({ message: MONEY_AMOUNT_FORMAT_MESSAGE });
     return;
   }
 
@@ -89,6 +98,12 @@ export const createExpense = async (
 
     response.status(201).json({ expense });
   } catch (error: unknown) {
+    // Same contract as settlements and members: a caller who is not in the
+    // group gets 404, not 400.
+    if (error instanceof Error && error.message.includes('not found')) {
+      response.status(404).json({ message: error.message });
+      return;
+    }
     response.status(400).json({
       message:
         error instanceof Error ? error.message : 'Unable to create expense.',
@@ -122,6 +137,11 @@ export const updateExpense = async (
     response
       .status(400)
       .json({ message: 'Valid amount greater than 0 is required.' });
+    return;
+  }
+
+  if (amount !== undefined && !isStorableMoneyAmount(amount)) {
+    response.status(400).json({ message: MONEY_AMOUNT_FORMAT_MESSAGE });
     return;
   }
 

@@ -1,4 +1,5 @@
 import { createJsonRequest, ensureBackendAvailable, registerUser, uniqueValue } from './helpers/api';
+import { bearer, createSoloGroup, fetchGroup, newUser } from './helpers/groups';
 
 const FAKE_INVITATION_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -787,6 +788,84 @@ describe('Group Invitations', () => {
       expect(response.body.group.members).not.toEqual(
         expect.arrayContaining([expect.objectContaining({ id: invitee.body.user.id })]),
       );
+    });
+  });
+
+  describe('invitation edge cases', () => {
+    const invite = (token: string, groupId: string, email: string) =>
+      createJsonRequest<{ invitation: { id: string }; message?: string }>(`/api/groups/${groupId}/members`, {
+        method: 'POST',
+        headers: bearer(token),
+        body: JSON.stringify({ email }),
+      });
+
+    it('returns 400 for a second invitation to an email that already has one pending, and keeps a single pending entry', async () => {
+      const { groupId, owner } = await createSoloGroup('inv-dup');
+      const email = `${uniqueValue('inv-dup-target')}@example.com`;
+
+      expect((await invite(owner.token, groupId, email)).status).toBe(201);
+      const second = await invite(owner.token, groupId, email.toUpperCase());
+
+      expect(second.status).toBe(400);
+      expect(second.body.message).toMatch(/already pending/i);
+      const group = await fetchGroup(owner.token, groupId);
+      expect(group.pendingInvitations.filter((pending) => pending.email === email)).toHaveLength(1);
+    });
+
+    it('decline: 404 for an unknown invitation', async () => {
+      const { groupId, owner } = await createSoloGroup('inv-decline-unknown');
+
+      const response = await createJsonRequest(`/api/groups/${groupId}/invitations/${FAKE_INVITATION_ID}/decline`, {
+        method: 'POST',
+        headers: bearer(owner.token),
+      });
+
+      expect(response.status).toBe(404);
+    });
+
+    it('decline: 403 when the caller is not the invitee, and the invitation stays pending', async () => {
+      const { groupId, owner } = await createSoloGroup('inv-decline-wrong-user');
+      const invitee = await newUser('inv-decline-wrong-user-invitee');
+      const invitation = await invite(owner.token, groupId, invitee.user.email);
+
+      const response = await createJsonRequest<{ message: string }>(
+        `/api/groups/${groupId}/invitations/${invitation.body.invitation.id}/decline`,
+        { method: 'POST', headers: bearer(owner.token) },
+      );
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toMatch(/not the invitee/i);
+      expect((await fetchGroup(owner.token, groupId)).pendingInvitations).toHaveLength(1);
+    });
+
+    it('decline: 400 once the invitation has already been accepted', async () => {
+      const { groupId, owner } = await createSoloGroup('inv-decline-accepted');
+      const invitee = await newUser('inv-decline-accepted-invitee');
+      const invitation = await invite(owner.token, groupId, invitee.user.email);
+      const invitationPath = `/api/groups/${groupId}/invitations/${invitation.body.invitation.id}`;
+      await createJsonRequest(`${invitationPath}/accept`, { method: 'POST', headers: bearer(invitee.token) });
+
+      const response = await createJsonRequest<{ message: string }>(`${invitationPath}/decline`, {
+        method: 'POST',
+        headers: bearer(invitee.token),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/no longer pending/i);
+      expect((await fetchGroup(owner.token, groupId)).members.map((member) => member.id)).toContain(invitee.user.id);
+    });
+
+    it('decline and cancel reject unauthenticated access', async () => {
+      const declineRes = await createJsonRequest(
+        `/api/groups/${FAKE_INVITATION_ID}/invitations/${FAKE_INVITATION_ID}/decline`,
+        { method: 'POST' },
+      );
+      expect(declineRes.status).toBe(401);
+
+      const cancelRes = await createJsonRequest(`/api/groups/${FAKE_INVITATION_ID}/invitations/${FAKE_INVITATION_ID}`, {
+        method: 'DELETE',
+      });
+      expect(cancelRes.status).toBe(401);
     });
   });
 });

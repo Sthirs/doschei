@@ -1,4 +1,5 @@
 import { createJsonRequest, createMultipartRequest, ensureBackendAvailable, registerUser, uniqueValue } from './helpers/api';
+import { createSoloGroup, UNKNOWN_ID } from './helpers/groups';
 
 describe('POST /api/groups/:id/image', () => {
   beforeAll(async () => {
@@ -238,5 +239,28 @@ describe('POST /api/groups/:id/image', () => {
     const member = group!.members[0];
     expect(member.imageUrl).toBe(uploadedImageUrl);
     expect(member.imageUrl).toMatch(/^data:image\/webp;base64,/);
+  });
+
+  it('rejects unauthenticated uploads with 401', async () => {
+    const formData = new FormData();
+    formData.append('image', createPngBlob(), 'group.png');
+
+    const response = await createMultipartRequest(`/api/groups/${UNKNOWN_ID}/image`, formData);
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects files over 5 MB with 413 and keeps the group without an image', async () => {
+    const { groupId, owner } = await createSoloGroup('groups-image-oversize');
+    const formData = new FormData();
+    formData.append('image', new Blob([Buffer.alloc(6 * 1024 * 1024)], { type: 'image/png' }), 'large.png');
+
+    const response = await createMultipartRequest(`/api/groups/${groupId}/image`, formData, owner.token);
+
+    expect(response.status).toBe(413);
+    const group = await createJsonRequest<{ group: { imageUrl: string | null } }>(`/api/groups/${groupId}`, {
+      headers: { Authorization: `Bearer ${owner.token}` },
+    });
+    expect(group.body.group.imageUrl).toBeNull();
   });
 });

@@ -1,4 +1,15 @@
 import { createJsonRequest, ensureBackendAvailable, registerUser, uniqueValue } from './helpers/api';
+import {
+  createGroupWithMembers,
+  createSoloGroup,
+  equalSplits,
+  fetchGroup,
+  newUser,
+  postExpense,
+  postSettlement,
+  toCents,
+  UNKNOWN_ID,
+} from './helpers/groups';
 
 type SerializedSplit = {
   userId: string;
@@ -550,6 +561,194 @@ describe('Settlements Endpoints', () => {
         settledWithUserId: null,
         settledWithName: null,
       });
+    });
+  });
+
+  describe('PATCH and DELETE access control and group scoping', () => {
+    it('returns 404 when a non-member updates or deletes a settlement, and leaves it intact', async () => {
+      const { groupId, members } = await createGroupWithMembers('settle-nonmember-edit', 1);
+      const [payer, payee] = members;
+      const outsider = await newUser('settle-nonmember-edit-outsider');
+      const created = await postSettlement(payer.token, groupId, { paidToUserId: payee.user.id, amount: 15 });
+      const settlementId = created.body.expense.id;
+
+      const patchRes = await createJsonRequest(`/api/groups/${groupId}/settlements/${settlementId}`, {
+        method: 'PATCH',
+        headers: bearer(outsider.token),
+        body: JSON.stringify({ amount: 1 }),
+      });
+      expect(patchRes.status).toBe(404);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${groupId}/settlements/${settlementId}`, {
+        method: 'DELETE',
+        headers: bearer(outsider.token),
+      });
+      expect(deleteRes.status).toBe(404);
+
+      const group = await fetchGroup(payer.token, groupId);
+      expect(group.expenses).toEqual([expect.objectContaining({ id: settlementId, amount: 15, kind: 'SETTLEMENT' })]);
+    });
+
+    it('returns 401 for unauthenticated PATCH and DELETE', async () => {
+      const patchRes = await createJsonRequest(`/api/groups/${UNKNOWN_ID}/settlements/${UNKNOWN_ID}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ amount: 1 }),
+      });
+      expect(patchRes.status).toBe(401);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${UNKNOWN_ID}/settlements/${UNKNOWN_ID}`, {
+        method: 'DELETE',
+      });
+      expect(deleteRes.status).toBe(401);
+    });
+
+    it('returns 404 for an unknown settlement id on PATCH and DELETE', async () => {
+      const { groupId, members } = await createGroupWithMembers('settle-unknown', 1);
+
+      const patchRes = await createJsonRequest(`/api/groups/${groupId}/settlements/${UNKNOWN_ID}`, {
+        method: 'PATCH',
+        headers: bearer(members[0].token),
+        body: JSON.stringify({ amount: 1 }),
+      });
+      expect(patchRes.status).toBe(404);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${groupId}/settlements/${UNKNOWN_ID}`, {
+        method: 'DELETE',
+        headers: bearer(members[0].token),
+      });
+      expect(deleteRes.status).toBe(404);
+    });
+
+    it('returns 404 when the settlements endpoint targets a regular expense', async () => {
+      const { groupId, members } = await createGroupWithMembers('settle-targets-expense', 1);
+      const expense = await postExpense(members[0].token, groupId, { amount: 30, splits: equalSplits(members) });
+      const expenseId = expense.body.expense.id;
+
+      const patchRes = await createJsonRequest(`/api/groups/${groupId}/settlements/${expenseId}`, {
+        method: 'PATCH',
+        headers: bearer(members[0].token),
+        body: JSON.stringify({ amount: 1 }),
+      });
+      expect(patchRes.status).toBe(404);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${groupId}/settlements/${expenseId}`, {
+        method: 'DELETE',
+        headers: bearer(members[0].token),
+      });
+      expect(deleteRes.status).toBe(404);
+
+      const group = await fetchGroup(members[0].token, groupId);
+      expect(group.expenses).toEqual([expect.objectContaining({ id: expenseId, amount: 30, kind: 'EXPENSE' })]);
+    });
+
+    it("cannot reach another group's settlement through a group the caller belongs to", async () => {
+      const victim = await createGroupWithMembers('settle-xgroup-victim', 1);
+      const attacker = await createSoloGroup('settle-xgroup-attacker');
+      const created = await postSettlement(victim.members[0].token, victim.groupId, {
+        paidToUserId: victim.members[1].user.id,
+        amount: 40,
+      });
+      const settlementId = created.body.expense.id;
+
+      const patchRes = await createJsonRequest(`/api/groups/${attacker.groupId}/settlements/${settlementId}`, {
+        method: 'PATCH',
+        headers: bearer(attacker.owner.token),
+        body: JSON.stringify({ amount: 1 }),
+      });
+      expect(patchRes.status).toBe(404);
+
+      const deleteRes = await createJsonRequest(`/api/groups/${attacker.groupId}/settlements/${settlementId}`, {
+        method: 'DELETE',
+        headers: bearer(attacker.owner.token),
+      });
+      expect(deleteRes.status).toBe(404);
+
+      const group = await fetchGroup(victim.members[0].token, victim.groupId);
+      expect(group.expenses).toEqual([expect.objectContaining({ id: settlementId, amount: 40 })]);
+    });
+  });
+
+  describe('amount precision', () => {
+    it.each([
+      ['more than two decimals', 10.005],
+      ['more than decimal(10,2) can hold', 100_000_000],
+    ])('POST rejects %s with 400 instead of rounding or overflowing', async (_label, amount) => {
+      const { groupId, members } = await createGroupWithMembers('settle-precision', 1);
+
+      const response = await postSettlement(members[0].token, groupId, { paidToUserId: members[1].user.id, amount });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toMatch(/at most two decimal places/i);
+      expect((await fetchGroup(members[0].token, groupId)).expenses).toHaveLength(0);
+    });
+
+    it('PATCH rejects an amount with more than two decimals and keeps the stored amount', async () => {
+      const { groupId, members } = await createGroupWithMembers('settle-precision-patch', 1);
+      const created = await postSettlement(members[0].token, groupId, { paidToUserId: members[1].user.id, amount: 8 });
+
+      const response = await createJsonRequest(`/api/groups/${groupId}/settlements/${created.body.expense.id}`, {
+        method: 'PATCH',
+        headers: bearer(members[0].token),
+        body: JSON.stringify({ amount: 8.001 }),
+      });
+
+      expect(response.status).toBe(400);
+      expect((await fetchGroup(members[0].token, groupId)).expenses[0].amount).toBe(8);
+    });
+  });
+
+  describe('balance invariants across a mixed ledger', () => {
+    it('member balances sum to exactly zero and every pairwise entry mirrors its counterpart', async () => {
+      const { groupId, members } = await createGroupWithMembers('settle-zero-sum', 2);
+      const [alice, bob, carol] = members;
+
+      // EQUAL €10.00 over three: one cent of remainder.
+      expect((await postExpense(alice.token, groupId, { amount: 10, splits: equalSplits(members) })).status).toBe(201);
+      // PERCENT €7.01 paid by Bob, thirds that do not divide evenly.
+      expect(
+        (
+          await postExpense(bob.token, groupId, {
+            amount: 7.01,
+            splits: [
+              { userId: alice.user.id, shareType: 'PERCENT', shareValue: 33.33 },
+              { userId: bob.user.id, shareType: 'PERCENT', shareValue: 33.33 },
+              { userId: carol.user.id, shareType: 'PERCENT', shareValue: 33.34 },
+            ],
+          })
+        ).status,
+      ).toBe(201);
+      // FIXED €5.55 paid by Carol, who is not a participant.
+      expect(
+        (
+          await postExpense(carol.token, groupId, {
+            amount: 5.55,
+            splits: [
+              { userId: alice.user.id, shareType: 'FIXED', shareValue: 2.22 },
+              { userId: bob.user.id, shareType: 'FIXED', shareValue: 3.33 },
+            ],
+          })
+        ).status,
+      ).toBe(201);
+      // A partial settle-up from Bob to Alice.
+      expect((await postSettlement(bob.token, groupId, { paidToUserId: alice.user.id, amount: 1.5 })).status).toBe(201);
+
+      const views = await Promise.all(members.map((member) => fetchGroup(member.token, groupId)));
+      const nets = views.map((view) => toCents(view.balance.netForCurrentUser));
+
+      expect(nets.reduce((sum, cents) => sum + cents, 0)).toBe(0);
+      expect(nets.some((cents) => cents !== 0)).toBe(true);
+
+      for (const [index, view] of views.entries()) {
+        const self = members[index].user.id;
+        // Each member's net is the sum of their pairwise entries...
+        expect(view.balance.perUser.reduce((sum, entry) => sum + toCents(entry.netForCurrentUser), 0)).toBe(nets[index]);
+        // ...and each pairwise entry is the exact negative of the other side's.
+        for (const entry of view.balance.perUser) {
+          const counterpart = views[members.findIndex((member) => member.user.id === entry.userId)];
+          const mirror = counterpart.balance.perUser.find((other) => other.userId === self);
+          expect(toCents(mirror?.netForCurrentUser ?? 0)).toBe(-toCents(entry.netForCurrentUser));
+        }
+      }
     });
   });
 });

@@ -13,6 +13,8 @@
  * and performs the presence check itself — the controller does not have to
  * repeat it.
  */
+import { isStorableMoneyAmount, MONEY_AMOUNT_FORMAT_MESSAGE } from '../utils/money';
+
 export type SettlementInput = {
   paidByUserId: unknown;
   paidToUserId: unknown;
@@ -73,6 +75,10 @@ export const validateSettlementInput = (
 
   if (!isFinitePositiveNumber(input.amount)) {
     return { ok: false, message: 'Settlement amount must be a positive number.' };
+  }
+
+  if (!isStorableMoneyAmount(input.amount)) {
+    return { ok: false, message: MONEY_AMOUNT_FORMAT_MESSAGE };
   }
 
   if (input.date !== undefined && input.date !== null) {

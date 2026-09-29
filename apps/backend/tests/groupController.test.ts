@@ -48,6 +48,7 @@ import {
   normalizeToDataUrl,
   UnsupportedImageTypeError,
 } from '../src/services/imageService';
+import { MONEY_AMOUNT_FORMAT_MESSAGE } from '../src/utils/money';
 
 const JWT_SECRET = 'change-me-in-real-environments';
 const AUTH_USER = {
@@ -116,7 +117,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .get('/api/groups/g1')
+        .get('/api/groups/11111111-1111-4111-8111-111111111111')
         .set(bearerAuth());
 
       expect(response.status).toBe(200);
@@ -212,7 +213,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/expenses')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/expenses')
         .set(bearerAuth())
         .send(validBody);
 
@@ -223,7 +224,7 @@ describe('groupController (unit, service layer mocked)', () => {
     it('error branch: missing description → 400', async () => {
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/expenses')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/expenses')
         .set(bearerAuth())
         .send({ ...validBody, description: '' });
 
@@ -234,7 +235,7 @@ describe('groupController (unit, service layer mocked)', () => {
     it('error branch: non-positive amount → 400', async () => {
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/expenses')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/expenses')
         .set(bearerAuth())
         .send({ ...validBody, amount: 0 });
 
@@ -247,7 +248,7 @@ describe('groupController (unit, service layer mocked)', () => {
     it('error branch: invalid category rejected — pins VALID_EXPENSE_CATEGORIES membership check', async () => {
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/expenses')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/expenses')
         .set(bearerAuth())
         .send({ ...validBody, category: 'not-a-real-category' });
 
@@ -260,7 +261,7 @@ describe('groupController (unit, service layer mocked)', () => {
     it('error branch: invalid date format → 400', async () => {
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/expenses')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/expenses')
         .set(bearerAuth())
         .send({ ...validBody, date: 'not-a-date' });
 
@@ -278,13 +279,47 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/expenses')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/expenses')
         .set(bearerAuth())
         .send(validBody);
 
       expect(response.status).toBe(400);
       expect(response.body).toEqual({ message: 'split mismatch' });
     });
+
+    it('404-vs-400 discrimination: a non-member ("Group not found or you are not a member.") → 404', async () => {
+      vi.spyOn(
+        GroupService.prototype,
+        'createExpenseForGroup',
+      ).mockRejectedValue(new Error('Group not found or you are not a member.'));
+
+      const app = createApp();
+      const response = await request(app)
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/expenses')
+        .set(bearerAuth())
+        .send(validBody);
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        message: 'Group not found or you are not a member.',
+      });
+    });
+
+    it.each([10.005, 0.001, 100_000_000])(
+      'error branch: amount %s does not fit decimal(10,2) → 400 without calling the service',
+      async (amount) => {
+        const spy = vi.spyOn(GroupService.prototype, 'createExpenseForGroup');
+        const app = createApp();
+        const response = await request(app)
+          .post('/api/groups/11111111-1111-4111-8111-111111111111/expenses')
+          .set(bearerAuth())
+          .send({ ...validBody, amount });
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({ message: MONEY_AMOUNT_FORMAT_MESSAGE });
+        expect(spy).not.toHaveBeenCalled();
+      },
+    );
   });
 
   // ---------------------------------------------------------------
@@ -299,7 +334,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .patch('/api/groups/g1/expenses/e1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111/expenses/22222222-2222-4222-8222-222222222222')
         .set(bearerAuth())
         .send({ amount: 10 });
 
@@ -307,11 +342,24 @@ describe('groupController (unit, service layer mocked)', () => {
       expect(response.body).toEqual({ expense: { id: 'e1', amount: 10 } });
     });
 
+    it('error branch: sub-cent amount → 400 without calling the service', async () => {
+      const spy = vi.spyOn(GroupService.prototype, 'updateExpenseForGroup');
+      const app = createApp();
+      const response = await request(app)
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111/expenses/22222222-2222-4222-8222-222222222222')
+        .set(bearerAuth())
+        .send({ amount: 10.005 });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({ message: MONEY_AMOUNT_FORMAT_MESSAGE });
+      expect(spy).not.toHaveBeenCalled();
+    });
+
     it('error branch: invalid category → 400 without calling the service', async () => {
       const spy = vi.spyOn(GroupService.prototype, 'updateExpenseForGroup');
       const app = createApp();
       const response = await request(app)
-        .patch('/api/groups/g1/expenses/e1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111/expenses/22222222-2222-4222-8222-222222222222')
         .set(bearerAuth())
         .send({ category: 'bogus' });
 
@@ -330,7 +378,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .patch('/api/groups/g1/expenses/e1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111/expenses/22222222-2222-4222-8222-222222222222')
         .set(bearerAuth())
         .send({ amount: 5 });
 
@@ -346,7 +394,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .patch('/api/groups/g1/expenses/e1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111/expenses/22222222-2222-4222-8222-222222222222')
         .set(bearerAuth())
         .send({ amount: 5 });
 
@@ -361,7 +409,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .patch('/api/groups/g1/expenses/e1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111/expenses/22222222-2222-4222-8222-222222222222')
         .set(bearerAuth())
         .send({ amount: 5 });
 
@@ -382,7 +430,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .delete('/api/groups/g1/expenses/e1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/expenses/22222222-2222-4222-8222-222222222222')
         .set(bearerAuth());
 
       expect(response.status).toBe(204);
@@ -397,7 +445,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .delete('/api/groups/g1/expenses/e1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/expenses/22222222-2222-4222-8222-222222222222')
         .set(bearerAuth());
       expect(notFound.status).toBe(404);
 
@@ -406,7 +454,7 @@ describe('groupController (unit, service layer mocked)', () => {
         'deleteExpenseForGroup',
       ).mockRejectedValueOnce(new Error('Nope.'));
       const generic = await request(app)
-        .delete('/api/groups/g1/expenses/e1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/expenses/22222222-2222-4222-8222-222222222222')
         .set(bearerAuth());
       expect(generic.status).toBe(400);
       expect(generic.body).toEqual({ message: 'Nope.' });
@@ -425,7 +473,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/settlements')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/settlements')
         .set(bearerAuth())
         .send({
           paidByUserId: 'u1',
@@ -446,7 +494,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .post('/api/groups/g1/settlements')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/settlements')
         .set(bearerAuth())
         .send({});
       expect(notFound.status).toBe(404);
@@ -456,7 +504,7 @@ describe('groupController (unit, service layer mocked)', () => {
         'createSettlementForGroup',
       ).mockRejectedValueOnce(new Error('Bad amount.'));
       const generic = await request(app)
-        .post('/api/groups/g1/settlements')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/settlements')
         .set(bearerAuth())
         .send({});
       expect(generic.status).toBe(400);
@@ -476,7 +524,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .patch('/api/groups/g1/settlements/s1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111/settlements/33333333-3333-4333-8333-333333333333')
         .set(bearerAuth())
         .send({ amount: 20 });
 
@@ -492,7 +540,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .patch('/api/groups/g1/settlements/s1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111/settlements/33333333-3333-4333-8333-333333333333')
         .set(bearerAuth())
         .send({});
       expect(notFound.status).toBe(404);
@@ -502,7 +550,7 @@ describe('groupController (unit, service layer mocked)', () => {
         'updateSettlementForGroup',
       ).mockRejectedValueOnce(new Error('Bad input.'));
       const generic = await request(app)
-        .patch('/api/groups/g1/settlements/s1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111/settlements/33333333-3333-4333-8333-333333333333')
         .set(bearerAuth())
         .send({});
       expect(generic.status).toBe(400);
@@ -522,7 +570,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .delete('/api/groups/g1/settlements/s1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/settlements/33333333-3333-4333-8333-333333333333')
         .set(bearerAuth());
 
       expect(response.status).toBe(204);
@@ -536,7 +584,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .delete('/api/groups/g1/settlements/s1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/settlements/33333333-3333-4333-8333-333333333333')
         .set(bearerAuth());
       expect(notFound.status).toBe(404);
 
@@ -545,7 +593,7 @@ describe('groupController (unit, service layer mocked)', () => {
         'deleteSettlementForGroup',
       ).mockRejectedValueOnce(new Error('Nope.'));
       const generic = await request(app)
-        .delete('/api/groups/g1/settlements/s1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/settlements/33333333-3333-4333-8333-333333333333')
         .set(bearerAuth());
       expect(generic.status).toBe(400);
     });
@@ -570,7 +618,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .get('/api/groups/g1/expenses/export?month=2026-06')
+        .get('/api/groups/11111111-1111-4111-8111-111111111111/expenses/export?month=2026-06')
         .set(bearerAuth());
 
       expect(response.status).toBe(200);
@@ -582,7 +630,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const spy = vi.spyOn(GroupService.prototype, 'startExpensesCsv');
       const app = createApp();
       const response = await request(app)
-        .get('/api/groups/g1/expenses/export')
+        .get('/api/groups/11111111-1111-4111-8111-111111111111/expenses/export')
         .set(bearerAuth());
 
       expect(response.status).toBe(400);
@@ -599,7 +647,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .get('/api/groups/g1/expenses/export?month=2026-06')
+        .get('/api/groups/11111111-1111-4111-8111-111111111111/expenses/export?month=2026-06')
         .set(bearerAuth());
 
       expect(response.status).toBe(404);
@@ -612,7 +660,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .get('/api/groups/g1/expenses/export?month=2026-06')
+        .get('/api/groups/11111111-1111-4111-8111-111111111111/expenses/export?month=2026-06')
         .set(bearerAuth());
 
       expect(response.status).toBe(400);
@@ -625,7 +673,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .get('/api/groups/g1/expenses/export?month=2026-06')
+        .get('/api/groups/11111111-1111-4111-8111-111111111111/expenses/export?month=2026-06')
         .set(bearerAuth());
 
       expect(response.status).toBe(500);
@@ -645,7 +693,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .patch('/api/groups/g1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111')
         .set(bearerAuth())
         .send({ name: 'New' });
 
@@ -657,7 +705,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const spy = vi.spyOn(GroupService.prototype, 'updateGroup');
       const app = createApp();
       const response = await request(app)
-        .patch('/api/groups/g1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111')
         .set(bearerAuth())
         .send({});
 
@@ -673,7 +721,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .patch('/api/groups/g1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111')
         .set(bearerAuth())
         .send({ name: 'X' });
       expect(notFound.status).toBe(404);
@@ -682,7 +730,7 @@ describe('groupController (unit, service layer mocked)', () => {
         new Error('Bad.'),
       );
       const generic = await request(app)
-        .patch('/api/groups/g1')
+        .patch('/api/groups/11111111-1111-4111-8111-111111111111')
         .set(bearerAuth())
         .send({ name: 'X' });
       expect(generic.status).toBe(400);
@@ -700,7 +748,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/members')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/members')
         .set(bearerAuth())
         .send({ email: 'a@b.com' });
 
@@ -712,7 +760,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const spy = vi.spyOn(GroupService.prototype, 'addMemberByEmail');
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/members')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/members')
         .set(bearerAuth())
         .send({ email: 'not-an-email' });
 
@@ -729,7 +777,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .post('/api/groups/g1/members')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/members')
         .set(bearerAuth())
         .send({ email: 'a@b.com' });
       expect(notFound.status).toBe(404);
@@ -739,7 +787,7 @@ describe('groupController (unit, service layer mocked)', () => {
         'addMemberByEmail',
       ).mockRejectedValueOnce(new Error('Already a member.'));
       const generic = await request(app)
-        .post('/api/groups/g1/members')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/members')
         .set(bearerAuth())
         .send({ email: 'a@b.com' });
       expect(generic.status).toBe(400);
@@ -757,7 +805,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .delete('/api/groups/g1/members/u2')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/members/44444444-4444-4444-8444-444444444444')
         .set(bearerAuth());
 
       expect(response.status).toBe(204);
@@ -770,7 +818,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .delete('/api/groups/g1/members/u2')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/members/44444444-4444-4444-8444-444444444444')
         .set(bearerAuth());
       expect(notFound.status).toBe(404);
 
@@ -778,7 +826,7 @@ describe('groupController (unit, service layer mocked)', () => {
         new Error('User is not a member.'),
       );
       const notMember = await request(app)
-        .delete('/api/groups/g1/members/u2')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/members/44444444-4444-4444-8444-444444444444')
         .set(bearerAuth());
       expect(notMember.status).toBe(404);
 
@@ -786,7 +834,7 @@ describe('groupController (unit, service layer mocked)', () => {
         new Error('Cannot remove owner.'),
       );
       const generic = await request(app)
-        .delete('/api/groups/g1/members/u2')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/members/44444444-4444-4444-8444-444444444444')
         .set(bearerAuth());
       expect(generic.status).toBe(400);
     });
@@ -803,7 +851,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/invitations/inv1/accept')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555/accept')
         .set(bearerAuth());
 
       expect(response.status).toBe(200);
@@ -817,7 +865,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .post('/api/groups/g1/invitations/inv1/accept')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555/accept')
         .set(bearerAuth());
       expect(notFound.status).toBe(404);
 
@@ -825,7 +873,7 @@ describe('groupController (unit, service layer mocked)', () => {
         new Error('You are not the invitee.'),
       );
       const forbidden = await request(app)
-        .post('/api/groups/g1/invitations/inv1/accept')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555/accept')
         .set(bearerAuth());
       expect(forbidden.status).toBe(403);
 
@@ -833,7 +881,7 @@ describe('groupController (unit, service layer mocked)', () => {
         new Error('Already accepted.'),
       );
       const generic = await request(app)
-        .post('/api/groups/g1/invitations/inv1/accept')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555/accept')
         .set(bearerAuth());
       expect(generic.status).toBe(400);
     });
@@ -850,7 +898,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/invitations/inv1/decline')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555/decline')
         .set(bearerAuth());
 
       expect(response.status).toBe(200);
@@ -864,7 +912,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .post('/api/groups/g1/invitations/inv1/decline')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555/decline')
         .set(bearerAuth());
       expect(notFound.status).toBe(404);
 
@@ -872,7 +920,7 @@ describe('groupController (unit, service layer mocked)', () => {
         new Error('You are not the invitee.'),
       );
       const forbidden = await request(app)
-        .post('/api/groups/g1/invitations/inv1/decline')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555/decline')
         .set(bearerAuth());
       expect(forbidden.status).toBe(403);
 
@@ -880,7 +928,7 @@ describe('groupController (unit, service layer mocked)', () => {
         new Error('Already declined.'),
       );
       const generic = await request(app)
-        .post('/api/groups/g1/invitations/inv1/decline')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555/decline')
         .set(bearerAuth());
       expect(generic.status).toBe(400);
     });
@@ -897,7 +945,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .delete('/api/groups/g1/invitations/inv1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555')
         .set(bearerAuth());
 
       expect(response.status).toBe(204);
@@ -910,7 +958,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .delete('/api/groups/g1/invitations/inv1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555')
         .set(bearerAuth());
       expect(notFound.status).toBe(404);
 
@@ -918,7 +966,7 @@ describe('groupController (unit, service layer mocked)', () => {
         new Error('You are not the inviter.'),
       );
       const forbidden = await request(app)
-        .delete('/api/groups/g1/invitations/inv1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555')
         .set(bearerAuth());
       expect(forbidden.status).toBe(403);
 
@@ -926,7 +974,7 @@ describe('groupController (unit, service layer mocked)', () => {
         new Error('Already cancelled.'),
       );
       const generic = await request(app)
-        .delete('/api/groups/g1/invitations/inv1')
+        .delete('/api/groups/11111111-1111-4111-8111-111111111111/invitations/55555555-5555-4555-8555-555555555555')
         .set(bearerAuth());
       expect(generic.status).toBe(400);
     });
@@ -947,7 +995,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/image')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/image')
         .set(bearerAuth())
         .attach('image', Buffer.from('fake-png-bytes'), {
           filename: 'a.png',
@@ -964,7 +1012,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const spy = vi.spyOn(GroupService.prototype, 'updateGroupImage');
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/image')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/image')
         .set(bearerAuth());
 
       expect(response.status).toBe(400);
@@ -979,7 +1027,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/image')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/image')
         .set(bearerAuth())
         .attach('image', Buffer.from('fake-png-bytes'), {
           filename: 'a.png',
@@ -996,7 +1044,7 @@ describe('groupController (unit, service layer mocked)', () => {
 
       const app = createApp();
       const response = await request(app)
-        .post('/api/groups/g1/image')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/image')
         .set(bearerAuth())
         .attach('image', Buffer.from('fake-png-bytes'), {
           filename: 'a.png',
@@ -1018,7 +1066,7 @@ describe('groupController (unit, service layer mocked)', () => {
       const app = createApp();
 
       const notFound = await request(app)
-        .post('/api/groups/g1/image')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/image')
         .set(bearerAuth())
         .attach('image', Buffer.from('fake-png-bytes'), {
           filename: 'a.png',
@@ -1031,13 +1079,57 @@ describe('groupController (unit, service layer mocked)', () => {
         'updateGroupImage',
       ).mockRejectedValueOnce(new Error('Not an owner.'));
       const generic = await request(app)
-        .post('/api/groups/g1/image')
+        .post('/api/groups/11111111-1111-4111-8111-111111111111/image')
         .set(bearerAuth())
         .attach('image', Buffer.from('fake-png-bytes'), {
           filename: 'a.png',
           contentType: 'image/png',
         });
       expect(generic.status).toBe(400);
+    });
+  });
+  // ---------------------------------------------------------------
+  // requireUuidParams — every group route with a path id
+  // ---------------------------------------------------------------
+  describe('malformed path ids', () => {
+    it.each([
+      ['get', '/api/groups/abc', 'Group not found.'],
+      ['patch', '/api/groups/abc', 'Group not found.'],
+      ['get', '/api/groups/abc/expenses/export?month=2026-06', 'Group not found.'],
+      ['patch', '/api/groups/11111111-1111-4111-8111-111111111111/expenses/abc', 'Expense not found.'],
+      ['delete', '/api/groups/11111111-1111-4111-8111-111111111111/settlements/abc', 'Settlement not found.'],
+      ['post', '/api/groups/11111111-1111-4111-8111-111111111111/invitations/abc/accept', 'Invitation not found.'],
+      ['delete', '/api/groups/11111111-1111-4111-8111-111111111111/members/abc', 'User is not a member of this group.'],
+    ] as const)('%s %s → 404 JSON without reaching the service', async (method, path, message) => {
+      const spy = vi.spyOn(GroupService.prototype, 'getGroupByIdForUser');
+      const app = createApp();
+      const response = await request(app)[method](path).set(bearerAuth()).send({});
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({ message });
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('an unexpected service failure is a 500 JSON error, never an HTML stack trace', async () => {
+      vi.spyOn(GroupService.prototype, 'getGroupByIdForUser').mockRejectedValue(
+        new Error('connection terminated'),
+      );
+      vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      const app = createApp();
+      const response = await request(app)
+        .get('/api/groups/11111111-1111-4111-8111-111111111111')
+        .set(bearerAuth());
+
+      expect(response.status).toBe(500);
+      expect(response.body).toEqual({ message: 'Internal server error.' });
+    });
+
+    it('an unauthenticated caller gets 401 before the id shape is looked at', async () => {
+      const app = createApp();
+      const response = await request(app).get('/api/groups/abc');
+
+      expect(response.status).toBe(401);
     });
   });
 });

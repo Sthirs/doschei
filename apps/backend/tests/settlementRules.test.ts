@@ -5,6 +5,7 @@ import {
   validateSettlementInput,
   type SettlementInput,
 } from '../src/services/settlementRules';
+import { MONEY_AMOUNT_FORMAT_MESSAGE } from '../src/utils/money';
 
 const MEMBER_IDS = ['u1', 'u2', 'u3'];
 
@@ -153,6 +154,27 @@ describe('validateSettlementInput', () => {
     if (!result.ok) {
       expect(result.message).toBe('Settlement amount must be a positive number.');
     }
+  });
+
+  it.each([10.005, 100_000_000])('rejects amount %s, which does not fit decimal(10,2)', (amount) => {
+    const result = validateSettlementInput(
+      { paidByUserId: 'u1', paidToUserId: 'u2', amount },
+      MEMBER_IDS,
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toBe(MONEY_AMOUNT_FORMAT_MESSAGE);
+    }
+  });
+
+  it.each([0.01, 0.29, 99_999_999.99])('accepts amount %s at the edge of decimal(10,2)', (amount) => {
+    const result = validateSettlementInput(
+      { paidByUserId: 'u1', paidToUserId: 'u2', amount },
+      MEMBER_IDS,
+    );
+
+    expect(result.ok).toBe(true);
   });
 
   it('rejects a missing amount', () => {
