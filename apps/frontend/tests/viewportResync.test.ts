@@ -4,7 +4,7 @@ import { installViewportResync } from '@/lib/viewportResync';
 
 describe('installViewportResync', () => {
   let uninstall: () => void;
-  let onResize: ReturnType<typeof vi.fn>;
+  let onResize: ReturnType<typeof vi.fn<() => void>>;
 
   const setVisibility = (state: 'visible' | 'hidden') => {
     Object.defineProperty(document, 'visibilityState', {
@@ -18,7 +18,7 @@ describe('installViewportResync', () => {
       cb(0);
       return 0;
     });
-    onResize = vi.fn();
+    onResize = vi.fn<() => void>();
     window.addEventListener('resize', onResize);
     uninstall = installViewportResync(document, window);
   });
