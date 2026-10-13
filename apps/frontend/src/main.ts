@@ -4,6 +4,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { createBrowserPorts, checkForNewBuild, shouldRunCheck } from '@/lib/appVersion';
 import { setupPushNotifications } from '@/lib/push';
 import { onAccessTokenChange, onSessionExpired } from '@/lib/sessionRefresh';
+import { installViewportResync } from '@/lib/viewportResync';
 import { useAuthStore } from '@/stores/auth';
 
 import App from './App.vue';
@@ -94,3 +95,6 @@ probe();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') probe();
 });
+
+// Android PWAs can resume with a stale window size; force a re-measure.
+installViewportResync();
