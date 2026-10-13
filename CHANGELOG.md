@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.5](https://github.com/Sthirs/doschei/compare/v1.9.4...v1.9.5) (2026-10-13)
+
+
+### Bug Fixes
+
+* **frontend:** force a resize on PWA resume to fix stale viewport width ([#155](https://github.com/Sthirs/doschei/issues/155)) ([3b55901](https://github.com/Sthirs/doschei/commit/3b559014c69a9fb96299f4ac2f7855a1d081348e))
+
 ## [1.9.4](https://github.com/Sthirs/doschei/compare/v1.9.3...v1.9.4) (2026-10-13)
 
 
