@@ -85,7 +85,7 @@ const {
       :aria-label="t('categoryPicker.dialogAriaLabel')"
       @keydown="onKeydown"
     >
-      <div class="bg-[#1E1E26] max-h-80 overflow-y-auto rounded-xl shadow-xl">
+      <div class="bg-[#1E1E26] h-80 overflow-y-auto rounded-xl shadow-xl">
         <div class="sticky top-0 z-10 border-b border-white/10 bg-[#1E1E26] px-3 py-2">
           <input
             ref="desktopSearchInputRef"
@@ -158,14 +158,14 @@ const {
     >
       <div
         ref="mobilePanelRef"
-        class="flex max-h-[85vh] flex-col"
+        class="flex h-[85vh] flex-col"
         @keydown="onKeydown"
       >
         <SheetHeader :close-label="t('common.close')" @close="close">
           <h3 class="text-sm font-medium text-[#E5E0ED]">{{ t('categoryPicker.selectCategoryHeading') }}</h3>
         </SheetHeader>
 
-        <div class="overflow-y-auto px-2 py-2">
+        <div class="min-h-0 flex-1 overflow-y-auto px-2 py-2">
           <div class="sticky top-0 z-10 bg-[#1E1E26] px-2 py-2">
             <input
               ref="mobileSearchInputRef"
