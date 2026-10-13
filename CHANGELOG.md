@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.4](https://github.com/Sthirs/doschei/compare/v1.9.3...v1.9.4) (2026-10-13)
+
+
+### Bug Fixes
+
+* **frontend:** keep category picker height fixed while searching ([#151](https://github.com/Sthirs/doschei/issues/151)) ([d368e68](https://github.com/Sthirs/doschei/commit/d368e681a4499c492c6ef623e1f6b3df4bf3f306))
+
 ## [1.9.3](https://github.com/Sthirs/doschei/compare/v1.9.2...v1.9.3) (2026-10-06)
 
 
