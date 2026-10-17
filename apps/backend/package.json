@@ -26,7 +26,7 @@
     "sharp": "0.35.5",
     "typeorm": "1.1.2",
     "web-push": "3.6.7",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -47,7 +47,7 @@
     "ts-node": "10.9.2",
     "tsx": "4.23.15",
     "typescript": "npm:@typescript/typescript6@6.0.2",
-    "typescript-eslint": "8.71.1",
-    "vitest": "5.0.3"
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.4"
   }
 }
