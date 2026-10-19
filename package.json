@@ -28,7 +28,7 @@
     "screenshots": "bash ./scripts/capture-screenshots.sh"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.0",
+    "@playwright/test": "1.64.1",
     "concurrently": "10.0.6"
   }
 }
