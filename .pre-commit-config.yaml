@@ -81,7 +81,7 @@ repos:
         exclude: CHANGELOG\.md$
 
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 6ebe81750a4c5da12fdfade64c40099df83e3386 # frozen: 44.181.0
+    rev: be4002a131a8fa52ef314b785adb353b29643508 # frozen: 44.181.6
     hooks:
       - id: renovate-config-validator
         args: [--strict]
