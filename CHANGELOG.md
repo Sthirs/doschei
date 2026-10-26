@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.7](https://github.com/Sthirs/doschei/compare/v1.9.6...v1.9.7) (2026-10-26)
+
+
+### Bug Fixes
+
+* **deps:** update minor and patch updates ([#162](https://github.com/Sthirs/doschei/issues/162)) ([70df4af](https://github.com/Sthirs/doschei/commit/70df4af648dabc2a4bcbf774ec2eb0bb8118d8eb))
+* **deps:** update minor and patch updates ([#164](https://github.com/Sthirs/doschei/issues/164)) ([1fced65](https://github.com/Sthirs/doschei/commit/1fced65c669c4c04eb4c42affe7a7e145990985d))
+
 ## [1.9.6](https://github.com/Sthirs/doschei/compare/v1.9.5...v1.9.6) (2026-10-23)
 
 
