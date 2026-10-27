@@ -10,7 +10,8 @@
       "description": "Own app images: tags are set by the release workflow",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ghcr.io/sthirs/doschei/**"],
-      "enabled": false
+      "enabled": false,
+      "minimumReleaseAge": "7 days"
     }
   ],
   "vulnerabilityAlerts": {
