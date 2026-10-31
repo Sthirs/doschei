@@ -5,10 +5,11 @@ import { test, expect } from '@playwright/test';
 import { registerUserViaApi } from './fixtures/auth';
 
 /*
- * ADR-0029: static assets (frontend nginx) and API JSON (Express
- * `compression`) are gzip-encoded when the client accepts it. Playwright's
- * request context sends `Accept-Encoding: gzip, deflate, br` and decodes the
- * body transparently, but leaves the response headers intact.
+ * ADR-0029: static assets are gzip-encoded by the frontend nginx, and API JSON
+ * is Brotli-encoded by Express `compression` when the client offers `br`.
+ * Playwright's request context sends the browser-like
+ * `Accept-Encoding: gzip, deflate, br` and decodes the body transparently, but
+ * leaves the response headers intact.
  */
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
 
@@ -46,15 +47,13 @@ test.describe('Response compression', () => {
     const assetPath = (await shell.text()).match(/\/assets\/[^"']+\.js/)?.[0];
     expect(assetPath, 'index.html references a hashed /assets/*.js bundle').toBeTruthy();
 
-    const asset = await request.get(`${baseURL}${assetPath}`, {
-      headers: { 'Accept-Encoding': 'gzip' },
-    });
+    const asset = await request.get(`${baseURL}${assetPath}`);
     expect(asset.status()).toBe(200);
     expect(asset.headers()['content-encoding']).toBe('gzip');
     expect(asset.headers()['vary'] ?? '').toMatch(/accept-encoding/i);
   });
 
-  test('account API JSON carrying an avatar is served gzip-encoded', async ({ request }) => {
+  test('account API JSON carrying an avatar is served Brotli-encoded', async ({ request }) => {
     const user = await registerUserViaApi('e2e-compression');
     const headers = { Authorization: `Bearer ${user.token}` };
 
@@ -69,11 +68,11 @@ test.describe('Response compression', () => {
     expect(upload.status()).toBe(200);
 
     const me = await request.get(`${baseURL}/api/auth/me`, {
-      headers: { ...headers, 'Accept-Encoding': 'gzip' },
+      headers,
     });
     expect(me.status()).toBe(200);
     expect((await me.body()).byteLength).toBeGreaterThan(1024);
-    expect(me.headers()['content-encoding']).toBe('gzip');
+    expect(me.headers()['content-encoding']).toBe('br');
     expect(me.headers()['content-type']).toMatch(/application\/json/);
   });
 });

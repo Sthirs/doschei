@@ -1,4 +1,4 @@
-# ADR-0029: HTTP response compression — nginx gzip for static files, Express `compression` for the API
+# ADR-0029: HTTP response compression — nginx gzip for static files, Express `compression` (Brotli/gzip) for the API
 
 - **Status:** 🟢 accepted
 - **Date:** 2026-10-31
@@ -29,14 +29,16 @@ We will compress at each workload, independent of the ingress controller:
 
 - **Static files:** the frontend nginx enables on-the-fly gzip at server
   level (`gzip on`, `gzip_comp_level 5`, `gzip_min_length 1024`,
-  `gzip_vary on`, `gzip_proxied any`) for CSS, JavaScript, JSON, the web app
-  manifest, SVG and plain text. HTML is always included. Raster images
-  (WebP/PNG) are excluded because they are already compressed.
+  `gzip_vary on`, `gzip_proxied any`) for CSS, JavaScript, JSON, SVG and
+  plain text. HTML is always included. Raster images (WebP/PNG) are excluded
+  because they are already compressed. The web app manifest is left out: it
+  is under the 1 KB threshold.
 - **API:** the backend mounts the `compression` middleware (exact-pinned)
   in `createApp()` before every route and error handler, with the library
-  defaults (gzip/deflate negotiated via `Accept-Encoding`, 1 KB threshold,
-  `compressible` MIME filter). The streamed CSV export keeps working: the
-  middleware wraps `write`/`end` and the download itself gets compressed.
+  defaults: Brotli preferred, then gzip/deflate, negotiated via
+  `Accept-Encoding`; Brotli at quality 4; 1 KB threshold; `compressible` MIME
+  filter. The streamed CSV export keeps working: the middleware wraps
+  `write`/`end` and the download itself gets compressed.
 
 ## Alternatives considered
 
@@ -48,8 +50,10 @@ We will compress at each workload, independent of the ingress controller:
   assumption for a small CPU saving. Hashed assets are already
   `immutable`-cached ([ADR-0020](0020-client-cache-lifecycle-on-deploy.md)),
   so each one is compressed rarely per client.
-- **Brotli** — not chosen: the official `nginx-unprivileged` alpine image does
-  not ship `ngx_brotli`, and gzip is universally supported.
+- **Brotli for static files** — not chosen: the official `nginx-unprivileged`
+  alpine image does not ship `ngx_brotli`, and gzip is universally supported.
+  This does not apply to the API: Node's `zlib` has Brotli built in, so the
+  backend uses it.
 - **Compress API JSON only at the frontend nginx `/api/` proxy** — not chosen:
   the Ingress sends `/api` directly to the backend, bypassing that proxy.
 
@@ -66,7 +70,11 @@ We will compress at each workload, independent of the ingress controller:
 
 - Positive: text transfers shrink, typically by 60–80%. No dependency on the
   ingress controller. `Vary: Accept-Encoding` keeps shared caches correct.
+  Brotli usually makes API JSON another 15–20% smaller than gzip.
 - Negative / trade-offs: a small per-request CPU cost in nginx and Node. One
-  new runtime dependency in the backend.
-- Follow-ups: a possible follow-up ADR on build-time precompression or Brotli
-  if CPU or bandwidth measurements justify it.
+  new runtime dependency in the backend. The streamed CSV export is buffered
+  by the compressor, so it reaches the client in large chunks or all at the
+  end; acceptable at its size (one group, one month).
+- Follow-ups: a possible follow-up ADR on Brotli for static files
+  (build-time precompression or an nginx image with `ngx_brotli`) if CPU or
+  bandwidth measurements justify it.

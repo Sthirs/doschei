@@ -39,9 +39,9 @@ export const createApp = () => {
       credentials: true,
     }),
   );
-  // gzip/deflate every response above the library's 1 KB threshold, before
-  // any route so JSON, errors and the streamed CSV export are all covered
-  // (ADR-0029).
+  // Brotli/gzip/deflate (negotiated) every response above the library's 1 KB
+  // threshold, before any route so JSON, errors and the streamed CSV export
+  // are all covered (ADR-0029).
   app.use(compression());
   app.use(express.json());
   // No CSRF token, by design (ADR-0023): the refresh cookie is sameSite

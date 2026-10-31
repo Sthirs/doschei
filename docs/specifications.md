@@ -361,7 +361,7 @@ The CI pipeline includes the following steps:
   Dockerfiles, Helm chart with ConfigMaps/Secrets, Telepresence/Minikube helper
   scripts, GitHub Actions on `push: main` and pull requests, Docker builds in
   CI, Pinia, Vue Router, Axios, Composition API, `script setup`, Tailwind, Vite,
-  PWA via `vite-plugin-pwa`, per-IP rate limiting, gzip response
+  PWA via `vite-plugin-pwa`, per-IP rate limiting, gzip/Brotli response
   compression, CSV export, client cache
   purge on new deploy, the group monthly totals chart, and the group category
   recap) are not annotated here.

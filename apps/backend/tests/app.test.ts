@@ -42,6 +42,21 @@ describe('backend bootstrap', () => {
     expect(response.body).toEqual(payload);
   });
 
+  it('prefers Brotli when a browser offers it alongside gzip', async () => {
+    const app = createApp();
+    app.get('/api/__test/large', (_request, response) => {
+      response.json({ items: Array.from({ length: 200 }, (_, index) => ({ index, label: 'expense' })) });
+    });
+
+    const response = await request(app)
+      .get('/api/__test/large')
+      .set('accept-encoding', 'gzip, deflate, br, zstd');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-encoding']).toBe('br');
+    expect(response.headers.vary).toMatch(/accept-encoding/i);
+  });
+
   it('leaves small responses uncompressed', async () => {
     const app = createApp();
 
