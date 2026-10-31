@@ -1,6 +1,6 @@
 {
   "name": "@doschei/backend",
-  "version": "1.9.7",
+  "version": "1.10.0",
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",

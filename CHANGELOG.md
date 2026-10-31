@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/Sthirs/doschei/compare/v1.9.7...v1.10.0) (2026-10-31)
+
+
+### Features
+
+* compress API JSON and static frontend files ([#171](https://github.com/Sthirs/doschei/issues/171)) ([17e486f](https://github.com/Sthirs/doschei/commit/17e486ff5dc1a2689e168de78a175232a92b2a94))
+
 ## [1.9.7](https://github.com/Sthirs/doschei/compare/v1.9.6...v1.9.7) (2026-10-26)
 
 
