@@ -1,3 +1,4 @@
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
@@ -38,6 +39,10 @@ export const createApp = () => {
       credentials: true,
     }),
   );
+  // Brotli/gzip/deflate (negotiated) every response above the library's 1 KB
+  // threshold, before any route so JSON, errors and the streamed CSV export
+  // are all covered (ADR-0029).
+  app.use(compression());
   app.use(express.json());
   // No CSRF token, by design (ADR-0023): the refresh cookie is sameSite
   // 'strict' and CORS never allows a foreign origin; the OAuth state cookie is
