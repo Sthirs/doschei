@@ -24,6 +24,10 @@ spec:
         - name: dex
           image: "{{ .Values.dex.image.repository }}:{{ .Values.dex.image.tag }}"
           imagePullPolicy: {{ .Values.dex.image.pullPolicy }}
+          {{- with .Values.dex.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           args:
             - /bin/sh
             - -c

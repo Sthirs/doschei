@@ -43,6 +43,10 @@ spec:
         - name: frontend
           image: {{ include "doschei.imageRepository" (dict "root" . "image" .Values.frontend.image "component" "frontend") }}:{{ include "doschei.imageTag" (dict "root" . "image" .Values.frontend.image) }}
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          {{- with .Values.frontend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- if not .Values.devMode.enabled }}
           securityContext:
             runAsNonRoot: true
