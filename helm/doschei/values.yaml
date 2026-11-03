@@ -14,6 +14,8 @@ frontend:
     repository: ghcr.io/sthirs/doschei/frontend
     tag: ""
     pullPolicy: IfNotPresent
+  # Container resources (requests/limits). Empty = none set.
+  resources: {}
   service:
     type: ClusterIP
     port: 8080
@@ -25,6 +27,8 @@ backend:
     repository: ghcr.io/sthirs/doschei/backend
     tag: ""
     pullPolicy: IfNotPresent
+  # Container resources (requests/limits). Empty = none set.
+  resources: {}
   service:
     type: ClusterIP
     port: 3000
@@ -102,6 +106,8 @@ postgres:
     repository: postgres
     tag: "18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5"
     pullPolicy: IfNotPresent
+  # Container resources (requests/limits). Empty = none set.
+  resources: {}
   service:
     port: 5432
   auth:
@@ -119,6 +125,8 @@ dex:
     repository: dexidp/dex
     tag: "v2.46.1@sha256:65b72ca0f4b0bf6d4ada84ec21da8851782563404ac7b8f926923d27ceced9ab"
     pullPolicy: IfNotPresent
+  # Container resources (requests/limits). Empty = none set.
+  resources: {}
   service:
     type: ClusterIP
     port: 5556

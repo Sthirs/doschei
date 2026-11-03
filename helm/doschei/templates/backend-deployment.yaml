@@ -55,6 +55,10 @@ spec:
         - name: backend
           image: {{ include "doschei.imageRepository" (dict "root" . "image" .Values.backend.image "component" "backend") }}:{{ include "doschei.imageTag" (dict "root" . "image" .Values.backend.image) }}
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          {{- with .Values.backend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- if not .Values.devMode.enabled }}
           securityContext:
             runAsNonRoot: true
