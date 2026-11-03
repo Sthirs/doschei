@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.11.0](https://github.com/Sthirs/doschei/compare/v1.10.0...v1.11.0) (2026-11-03)
+
+
+### Features
+
+* **helm:** allow setting container resources ([#174](https://github.com/Sthirs/doschei/issues/174)) ([ffae7f1](https://github.com/Sthirs/doschei/commit/ffae7f1366c017a6ab5aa3aa3d684b56a11526ff))
+
+
+### Bug Fixes
+
+* **deps:** update minor and patch updates ([#173](https://github.com/Sthirs/doschei/issues/173)) ([2259d47](https://github.com/Sthirs/doschei/commit/2259d4702c16f3d8bf3b56b94ac85ffc5a95be9a))
+
 ## [1.10.0](https://github.com/Sthirs/doschei/compare/v1.9.7...v1.10.0) (2026-10-31)
 
 
