@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/Sthirs/doschei/compare/v1.11.0...v1.11.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **deps:** update minor and patch updates ([#177](https://github.com/Sthirs/doschei/issues/177)) ([1665d26](https://github.com/Sthirs/doschei/commit/1665d2647b1695c10ce4f325346eecf03bb2f81f))
+
 ## [1.11.0](https://github.com/Sthirs/doschei/compare/v1.10.0...v1.11.0) (2026-11-03)
 
 
