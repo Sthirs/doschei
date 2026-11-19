@@ -104,7 +104,7 @@ postgres:
   enabled: true
   image:
     repository: postgres
-    tag: "18-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015"
+    tag: "18-alpine@sha256:ff64c9e3bdf8e2120107d3559de8db314e8305f7e38c5105903c6295876738ff"
     pullPolicy: IfNotPresent
   # Container resources (requests/limits). Empty = none set.
   resources: {}
