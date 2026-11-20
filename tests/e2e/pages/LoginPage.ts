@@ -1,11 +1,15 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 export class LoginPage {
-  private emailField = this.page.getByLabel('Email');
-  private passwordField = this.page.getByLabel('Password', { exact: true });
-  private signInButton = this.page.getByRole('button', { name: 'Log in' });
+  private emailField: Locator;
+  private passwordField: Locator;
+  private signInButton: Locator;
 
-  constructor(private page: Page) {}
+  constructor(private page: Page) {
+    this.emailField = this.page.getByLabel('Email');
+    this.passwordField = this.page.getByLabel('Password', { exact: true });
+    this.signInButton = this.page.getByRole('button', { name: 'Log in' });
+  }
 
   async login(email: string, password: string) {
     await this.emailField.fill(email);
