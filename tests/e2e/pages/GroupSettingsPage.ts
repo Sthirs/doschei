@@ -1,21 +1,29 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 const TOKEN_KEY = 'doschei.auth.token';
 
 export class GroupSettingsPage {
   // GroupSettingsPanel.vue — the redesigned panel's group-name input carries
   // data-testid="group-name-input".
-  private nameInput = this.page.getByTestId('group-name-input');
-  private saveButton = this.page.getByRole('button', { name: 'Save' });
-  private memberEmailInput = this.page.getByPlaceholder('user@example.com');
-  private addButton = this.page.getByRole('button', { name: 'Add' });
+  private nameInput: Locator;
+  private saveButton: Locator;
+  private memberEmailInput: Locator;
+  private addButton: Locator;
 
   // Group image upload locators
-  readonly imageEditButton = this.page.getByTestId('group-image-edit');
-  readonly imageInput = this.page.getByTestId('group-image-input');
-  readonly previewImage = this.page.getByTestId('group-image-preview');
+  readonly imageEditButton: Locator;
+  readonly imageInput: Locator;
+  readonly previewImage: Locator;
 
-  constructor(private page: Page) {}
+  constructor(private page: Page) {
+    this.nameInput = this.page.getByTestId('group-name-input');
+    this.saveButton = this.page.getByRole('button', { name: 'Save' });
+    this.memberEmailInput = this.page.getByPlaceholder('user@example.com');
+    this.addButton = this.page.getByRole('button', { name: 'Add' });
+    this.imageEditButton = this.page.getByTestId('group-image-edit');
+    this.imageInput = this.page.getByTestId('group-image-input');
+    this.previewImage = this.page.getByTestId('group-image-preview');
+  }
 
   async rename(newName: string) {
     await this.nameInput.fill(newName);

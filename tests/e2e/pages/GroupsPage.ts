@@ -1,12 +1,17 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 export class GroupsPage {
-  private createGroupButton = this.page.getByRole('button', { name: '+ Create group' });
-  private groupNameInput = this.page.getByRole('textbox', { name: 'Group name' });
-  private createButton = this.page.getByRole('button', { name: 'Create', exact: true });
-  private cancelButton = this.page.getByRole('button', { name: 'Cancel' });
+  private createGroupButton: Locator;
+  private groupNameInput: Locator;
+  private createButton: Locator;
+  private cancelButton: Locator;
 
-  constructor(private page: Page) {}
+  constructor(private page: Page) {
+    this.createGroupButton = this.page.getByRole('button', { name: '+ Create group' });
+    this.groupNameInput = this.page.getByRole('textbox', { name: 'Group name' });
+    this.createButton = this.page.getByRole('button', { name: 'Create', exact: true });
+    this.cancelButton = this.page.getByRole('button', { name: 'Cancel' });
+  }
 
   async clickCreateGroupButton() {
     await this.createGroupButton.click();

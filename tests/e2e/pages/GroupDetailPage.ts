@@ -19,80 +19,109 @@ export class GroupDetailPage {
   // ExpenseFormView.vue:333-339 — the description input shares placeholder
   // "Description"; the settle-up form has no description field, so the
   // placeholder is unambiguous.
-  private descriptionInput = this.page.getByPlaceholder('Description');
+  private descriptionInput: Locator;
   // ExpenseFormView.vue:309-328 — Amount is the <label> above a type="number"
   // input with placeholder "0.00". (SettleUpView has no <label for=amount>, so
   // the settle-up amount helper locates the input by placeholder instead.)
-  private amountInput = this.page.getByLabel('Amount');
+  private amountInput: Locator;
   // ExpenseFormView.vue:578-585 — submit button reads "Save" (or "Saving..."
   // while in flight). It is an in-flow button at the end of the form, NOT a
   // modal footer action.
-  private saveExpenseButton = this.page.getByRole('button', { name: 'Save', exact: true });
+  private saveExpenseButton: Locator;
   // ExpenseFormView.vue:588-596 — Delete is only rendered in edit mode.
   // `exact: true` so it doesn't match the "Confirm Delete" panel button.
-  private deleteExpenseButton = this.page.getByRole('button', { name: 'Delete', exact: true });
+  private deleteExpenseButton: Locator;
   // ExpenseFormView.vue:637-645 — destructive confirm button.
-  private confirmDeleteButton = this.page.getByRole('button', { name: 'Confirm Delete' });
+  private confirmDeleteButton: Locator;
 
   // CategoryPicker.vue:81-94 — the round category trigger button has an
   // aria-label of the form "Category: <label>". CategoryPicker is reused by
   // ExpenseFormView, so the same selector works on the routed form.
-  private categoryPicker = this.page.getByRole('button', { name: /^Category:/ });
+  private categoryPicker: Locator;
   // CategoryPicker.vue:160, :252 — both the desktop popover and the mobile
   // sheet expose a text input with aria-label="Search categories". The desktop
   // popover auto-focuses this input on open (CategoryPicker.vue:53-56).
-  private categorySearchInput = this.page.getByRole('textbox', { name: 'Search categories' });
+  private categorySearchInput: Locator;
   // CategoryPicker.vue:106-113 — desktop popover aria-label="Select category".
   // The mobile sheet (CategoryPicker.vue:165-178) uses the same aria-label so
   // the locator works on both layouts.
-  private categoryDialog = this.page.getByRole('dialog', { name: 'Select category' });
+  private categoryDialog: Locator;
 
   // SettleUpView.vue:317, :324 — the UserPicker instances each carry a
   // distinct data-testid ("payer-picker" / "payee-picker", passed via the
   // testId prop on UserPicker.vue), so payer and payee are looked up
   // unambiguously instead of relying on DOM order via .first()/.nth(1).
-  private settleUpPayerTrigger = this.page.getByTestId('payer-picker');
-  private settleUpPayeeTrigger = this.page.getByTestId('payee-picker');
+  private settleUpPayerTrigger: Locator;
+  private settleUpPayeeTrigger: Locator;
   // SettleUpView.vue:313-321 — submit button reads "+ Record Payment" (or
   // "Saving..." while the request is in flight).
-  private settleUpSaveButton = this.page.getByRole('button', { name: 'Record Payment' });
+  private settleUpSaveButton: Locator;
   // SettleUpView.vue:333-340 — the edit-only trigger that reveals the confirm
   // panel. Text is exactly "Delete this payment".
-  private settleUpDeleteButton = this.page.getByRole('button', { name: 'Delete this payment' });
+  private settleUpDeleteButton: Locator;
   // SettleUpView.vue:369-376 — confirm-panel destructive button. `exact: true`
   // is required because the trigger button "Delete this payment" is also in
   // the DOM while the confirm panel is visible.
-  private settleUpConfirmDeleteButton = this.page.getByRole('button', { name: 'Delete', exact: true });
+  private settleUpConfirmDeleteButton: Locator;
 
   // Export controls (GroupDetailView.vue — "Export" button next to "Settle Up"
   // opens a modal with native Month/Year <select>s and an "Export Expenses"
   // action button). The export modal is still a real overlay (separate from
   // the new routed forms), so the old `role="dialog"` scope is still correct.
-  private exportTriggerButton = this.page.getByRole('button', { name: /^Export$/, exact: true });
-  private exportDialog = this.page.getByRole('dialog', { name: 'Export expenses' });
-  private exportMonthSelect = this.exportDialog.getByLabel('Month');
-  private exportYearSelect = this.exportDialog.getByLabel('Year');
-  private exportActionButton = this.exportDialog.getByRole('button', { name: 'Export Expenses' });
+  private exportTriggerButton: Locator;
+  private exportDialog: Locator;
+  private exportMonthSelect: Locator;
+  private exportYearSelect: Locator;
+  private exportActionButton: Locator;
 
   // Totals controls (GroupDetailView.vue → ActionRow.vue — the "Totals" button
   // next to "Export" opens the TotalsModal bottom sheet, a teleported
   // role="dialog" holding the three-month stacked chart and a period stepper).
-  private totalsTriggerButton = this.page.getByRole('button', { name: /^Totals$/, exact: true });
-  private totalsDialog = this.page.getByRole('dialog', { name: 'Totals' });
-  private totalsRange = this.totalsDialog.getByTestId('totals-range');
-  private totalsPreviousButton = this.totalsDialog.getByRole('button', { name: 'Previous period' });
-  private totalsNextButton = this.totalsDialog.getByRole('button', { name: 'Next period' });
+  private totalsTriggerButton: Locator;
+  private totalsDialog: Locator;
+  private totalsRange: Locator;
+  private totalsPreviousButton: Locator;
+  private totalsNextButton: Locator;
 
   // Category recap controls (GroupDetailView.vue → ActionRow.vue — the
   // "Stats" button next to "Totals" opens CategoryRecapModal, a teleported
   // role="dialog" holding the per-family rows and a one-month stepper).
-  private categoryRecapTriggerButton = this.page.getByRole('button', { name: /^Stats$/, exact: true });
-  private categoryRecapDialog = this.page.getByRole('dialog', { name: 'Category details' });
-  private categoryRecapMonth = this.categoryRecapDialog.getByTestId('category-recap-month');
-  private categoryRecapPreviousButton = this.categoryRecapDialog.getByRole('button', { name: 'Previous month' });
-  private categoryRecapNextButton = this.categoryRecapDialog.getByRole('button', { name: 'Next month' });
+  private categoryRecapTriggerButton: Locator;
+  private categoryRecapDialog: Locator;
+  private categoryRecapMonth: Locator;
+  private categoryRecapPreviousButton: Locator;
+  private categoryRecapNextButton: Locator;
 
-  constructor(private page: Page) {}
+  constructor(private page: Page) {
+    this.descriptionInput = this.page.getByPlaceholder('Description');
+    this.amountInput = this.page.getByLabel('Amount');
+    this.saveExpenseButton = this.page.getByRole('button', { name: 'Save', exact: true });
+    this.deleteExpenseButton = this.page.getByRole('button', { name: 'Delete', exact: true });
+    this.confirmDeleteButton = this.page.getByRole('button', { name: 'Confirm Delete' });
+    this.categoryPicker = this.page.getByRole('button', { name: /^Category:/ });
+    this.categorySearchInput = this.page.getByRole('textbox', { name: 'Search categories' });
+    this.categoryDialog = this.page.getByRole('dialog', { name: 'Select category' });
+    this.settleUpPayerTrigger = this.page.getByTestId('payer-picker');
+    this.settleUpPayeeTrigger = this.page.getByTestId('payee-picker');
+    this.settleUpSaveButton = this.page.getByRole('button', { name: 'Record Payment' });
+    this.settleUpDeleteButton = this.page.getByRole('button', { name: 'Delete this payment' });
+    this.settleUpConfirmDeleteButton = this.page.getByRole('button', { name: 'Delete', exact: true });
+    this.exportTriggerButton = this.page.getByRole('button', { name: /^Export$/, exact: true });
+    this.exportDialog = this.page.getByRole('dialog', { name: 'Export expenses' });
+    this.exportMonthSelect = this.exportDialog.getByLabel('Month');
+    this.exportYearSelect = this.exportDialog.getByLabel('Year');
+    this.exportActionButton = this.exportDialog.getByRole('button', { name: 'Export Expenses' });
+    this.totalsTriggerButton = this.page.getByRole('button', { name: /^Totals$/, exact: true });
+    this.totalsDialog = this.page.getByRole('dialog', { name: 'Totals' });
+    this.totalsRange = this.totalsDialog.getByTestId('totals-range');
+    this.totalsPreviousButton = this.totalsDialog.getByRole('button', { name: 'Previous period' });
+    this.totalsNextButton = this.totalsDialog.getByRole('button', { name: 'Next period' });
+    this.categoryRecapTriggerButton = this.page.getByRole('button', { name: /^Stats$/, exact: true });
+    this.categoryRecapDialog = this.page.getByRole('dialog', { name: 'Category details' });
+    this.categoryRecapMonth = this.categoryRecapDialog.getByTestId('category-recap-month');
+    this.categoryRecapPreviousButton = this.categoryRecapDialog.getByRole('button', { name: 'Previous month' });
+    this.categoryRecapNextButton = this.categoryRecapDialog.getByRole('button', { name: 'Next month' });
+  }
 
   // ---------------------------------------------------------------------------
   // Sheet drag-to-dismiss (ADR-0027)
