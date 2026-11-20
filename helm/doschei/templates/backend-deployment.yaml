@@ -38,7 +38,8 @@ spec:
       {{- if and .Values.dex.enabled .Values.devMode.enabled }}
       initContainers:
         - name: wait-for-dex
-          image: busybox:1.36
+          image: "{{ .Values.dex.waitImage.repository }}:{{ .Values.dex.waitImage.tag }}"
+          imagePullPolicy: {{ .Values.dex.waitImage.pullPolicy }}
           command:
             - sh
             - -c
