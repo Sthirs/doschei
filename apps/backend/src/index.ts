@@ -52,6 +52,7 @@ const bootstrap = async () => {
   const app = createApp();
 
   app.listen(env.PORT, () => {
+    // codeql[js/clear-text-logging] PORT is a public listen port, not a secret.
     console.log(`Backend listening on port ${env.PORT}`);
   });
 };
