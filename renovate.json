@@ -2,6 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>neteye-platform/repo-commons", ":semanticCommits", ":dependencyDashboard", "schedule:weekly"],
   "minimumReleaseAge": "7 days",
+  "minimumReleaseAgePackageManagerSync": true,
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch"],
