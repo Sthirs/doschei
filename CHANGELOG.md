@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.3](https://github.com/Sthirs/doschei/compare/v1.11.2...v1.11.3) (2026-11-20)
+
+
+### Bug Fixes
+
+* **frontend:** use official nginx alpine image ([#191](https://github.com/Sthirs/doschei/issues/191)) ([fc6fb49](https://github.com/Sthirs/doschei/commit/fc6fb49a056d52d47053771fb6d1ff853f74b2d8))
+
 ## [1.11.2](https://github.com/Sthirs/doschei/compare/v1.11.1...v1.11.2) (2026-11-20)
 
 
