@@ -6,6 +6,7 @@ if [ -s "$HOME/.nvm/nvm.sh" ]; then
   . "$HOME/.nvm/nvm.sh"
 fi
 
-nvm install 26.2.0 >/dev/null
-nvm use 26.2.0 >/dev/null
+# No version argument: nvm reads .nvmrc (kept current by Renovate).
+nvm install >/dev/null
+nvm use >/dev/null
 npm ci

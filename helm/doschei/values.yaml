@@ -125,6 +125,11 @@ dex:
     repository: dexidp/dex
     tag: "v2.46.1@sha256:65b72ca0f4b0bf6d4ada84ec21da8851782563404ac7b8f926923d27ceced9ab"
     pullPolicy: IfNotPresent
+  # Init container on the backend that waits for Dex (devMode only).
+  waitImage:
+    repository: busybox
+    tag: "1.37@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36cd8fad289ec"
+    pullPolicy: IfNotPresent
   # Container resources (requests/limits). Empty = none set.
   resources: {}
   service:

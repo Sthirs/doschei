@@ -12,7 +12,8 @@ RUN npm ci --workspace @doschei/frontend --ignore-scripts
 COPY apps ./apps
 RUN npm run build --workspace @doschei/frontend
 
-FROM nginxinc/nginx-unprivileged:1.31.2-alpine3.23@sha256:6320020c7da8714feab524e02c08c5a1958675c4e68700e93a2fd8970b065786
+FROM nginx:1.31.9-alpine@sha256:fb4658584bd9a916ffb6f6e365f97c25cfdb2923801f551ea08356e695f14ff7
+COPY apps/frontend/nginx.main.conf /etc/nginx/nginx.conf
 COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/frontend/dist /usr/share/nginx/html
 USER nginx
