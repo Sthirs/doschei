@@ -77,7 +77,33 @@ const groupRepo = {
 
 let lastSavedExpense: Record<string, unknown> | undefined;
 
+// Expense reads go through `services/group/expenseQueries.ts` (lean
+// QueryBuilder selects). `getOne` is the reload after save, so it returns
+// the last saved expense just like `findOne` did.
+const expenseQueryBuilder = {
+  select: vi.fn(),
+  addSelect: vi.fn(),
+  leftJoin: vi.fn(),
+  leftJoinAndSelect: vi.fn(),
+  where: vi.fn(),
+  orderBy: vi.fn(),
+  addOrderBy: vi.fn(),
+  getMany: vi.fn(async (): Promise<unknown[]> => []),
+  getOne: vi.fn(async () => lastSavedExpense),
+  getRawMany: vi.fn(async (): Promise<unknown[]> => []),
+};
+const chainableExpenseQueryMethods = [
+  'select',
+  'addSelect',
+  'leftJoin',
+  'leftJoinAndSelect',
+  'where',
+  'orderBy',
+  'addOrderBy',
+] as const;
+
 const expenseRepo = {
+  createQueryBuilder: vi.fn(() => expenseQueryBuilder),
   find: vi.fn(),
   create: vi.fn((data: Record<string, unknown>) => ({
     id: 'expense-created-id',
@@ -157,6 +183,12 @@ describe('GroupService (characterization — pins current behavior pre-split)', 
     groupQueryBuilder.leftJoinAndSelect.mockReturnThis();
     groupQueryBuilder.where.mockReturnThis();
     groupQueryBuilder.orderBy.mockReturnThis();
+    for (const method of chainableExpenseQueryMethods) {
+      expenseQueryBuilder[method].mockReturnThis();
+    }
+    expenseQueryBuilder.getMany.mockResolvedValue([]);
+    expenseQueryBuilder.getOne.mockImplementation(async () => lastSavedExpense);
+    expenseQueryBuilder.getRawMany.mockResolvedValue([]);
     invitationRepo.find.mockResolvedValue([]);
     service = new GroupService();
   });
@@ -280,7 +312,10 @@ describe('GroupService (characterization — pins current behavior pre-split)', 
         ],
       };
 
-      expenseRepo.find.mockResolvedValueOnce([expenseEntity, settlementEntity]);
+      expenseQueryBuilder.getMany.mockResolvedValueOnce([
+        expenseEntity,
+        settlementEntity,
+      ]);
 
       const result = await service.getGroupByIdForUser(GROUP.id, ALICE.id);
 
@@ -473,6 +508,122 @@ describe('GroupService (characterization — pins current behavior pre-split)', 
           computedAmount: 12.5,
         },
       ]);
+    });
+  });
+
+  describe('lean expense queries — balances without image columns', () => {
+    const OTHER_GROUP = {
+      id: 'group-2',
+      name: 'Flat',
+      imageUrl: null as string | null,
+      members: [ALICE],
+    };
+
+    it('getGroupsForUser: derives each netForCurrentUser from the raw balance rows, 0 for a group without expenses', async () => {
+      groupQueryBuilder.getMany.mockResolvedValueOnce([GROUP, OTHER_GROUP]);
+      expenseQueryBuilder.getRawMany.mockResolvedValueOnce([
+        // Alice paid 30.00 split EQUAL with Bob and Carol.
+        { group_id: GROUP.id, expense_id: 'e1', paid_by_id: ALICE.id, split_user_id: ALICE.id, split_computed_amount: '10.00' },
+        { group_id: GROUP.id, expense_id: 'e1', paid_by_id: ALICE.id, split_user_id: BOB.id, split_computed_amount: '10.00' },
+        { group_id: GROUP.id, expense_id: 'e1', paid_by_id: ALICE.id, split_user_id: CAROL.id, split_computed_amount: '10.00' },
+        // Bob settled 4.00 to Alice.
+        { group_id: GROUP.id, expense_id: 'e2', paid_by_id: BOB.id, split_user_id: ALICE.id, split_computed_amount: '4.00' },
+      ]);
+
+      const result = await service.getGroupsForUser(ALICE.id);
+
+      expect(result.map((g) => [g.id, g.netForCurrentUser])).toEqual([
+        [GROUP.id, 16],
+        [OTHER_GROUP.id, 0],
+      ]);
+      expect(expenseQueryBuilder.where).toHaveBeenCalledWith(
+        'expense.group_id IN (:...groupIds)',
+        { groupIds: [GROUP.id, OTHER_GROUP.id] },
+      );
+      // The balance path never hydrates Expense entities.
+      expect(expenseRepo.find).not.toHaveBeenCalled();
+      expect(expenseQueryBuilder.getMany).not.toHaveBeenCalled();
+    });
+
+    it('getGroupsForUser: skips the expense query entirely when the user has no groups', async () => {
+      groupQueryBuilder.getMany.mockResolvedValueOnce([]);
+
+      expect(await service.getGroupsForUser(ALICE.id)).toEqual([]);
+      expect(expenseRepo.createQueryBuilder).not.toHaveBeenCalled();
+    });
+
+    const selectedColumns = () =>
+      [
+        ...expenseQueryBuilder.select.mock.calls,
+        ...expenseQueryBuilder.addSelect.mock.calls,
+      ].flatMap(([selection]) => [selection as string | string[]].flat());
+
+    it('getGroupsForUser: selects only the four balance columns', async () => {
+      groupQueryBuilder.getMany.mockResolvedValueOnce([GROUP]);
+
+      await service.getGroupsForUser(ALICE.id);
+
+      expect(selectedColumns()).toEqual([
+        'expense.group_id',
+        'expense.id',
+        'expense.paid_by_id',
+        'split.user_id',
+        'split.computed_amount',
+      ]);
+      expect(expenseQueryBuilder.leftJoinAndSelect).not.toHaveBeenCalled();
+    });
+
+    it('getGroupByIdForUser: joins payer and split users with only id + displayName (never imageUrl/email)', async () => {
+      groupQueryBuilder.getOne.mockResolvedValueOnce(GROUP);
+
+      await service.getGroupByIdForUser(GROUP.id, ALICE.id);
+
+      expect(expenseQueryBuilder.leftJoin.mock.calls).toEqual([
+        ['expense.paidBy', 'paidBy'],
+        ['split.user', 'splitUser'],
+      ]);
+      expect(expenseQueryBuilder.leftJoinAndSelect.mock.calls).toEqual([
+        ['expense.splits', 'split'],
+      ]);
+      expect(selectedColumns()).toEqual([
+        'paidBy.id',
+        'paidBy.displayName',
+        'splitUser.id',
+        'splitUser.displayName',
+      ]);
+      expect(expenseQueryBuilder.orderBy).toHaveBeenCalledWith(
+        'expense.date',
+        'DESC',
+      );
+      expect(expenseQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        'expense.createdAt',
+        'DESC',
+      );
+      expect(expenseRepo.find).not.toHaveBeenCalled();
+    });
+
+    it('createExpenseForGroup: reloads the saved expense through the same lean select', async () => {
+      groupQueryBuilder.getOne.mockResolvedValueOnce(GROUP);
+
+      await service.createExpenseForGroup(
+        GROUP.id,
+        'Dinner',
+        10,
+        '2026-02-01',
+        'food',
+        ALICE.id,
+        ALICE.id,
+        [{ userId: ALICE.id, shareType: 'EQUAL', shareValue: 0 }],
+      );
+
+      expect(expenseRepo.findOne).not.toHaveBeenCalled();
+      expect(expenseQueryBuilder.where).toHaveBeenCalledWith(
+        'expense.id = :expenseId',
+        { expenseId: 'expense-created-id' },
+      );
+      expect(selectedColumns()).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(/imageUrl|email/)]),
+      );
     });
   });
 });

@@ -4,6 +4,7 @@ import { ExpenseSplit } from '../../entities/ExpenseSplit';
 import { User } from '../../entities/User';
 import { computeAllocatedAmounts, validateSplits } from '../expenseSplitMath';
 import { notifyLedgerChange } from '../push/notifyLedgerChange';
+import { findSerializableExpense } from './expenseQueries';
 import type { GroupRepositories } from './groupRepositories';
 import {
   assertAllSplitUsersAreMembers,
@@ -81,10 +82,10 @@ export async function createExpenseForGroup(
 
   const savedExpense = await repositories.expenseRepository.save(expense);
 
-  const reloaded = await repositories.expenseRepository.findOne({
-    where: { id: savedExpense.id },
-    relations: { paidBy: true, splits: { user: true } },
-  });
+  const reloaded = await findSerializableExpense(
+    repositories.expenseRepository,
+    savedExpense.id,
+  );
 
   if (!reloaded) {
     throw new Error('Created expense could not be reloaded.');
@@ -206,10 +207,10 @@ export async function updateExpenseForGroup(
     return manager.getRepository(Expense).save(expense);
   });
 
-  const reloaded = await repositories.expenseRepository.findOne({
-    where: { id: savedExpense.id },
-    relations: { paidBy: true, splits: { user: true } },
-  });
+  const reloaded = await findSerializableExpense(
+    repositories.expenseRepository,
+    savedExpense.id,
+  );
 
   if (!reloaded) {
     throw new Error('Updated expense could not be reloaded.');

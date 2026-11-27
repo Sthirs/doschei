@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -17,6 +18,8 @@ export class ExpenseSplit {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  // Splits are always fetched by their expense (joins, cascade deletes).
+  @Index()
   @ManyToOne(() => Expense, (expense) => expense.splits, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'expense_id' })
   expense!: Expense;
