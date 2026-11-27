@@ -25,10 +25,8 @@ const { sendNotificationMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('web-push', () => ({
-  default: {
-    setVapidDetails: vi.fn(),
-    sendNotification: sendNotificationMock,
-  },
+  setVapidDetails: vi.fn(),
+  sendNotification: sendNotificationMock,
 }));
 
 import { sendToSubscription } from '../../src/services/push/webPushClient';
