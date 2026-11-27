@@ -132,8 +132,10 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
     currentPageTitle.value =
       mode.value === 'edit' ? t('settleUp.editTitle') : t('settleUp.addTitle');
 
-    // ADR-0030: cached group when it has the edit target; else fetch.
-    const cached = store.cachedDetail(groupId.value);
+    // ADR-0030: the cached group when it is fresh and has the edit target;
+    // else fetch (joining any in-flight revalidation), so defaults never come
+    // from a stale balance.
+    const cached = store.freshDetail(groupId.value);
     if (
       cached &&
       (mode.value === 'create' ||

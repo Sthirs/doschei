@@ -15,11 +15,11 @@ import type { GroupDetail, GroupsListResponse } from '@/types/group';
 
 export type CachedRead<T> = {
   data: ComputedRef<T | null>;
-  /** Nothing cached yet and no failure: the only case that shows "Loading…". */
+  /** Nothing cached, and no failure or a retry in flight: shows "Loading…". */
   isInitialLoading: ComputedRef<boolean>;
   /** Cached data is on screen but the last refetch failed (non-blocking). */
   refreshFailed: ComputedRef<boolean>;
-  /** Nothing cached and the fetch failed: the full-screen error. */
+  /** Nothing cached and the last fetch failed, none in flight: full-screen error. */
   blockingError: ComputedRef<boolean>;
   refresh: () => Promise<T | null>;
 };
@@ -38,6 +38,9 @@ const useCachedRead = <T>(
 ): CachedRead<T> => {
   const data = computed(() => entry()?.data ?? null);
   const error = computed(() => entry()?.error ?? false);
+  // A failure from an earlier request must not show the blocking error while
+  // a new one is still running: that is still "Loading…".
+  const fetching = computed(() => entry()?.isFetching ?? false);
 
   let mounted = false;
   const refresh = () => fetch();
@@ -58,9 +61,13 @@ const useCachedRead = <T>(
 
   return {
     data,
-    isInitialLoading: computed(() => !data.value && !error.value),
+    isInitialLoading: computed(
+      () => !data.value && (!error.value || fetching.value),
+    ),
     refreshFailed: computed(() => Boolean(data.value) && error.value),
-    blockingError: computed(() => !data.value && error.value),
+    blockingError: computed(
+      () => !data.value && error.value && !fetching.value,
+    ),
     refresh,
   };
 };

@@ -163,10 +163,11 @@ export const useExpenseForm = () => {
     // first paint.
     currentPageTitle.value = pageTitle.value;
 
-    // ADR-0030: use the cached group when it has what this form needs; an
+    // ADR-0030: use the cached group when it is fresh (not stale, last
+    // refresh succeeded) and has what this form needs; a stale entry, an
     // edit target missing from it (e.g. just added by another member) or a
     // cold deep link fetches instead.
-    const cached = store.cachedDetail(groupId.value);
+    const cached = store.freshDetail(groupId.value);
     if (
       cached &&
       (mode.value === 'create' ||

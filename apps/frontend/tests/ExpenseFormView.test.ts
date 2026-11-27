@@ -815,6 +815,31 @@ describe('ExpenseFormView — group data cache (ADR-0030)', () => {
     expect(wrapper.html()).not.toContain('Paid by');
   });
 
+  it.each([
+    ['a stale', { stale: true }],
+    ['an errored', { error: true }],
+  ] as const)(
+    'edit: %s cached group is refetched and the form shows the fresh expense',
+    async (_label, flags) => {
+      seedGroupDetail(
+        makeGroup({ expenses: [makeExpense({ description: 'Old text' })] }) as any,
+      );
+      Object.assign(useGroupDataStore().details.g1, flags);
+      getMock.mockResolvedValueOnce({
+        data: {
+          group: makeGroup({ expenses: [makeExpense({ description: 'Edited by Bob' })] }),
+        },
+      });
+
+      const { wrapper } = await mountAt('/groups/g1/expenses/e1/edit');
+
+      expect(getMock).toHaveBeenCalledTimes(1);
+      expect((wrapper.findAll('input[type="text"]')[0].element as HTMLInputElement).value).toBe(
+        'Edited by Bob',
+      );
+    },
+  );
+
   it('edit target missing from the cache is fetched fresh and then found', async () => {
     seedGroupDetail(makeGroup({ expenses: [] }) as any);
     getMock.mockResolvedValueOnce({

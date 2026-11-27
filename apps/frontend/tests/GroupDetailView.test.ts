@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
-import { ref } from 'vue';
+import { defineComponent, h, nextTick, onUnmounted, ref } from 'vue';
 
 import GroupDetailView from '@/views/GroupDetailView.vue';
 import { i18n } from '@/i18n';
@@ -750,6 +750,37 @@ describe('GroupDetailView — cached group (ADR-0030)', () => {
     getMock.mockReturnValueOnce(new Promise(() => {}));
 
     mountGroupDetailView();
+
+    expect(currentPageTitle.value).toBe('Cached Name');
+  });
+
+  it('keeps the cached name in the topbar when the previous view clears the title after unmounting', async () => {
+    // A route switch: the previous view's post-flush `unmounted` hook runs
+    // after this view's setup already set the title from the cache.
+    seedGroupDetail({ ...getDefaultGroup(), name: 'Cached Name' } as never);
+    getMock.mockReturnValueOnce(new Promise(() => {}));
+    const Previous = defineComponent({
+      setup() {
+        onUnmounted(() => {
+          currentPageTitle.value = null;
+        });
+        return () => h('div');
+      },
+    });
+    const showDetail = ref(false);
+    const Switcher = defineComponent({
+      setup: () => () => (showDetail.value ? h(GroupDetailView) : h(Previous)),
+    });
+    mount(Switcher, {
+      global: {
+        plugins: [i18n],
+        stubs: { Teleport: true, DateTimePicker: true, UserPicker: true, CategoryPicker: true },
+      },
+    });
+
+    showDetail.value = true;
+    await nextTick();
+    await flushPromises();
 
     expect(currentPageTitle.value).toBe('Cached Name');
   });

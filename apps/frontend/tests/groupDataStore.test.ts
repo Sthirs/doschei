@@ -144,6 +144,24 @@ describe('useGroupDataStore (ADR-0030)', () => {
       await store.fetchDetail('g1');
       expect(store.cachedDetail('g1')?.id).toBe('g1');
     });
+
+    it('freshDetail returns the group only while it is neither stale nor errored', async () => {
+      get.mockResolvedValueOnce(detailResponse(makeDetail('g1')));
+      const store = useGroupDataStore();
+      expect(store.freshDetail('g1')).toBeNull();
+      await store.fetchDetail('g1');
+      expect(store.freshDetail('g1')?.id).toBe('g1');
+
+      store.invalidateGroup('g1');
+      expect(store.cachedDetail('g1')?.id).toBe('g1');
+      expect(store.freshDetail('g1')).toBeNull();
+
+      get.mockRejectedValueOnce(new Error('network'));
+      await store.fetchDetail('g1');
+      expect(store.details.g1.error).toBe(true);
+      expect(store.cachedDetail('g1')?.id).toBe('g1');
+      expect(store.freshDetail('g1')).toBeNull();
+    });
   });
 
   describe('in-flight deduplication', () => {

@@ -286,6 +286,9 @@ test.describe('group data cache (ADR-0030)', () => {
     await new GroupsPage(page).openGroup(first.name);
     await expect(balanceCard(page)).toBeVisible({ timeout: 1000 });
     expect(await sawLoading(page)).toBe(false);
+    // The topbar shows the group's name, not the generic route title, even
+    // though the (delayed) revalidation has not landed yet.
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(first.name, { timeout: 1000 });
   });
 
   test('expense and settle-up forms open from the cache with no network', async ({ pageForUser }) => {

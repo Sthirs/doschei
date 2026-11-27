@@ -1,8 +1,8 @@
 import axios from 'axios';
 import {
   computed,
+  onBeforeUnmount,
   onMounted,
-  onUnmounted,
   ref,
   watch,
   type ComputedRef,
@@ -51,7 +51,7 @@ export type UseGroupsViewReturn = {
  * own strings through `useI18n()` instead of taking injected messages.
  *
  * MUST be called synchronously from `setup()`: it registers `onMounted` /
- * `onUnmounted`.
+ * `onBeforeUnmount`.
  */
 export const useGroupsView = (): UseGroupsViewReturn => {
   const { t, locale } = useI18n();
@@ -179,7 +179,10 @@ export const useGroupsView = (): UseGroupsViewReturn => {
     currentPageTitle.value = t('groups.title');
   });
 
-  onUnmounted(() => {
+  // Before, not after, unmount: the next view sets its title during setup
+  // (synchronously when its data is cached, ADR-0030), and a post-flush
+  // `onUnmounted` would then clear it.
+  onBeforeUnmount(() => {
     currentPageTitle.value = null;
   });
 

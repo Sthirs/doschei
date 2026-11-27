@@ -411,6 +411,49 @@ describe('useSettleUpForm — group data cache (ADR-0030)', () => {
     expect(form.amount.value).toBe(800);
   });
 
+  // The balance a fetch returns after another member changed the group:
+  // Bob is now owed 300 instead of 800.
+  const updatedGroup = (): GroupDetail => {
+    const g = makeGroup(-1);
+    g.balance.perUser[0].netForCurrentUser = -300;
+    g.balance.netForCurrentUser = -550;
+    g.netForCurrentUser = -550;
+    return g;
+  };
+
+  it.each([
+    ['a stale', { stale: true }],
+    ['an errored', { error: true }],
+  ] as const)(
+    '%s cached group is refetched and defaults come from the fresh balance',
+    async (_label, flags) => {
+      seedGroupDetail(makeGroup(-1));
+      Object.assign(useGroupDataStore().details.g1, flags);
+      getMock.mockResolvedValueOnce({ data: { group: updatedGroup() } });
+
+      const form = await mountCold();
+
+      expect(getMock).toHaveBeenCalledTimes(1);
+      expect(form.payeeId.value).toBe('user-2');
+      expect(form.amount.value).toBe(300);
+    },
+  );
+
+  it('a stale cached group joins the in-flight revalidation (one GET)', async () => {
+    seedGroupDetail(makeGroup(-1));
+    const store = useGroupDataStore();
+    store.invalidateGroup('g1');
+    getMock.mockResolvedValueOnce({ data: { group: updatedGroup() } });
+    // The detail view's revalidation, already running when the form mounts.
+    const revalidation = store.fetchDetail('g1');
+
+    const form = await mountCold();
+    await revalidation;
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect(form.amount.value).toBe(300);
+  });
+
   it('cold deep link: one GET, then the form initialises and the cache is warm', async () => {
     getMock.mockResolvedValueOnce({ data: { group: makeGroup(-1) } });
 

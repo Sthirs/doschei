@@ -153,6 +153,18 @@ export const useGroupDataStore = defineStore('groupData', () => {
   const cachedDetail = (groupId: string): GroupDetail | null =>
     details.value[groupId]?.data ?? null;
 
+  /**
+   * The cached group only when it is trustworthy to seed a form: neither
+   * invalidated since it was fetched nor left over from a failed refresh.
+   * Forms prefill amounts and edit values from it, so they must not start
+   * from outdated data the way a revalidating view safely can.
+   */
+  const freshDetail = (groupId: string): GroupDetail | null => {
+    const entry = details.value[groupId];
+    if (!entry || entry.stale || entry.error) return null;
+    return entry.data;
+  };
+
   const markStale = (entry: CacheEntry<unknown>) => {
     entry.stale = true;
     entry.version += 1;
@@ -195,6 +207,7 @@ export const useGroupDataStore = defineStore('groupData', () => {
     fetchList,
     fetchDetail,
     cachedDetail,
+    freshDetail,
     invalidateList,
     invalidateGroup,
     invalidateAll,

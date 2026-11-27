@@ -150,9 +150,10 @@ const groupExpensesByMonth = computed(() => {
 });
 
 onMounted(() => {
-  if (!group.value && history.state.groupName) {
-    currentPageTitle.value = String(history.state.groupName);
-  }
+  // Re-assert the title on mount: the previous view's unmount hooks may run
+  // after this view's setup and clear the title the watch above just set.
+  const name = group.value?.name ?? history.state?.groupName;
+  if (name) currentPageTitle.value = String(name);
 });
 
 onBeforeUnmount(() => {

@@ -146,6 +146,55 @@ describe('useCachedGroupDetail (ADR-0030)', () => {
     expect(read().refreshFailed.value).toBe(false);
   });
 
+  it('a retry after a cold failure shows loading, not the error, until it settles', async () => {
+    // e.g. a prefetch failed on a flaky network; the user then opens the group.
+    const store = useGroupDataStore();
+    store.details.g1 = {
+      data: null,
+      isFetching: false,
+      error: true,
+      stale: false,
+      version: 0,
+      settledVersion: 0,
+    };
+    const ok = deferred<unknown>();
+    get.mockReturnValueOnce(ok.promise);
+
+    const { read } = mountDetail(ref('g1'));
+    await nextTick();
+
+    expect(read().isInitialLoading.value).toBe(true);
+    expect(read().blockingError.value).toBe(false);
+
+    ok.resolve({ data: { group: makeDetail('g1') } });
+    await flushPromises();
+    expect(read().data.value?.id).toBe('g1');
+    expect(read().blockingError.value).toBe(false);
+  });
+
+  it('a retry that fails again ends in blockingError', async () => {
+    const store = useGroupDataStore();
+    store.details.g1 = {
+      data: null,
+      isFetching: false,
+      error: true,
+      stale: false,
+      version: 0,
+      settledVersion: 0,
+    };
+    const fail = deferred<unknown>();
+    get.mockReturnValueOnce(fail.promise);
+
+    const { read } = mountDetail(ref('g1'));
+    await nextTick();
+    expect(read().blockingError.value).toBe(false);
+
+    fail.reject(httpError(500));
+    await flushPromises();
+    expect(read().isInitialLoading.value).toBe(false);
+    expect(read().blockingError.value).toBe(true);
+  });
+
   it('a 404 refetch on cached data switches to blockingError', async () => {
     seedGroupDetail(makeDetail('g1'));
     get.mockRejectedValueOnce(httpError(404));
@@ -282,6 +331,23 @@ describe('useCachedGroupsList (ADR-0030)', () => {
     const cold = mountList();
     await flushPromises();
     expect(cold.read().blockingError.value).toBe(true);
+  });
+
+  it('a retry after a cold list failure shows loading, not the error', async () => {
+    const store = useGroupDataStore();
+    store.list.error = true;
+    const ok = deferred<unknown>();
+    get.mockReturnValueOnce(ok.promise);
+
+    const { read } = mountList();
+    await nextTick();
+    expect(read().isInitialLoading.value).toBe(true);
+    expect(read().blockingError.value).toBe(false);
+
+    ok.resolve({ data: makeList(['a']) });
+    await flushPromises();
+    expect(read().data.value?.groups).toHaveLength(1);
+    expect(read().blockingError.value).toBe(false);
   });
 
   it('an invalidation while mounted refetches; after unmount it does not', async () => {
