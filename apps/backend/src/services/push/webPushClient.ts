@@ -1,4 +1,4 @@
-import webpush from 'web-push';
+import * as webpush from 'web-push';
 
 import { env } from '../../config/env';
 import { validatePushEndpoint } from './endpointValidation';
