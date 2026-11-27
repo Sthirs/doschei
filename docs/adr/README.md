@@ -58,3 +58,4 @@ in the repository root). ADRs derive from the specification in [`docs/specificat
 | [ADR-0027](0027-motion-tokens-and-bottom-sheet.md) | Bottom-sheet motion and drag-to-dismiss — Carbon productive tokens, hand-written | 🟢 accepted |
 | [ADR-0028](0028-stats-label-for-category-recap-action.md) | "Stats" as the label of the category recap action | 🟢 accepted |
 | [ADR-0029](0029-http-response-compression.md) | HTTP response compression — nginx gzip for static files, Express `compression` (Brotli/gzip) for the API | 🟢 accepted |
+| [ADR-0030](0030-client-side-group-data-cache.md) | Client-side group data cache — in-memory stale-while-revalidate Pinia store | 🟢 accepted |
