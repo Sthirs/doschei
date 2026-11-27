@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   ManyToOne,
   JoinColumn,
   OneToMany,
@@ -38,6 +39,8 @@ export class Expense {
   @JoinColumn({ name: 'paid_by_id' })
   paidBy!: User;
 
+  // Every group read filters expenses by group (list balances, detail, CSV).
+  @Index()
   @ManyToOne(() => Group, (group) => group.expenses)
   @JoinColumn({ name: 'group_id' })
   group!: Group;

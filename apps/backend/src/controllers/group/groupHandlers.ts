@@ -9,10 +9,10 @@ export const listGroups = async (
   response: Response,
 ): Promise<void> => {
   const { auth } = request as AuthedRequest;
-  const groups = await groupService.getGroupsForUser(auth.userId);
-  const invitations = await invitationService.listPendingForInvitee(
-    auth.userId,
-  );
+  const [groups, invitations] = await Promise.all([
+    groupService.getGroupsForUser(auth.userId),
+    invitationService.listPendingForInvitee(auth.userId),
+  ]);
 
   response.json({ groups, invitations });
 };

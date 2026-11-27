@@ -9,6 +9,7 @@ import {
   postExpense,
   UNKNOWN_ID,
 } from './helpers/groups';
+import { postDatedExpense, SERIALIZED_EXPENSE_KEYS } from './helpers/ledgerFixture';
 
 describe('Expenses Endpoints', () => {
   beforeAll(async () => {
@@ -671,6 +672,41 @@ describe('Expenses Endpoints', () => {
       expect(afterDelete.balance.netForCurrentUser).toBe(0);
       expect(afterDelete.balance.perUser).toEqual([]);
       expect((await fetchGroup(other.token, groupId)).balance.netForCurrentUser).toBe(0);
+    });
+  });
+
+  describe('reads after adding an expense', () => {
+    it('returns the lean serialized expense, shows it first in the detail and updates the groups-list balance', async () => {
+      const { groupId, members } = await createGroupWithMembers('expenses-create-reads');
+      const [owner, other] = members;
+      await postDatedExpense(owner.token, groupId, {
+        description: 'Older',
+        amount: 10,
+        date: '2026-01-01',
+        paidByUserId: owner.user.id,
+        splits: equalSplits(members),
+      });
+
+      const created = await postDatedExpense(other.token, groupId, {
+        description: 'Newest',
+        amount: 12.4,
+        date: '2026-01-02',
+        paidByUserId: other.user.id,
+        splits: equalSplits(members),
+      });
+      const createdExpense = created.expense as unknown as Record<string, unknown>;
+      expect(Object.keys(createdExpense).sort()).toEqual(SERIALIZED_EXPENSE_KEYS);
+      expect(createdExpense).toMatchObject({ paidByName: other.user.displayName, amount: 12.4 });
+
+      const detail = await fetchGroup(owner.token, groupId);
+      expect(detail.expenses[0].id).toBe(created.expense.id);
+      // Owner: +5.00 from "Older", −6.20 from "Newest".
+      expect(detail.balance.netForCurrentUser).toBe(-1.2);
+
+      const list = await createJsonRequest<{ groups: Array<{ id: string; netForCurrentUser: number }> }>('/api/groups', {
+        headers: bearer(owner.token),
+      });
+      expect(list.body.groups.find((g) => g.id === groupId)?.netForCurrentUser).toBe(-1.2);
     });
   });
 });

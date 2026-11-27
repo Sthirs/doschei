@@ -2,6 +2,7 @@ import { AppDataSource } from '../../db/data-source';
 import { Expense } from '../../entities/Expense';
 import { ExpenseSplit } from '../../entities/ExpenseSplit';
 import { notifyLedgerChange } from '../push/notifyLedgerChange';
+import { findSerializableExpense } from './expenseQueries';
 import {
   buildSettlementSplit,
   validateSettlementInput,
@@ -97,10 +98,10 @@ export async function createSettlementForGroup(
 
   const savedExpense = await repositories.expenseRepository.save(expense);
 
-  const reloaded = await repositories.expenseRepository.findOne({
-    where: { id: savedExpense.id },
-    relations: { paidBy: true, splits: { user: true } },
-  });
+  const reloaded = await findSerializableExpense(
+    repositories.expenseRepository,
+    savedExpense.id,
+  );
 
   if (!reloaded) {
     throw new Error('Created settlement could not be reloaded.');
@@ -211,10 +212,10 @@ export async function updateSettlementForGroup(
     return manager.getRepository(Expense).save(expense);
   });
 
-  const reloaded = await repositories.expenseRepository.findOne({
-    where: { id: savedExpense.id },
-    relations: { paidBy: true, splits: { user: true } },
-  });
+  const reloaded = await findSerializableExpense(
+    repositories.expenseRepository,
+    savedExpense.id,
+  );
 
   if (!reloaded) {
     throw new Error('Updated settlement could not be reloaded.');

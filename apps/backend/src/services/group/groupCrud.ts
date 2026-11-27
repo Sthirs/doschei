@@ -1,10 +1,7 @@
-import { In } from 'typeorm';
-
-import {
-  aggregateNetForUser,
-  type AggregateBalanceInput,
-} from '../expenseSplitMath';
+import { aggregateNetForUser } from '../expenseSplitMath';
 import { computeBalance } from './balanceComputation';
+import { foldBalanceRows } from './balanceRows';
+import { findBalanceRows, findGroupExpenses } from './expenseQueries';
 import type { GroupRepositories } from './groupRepositories';
 import {
   serializeExpense,
@@ -54,29 +51,9 @@ export async function getGroupsForUser(
 
   const groupIds = groups.map((group) => group.id);
 
-  const expenses = await repositories.expenseRepository.find({
-    where: { group: { id: In(groupIds) } },
-    relations: { group: true, paidBy: true, splits: { user: true } },
-    order: { date: 'DESC', createdAt: 'DESC' },
-  });
-
-  const expensesByGroup = new Map<string, AggregateBalanceInput[]>();
-  for (const expense of expenses) {
-    const groupId = expense.group.id;
-    const entry: AggregateBalanceInput = {
-      paidByUserId: expense.paidBy.id,
-      splits: (expense.splits ?? []).map((split) => ({
-        userId: split.user.id,
-        computedAmount: Number(split.computedAmount),
-      })),
-    };
-    const list = expensesByGroup.get(groupId);
-    if (list) {
-      list.push(entry);
-    } else {
-      expensesByGroup.set(groupId, [entry]);
-    }
-  }
+  const expensesByGroup = foldBalanceRows(
+    await findBalanceRows(repositories.expenseRepository, groupIds),
+  );
 
   return groups.map((group) =>
     serializeGroup(
@@ -104,20 +81,17 @@ export async function getGroupByIdForUser(
     return null;
   }
 
-  const expenses = await repositories.expenseRepository.find({
-    where: { group: { id: groupId } },
-    relations: { paidBy: true, splits: { user: true } },
-    order: { date: 'DESC', createdAt: 'DESC' },
-  });
+  const [expenses, pendingInvitations] = await Promise.all([
+    findGroupExpenses(repositories.expenseRepository, groupId),
+    repositories.invitationRepository.find({
+      where: { groupId, status: 'pending' },
+    }),
+  ]);
 
   const serializedExpenses = expenses.map((expense) =>
     serializeExpense(expense),
   );
   const balance = computeBalance(group, serializedExpenses, userId);
-
-  const pendingInvitations = await repositories.invitationRepository.find({
-    where: { groupId, status: 'pending' },
-  });
 
   return {
     ...serializeGroup(group),
