@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
+import StatusNotice from '@/components/StatusNotice.vue';
 import { useGroupsView } from '@/composables/useGroupsView';
 import { balanceChipKind, balanceColorClass, groupInitials } from '@/lib/format';
 
@@ -9,7 +10,7 @@ const { t } = useI18n();
 const router = useRouter();
 
 const {
-  groups, invitations, isLoading, errorMessage, balanceChipLabel,
+  groups, invitations, isLoading, errorMessage, refreshFailed, balanceChipLabel,
   acceptingInvitationId, decliningInvitationId, invitationErrorMessage,
   failingInvitationId, acceptInvitation, declineInvitation,
   newGroupName, isCreateFormVisible, isCreating, createErrorMessage,
@@ -32,14 +33,13 @@ const {
       v-else-if="errorMessage"
       class="flex-1 flex items-center justify-center px-6"
     >
-      <p
-        class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
-      >
-        {{ errorMessage }}
-      </p>
+      <StatusNotice :message="errorMessage" />
     </div>
 
     <template v-else>
+      <div v-if="refreshFailed" class="shrink-0 px-4 pt-4">
+        <StatusNotice :message="t('common.refreshFailed')" live />
+      </div>
       <!-- Invitations section -->
       <section
         v-if="invitations.length > 0"

@@ -1,21 +1,28 @@
 import axios from 'axios';
-import { onMounted, onUnmounted, ref, type Ref } from 'vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+  type ComputedRef,
+  type Ref,
+} from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import { useCachedGroupsList } from '@/composables/useGroupData';
 import { api } from '@/lib/api';
 import { balanceChipKind, formatEur } from '@/lib/format';
 import { currentPageTitle } from '@/router';
-import type {
-  Group,
-  GroupsListResponse,
-  InvitationListItem,
-} from '@/types/group';
+import { useGroupDataStore } from '@/stores/groupData';
+import type { Group, InvitationListItem } from '@/types/group';
 
 export type UseGroupsViewReturn = {
-  groups: Ref<Group[]>;
-  invitations: Ref<InvitationListItem[]>;
-  isLoading: Ref<boolean>;
-  errorMessage: Ref<string>;
+  groups: ComputedRef<Group[]>;
+  invitations: ComputedRef<InvitationListItem[]>;
+  isLoading: ComputedRef<boolean>;
+  errorMessage: ComputedRef<string>;
+  refreshFailed: ComputedRef<boolean>;
   acceptingInvitationId: Ref<string | null>;
   decliningInvitationId: Ref<string | null>;
   invitationErrorMessage: Ref<string>;
@@ -33,7 +40,7 @@ export type UseGroupsViewReturn = {
 };
 
 /**
- * View model for `GroupsView`: the group + invitation list fetch, the
+ * View model for `GroupsView`: the cached group + invitation list, the
  * invitation accept/decline responses, the inline create-group form, the
  * localized balance-chip label, and the `currentPageTitle` mount/unmount
  * coupling every view shares.
@@ -44,30 +51,30 @@ export type UseGroupsViewReturn = {
  * own strings through `useI18n()` instead of taking injected messages.
  *
  * MUST be called synchronously from `setup()`: it registers `onMounted` /
- * `onUnmounted`.
+ * `onBeforeUnmount`.
  */
 export const useGroupsView = (): UseGroupsViewReturn => {
   const { t, locale } = useI18n();
 
-  const groups = ref<Group[]>([]);
-  const invitations = ref<InvitationListItem[]>([]);
-  const isLoading = ref(true);
-  const errorMessage = ref('');
+  // ADR-0030: the list renders from the in-memory cache and revalidates.
+  const store = useGroupDataStore();
+  const list = useCachedGroupsList();
+  const groups = computed(() => list.data.value?.groups ?? []);
+  const invitations = computed(() => list.data.value?.invitations ?? []);
+  const isLoading = list.isInitialLoading;
+  const errorMessage = computed(() =>
+    list.blockingError.value ? t('groups.loadFailed') : '',
+  );
 
   const loadGroups = async () => {
-    isLoading.value = true;
-    errorMessage.value = '';
-
-    try {
-      const { data } = await api.get<GroupsListResponse>('/groups');
-      groups.value = data.groups;
-      invitations.value = data.invitations ?? [];
-    } catch {
-      errorMessage.value = t('groups.loadFailed');
-    } finally {
-      isLoading.value = false;
-    }
+    store.invalidateList();
+    await list.refresh();
   };
+
+  // Warm the first groups' details so opening one is instant (ADR-0030 §5).
+  watch(groups, (next) => store.prefetchDetails(next.map((g) => g.id)), {
+    immediate: true,
+  });
 
   const acceptingInvitationId = ref<string | null>(null);
   const decliningInvitationId = ref<string | null>(null);
@@ -170,10 +177,12 @@ export const useGroupsView = (): UseGroupsViewReturn => {
 
   onMounted(() => {
     currentPageTitle.value = t('groups.title');
-    loadGroups();
   });
 
-  onUnmounted(() => {
+  // Before, not after, unmount: the next view sets its title during setup
+  // (synchronously when its data is cached, ADR-0030), and a post-flush
+  // `onUnmounted` would then clear it.
+  onBeforeUnmount(() => {
     currentPageTitle.value = null;
   });
 
@@ -182,6 +191,7 @@ export const useGroupsView = (): UseGroupsViewReturn => {
     invitations,
     isLoading,
     errorMessage,
+    refreshFailed: list.refreshFailed,
     acceptingInvitationId,
     decliningInvitationId,
     invitationErrorMessage,

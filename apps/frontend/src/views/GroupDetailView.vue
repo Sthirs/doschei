@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import { onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -7,16 +7,17 @@ import ActionRow from '@/components/group-detail/ActionRow.vue';
 import BalanceCard from '@/components/group-detail/BalanceCard.vue';
 import ExpenseRow from '@/components/group-detail/ExpenseRow.vue';
 import GroupDetailSheets from '@/components/group-detail/GroupDetailSheets.vue';
+import StatusNotice from '@/components/StatusNotice.vue';
 import TopbarBackButton from '@/components/group-detail/TopbarBackButton.vue';
 import TopbarSettingsButtons from '@/components/group-detail/TopbarSettingsButtons.vue';
+import { useCachedGroupDetail } from '@/composables/useGroupData';
 import { useGroupDetailOverlays } from '@/composables/useGroupDetailOverlays';
-import { api } from '@/lib/api';
 import { goBackTo } from '@/lib/backNavigation';
 import { fromDateValue, getExpenseDateValue } from '@/lib/expenseDate';
-import { currentPageTitle, sharedGroup } from '@/router';
+import { currentPageTitle } from '@/router';
 import { useAuthStore } from '@/stores/auth';
 
-import type { GroupDetail, Expense } from '@/types/group';
+import type { Expense } from '@/types/group';
 
 const { t, locale } = useI18n();
 
@@ -27,9 +28,6 @@ const router = useRouter();
 // re-instantiated per rendered row.
 const authStore = useAuthStore();
 
-const group = ref<GroupDetail | null>(null);
-const isLoading = ref(true);
-const errorMessage = ref('');
 const {
   showTotalsModal,
   openTotals,
@@ -43,6 +41,24 @@ const {
 } = useGroupDetailOverlays();
 
 const groupId = computed(() => route.params.id as string);
+// ADR-0030: render the cached group at once and revalidate behind it. The
+// expense and settle-up forms read the same cache entry.
+const {
+  data: group,
+  isInitialLoading: isLoading,
+  refreshFailed,
+  blockingError,
+} = useCachedGroupDetail(groupId);
+const errorMessage = computed(() =>
+  blockingError.value ? t('groupDetail.loadFailed') : '',
+);
+watch(
+  () => group.value?.name,
+  (name) => {
+    if (name) currentPageTitle.value = name;
+  },
+  { immediate: true },
+);
 
 const expenseNetForUser = (expense: Expense): number => {
   const currentUserId = authStore.user?.id;
@@ -57,29 +73,11 @@ const expenseNetForUser = (expense: Expense): number => {
   return userSplit ? -Number(userSplit.computedAmount) : 0;
 };
 
-const loadGroup = async () => {
-  isLoading.value = true;
-  errorMessage.value = '';
-
-  try {
-    const { data } = await api.get<{ group: GroupDetail }>(
-      `/groups/${groupId.value}`,
-    );
-    group.value = data.group;
-    currentPageTitle.value = data.group.name;
-  } catch {
-    errorMessage.value = t('groupDetail.loadFailed');
-  } finally {
-    isLoading.value = false;
-  }
-};
-
 const goBack = () => {
   goBackTo(router, { name: 'groups' });
 };
 
 const navigateToExpenseNew = () => {
-  sharedGroup.value = group.value;
   router.push({
     name: 'expense-new',
     params: { id: groupId.value },
@@ -87,7 +85,6 @@ const navigateToExpenseNew = () => {
   });
 };
 const navigateToExpenseEdit = (expenseId: string) => {
-  sharedGroup.value = group.value;
   router.push({
     name: 'expense-edit',
     params: { id: groupId.value, expenseId },
@@ -95,7 +92,6 @@ const navigateToExpenseEdit = (expenseId: string) => {
   });
 };
 const navigateToSettleUpNew = () => {
-  sharedGroup.value = group.value;
   router.push({
     name: 'settleup-new',
     params: { id: groupId.value },
@@ -103,7 +99,6 @@ const navigateToSettleUpNew = () => {
   });
 };
 const navigateToSettleUpEdit = (sid: string) => {
-  sharedGroup.value = group.value;
   router.push({
     name: 'settleup-edit',
     params: { id: groupId.value, sid },
@@ -155,10 +150,10 @@ const groupExpensesByMonth = computed(() => {
 });
 
 onMounted(() => {
-  if (history.state.groupName) {
-    currentPageTitle.value = String(history.state.groupName);
-  }
-  loadGroup();
+  // Re-assert the title on mount: the previous view's unmount hooks may run
+  // after this view's setup and clear the title the watch above just set.
+  const name = group.value?.name ?? history.state?.groupName;
+  if (name) currentPageTitle.value = String(name);
 });
 
 onBeforeUnmount(() => {
@@ -186,6 +181,7 @@ onBeforeUnmount(() => {
       <template v-else-if="group">
         <!-- Sticky header: balance + actions -->
         <div class="shrink-0 px-4 pt-3 pb-3 flex flex-col gap-3">
+          <StatusNotice v-if="refreshFailed" :message="t('common.refreshFailed')" live />
           <!-- Balance summary card -->
           <BalanceCard v-if="group.balance" :balance="group.balance" />
 
@@ -269,11 +265,7 @@ onBeforeUnmount(() => {
         v-if="errorMessage"
         class="flex-1 flex items-center justify-center px-4"
       >
-        <p
-          class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
-        >
-          {{ errorMessage }}
-        </p>
+        <StatusNotice :message="errorMessage" />
       </div>
     </div>
   </main>

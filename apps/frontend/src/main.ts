@@ -2,10 +2,12 @@ import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import { registerSW } from 'virtual:pwa-register';
 import { createBrowserPorts, checkForNewBuild, shouldRunCheck } from '@/lib/appVersion';
+import { installGroupDataLifecycle } from '@/lib/groupDataLifecycle';
 import { setupPushNotifications } from '@/lib/push';
 import { onAccessTokenChange, onSessionExpired } from '@/lib/sessionRefresh';
 import { installViewportResync } from '@/lib/viewportResync';
 import { useAuthStore } from '@/stores/auth';
+import { useGroupDataStore } from '@/stores/groupData';
 
 import App from './App.vue';
 import { i18n, setAppLocale, type Locale } from './i18n';
@@ -72,6 +74,16 @@ onSessionExpired(() => {
   authStore.$subscribe(wirePushIfNeeded);
   wirePushIfNeeded();
 }
+
+// ADR-0030: clear the group data cache when the session ends and revalidate
+// it on focus and on push.
+installGroupDataLifecycle({
+  authStore: useAuthStore(),
+  groupData: useGroupDataStore(),
+  doc: document,
+  serviceWorker:
+    typeof navigator !== 'undefined' ? navigator.serviceWorker : undefined,
+});
 
 // Mirror the active locale into <html lang> at boot; the auth store will
 // call setAppLocale again after Task 8 wires the server-side preference.

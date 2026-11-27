@@ -33,6 +33,7 @@ import { join } from 'node:path';
 
 import { chromium, devices, expect, test as base, type Page } from '@playwright/test';
 import { test as authTest } from './fixtures/auth';
+import { clearGroupLedgerViaApi } from './pages';
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
 
@@ -221,6 +222,61 @@ test.describe('Push notifications (ADR-0025)', () => {
     });
 
     await waitForNotificationCount(page).toBe(0);
+  });
+
+  // ADR-0030: besides showing the notification, sw.ts posts the push URL to
+  // every open window, and the page marks that group's cached data stale. An
+  // open group page therefore shows the change without a reload. This drives
+  // the REAL worker (CDP deliverPushMessage), not a synthetic page message.
+  test('a push for an open group refreshes that group page in place', async ({
+    pushPage: page,
+    deliverPush,
+  }) => {
+    const login = await fetch(`${baseURL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'demo@doschei.local', password: 'password123' }),
+    });
+    const { token, user } = (await login.json()) as { token: string; user: { id: string } };
+    const call = async <T,>(method: string, path: string, body?: unknown): Promise<T> => {
+      const res = await fetch(`${baseURL}/api${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`);
+      return (await res.json()) as T;
+    };
+
+    const name = `e2e-push-cache-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const { group } = await call<{ group: { id: string } }>('POST', '/groups', { name });
+
+    try {
+      await page.goto(`/groups/${group.id}`);
+      await expect(page.getByText('No expenses yet')).toBeVisible();
+      await page.evaluate(() => navigator.serviceWorker.ready);
+
+      // A change made elsewhere; the page does not know about it yet.
+      await call('POST', `/groups/${group.id}/expenses`, {
+        description: 'Pushed gelato',
+        amount: 4,
+        paidByUserId: user.id,
+        splits: [{ userId: user.id, shareType: 'EQUAL', shareValue: 0 }],
+      });
+      const refetch = page.waitForRequest(
+        (r) => r.method() === 'GET' && r.url().endsWith(`/api/groups/${group.id}`),
+      );
+
+      await deliverPush({ title: name, body: 'New expense', url: `/groups/${group.id}` });
+
+      await refetch;
+      await expect(
+        page.getByTestId('expense-row').filter({ hasText: 'Pushed gelato' }),
+      ).toBeVisible();
+    } finally {
+      // Leave the shared demo user's group inert (settled, no entries).
+      await clearGroupLedgerViaApi(group.id, 'demo@doschei.local', 'password123');
+    }
   });
 });
 

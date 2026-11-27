@@ -589,8 +589,8 @@ export class GroupDetailPage {
   // ExpenseRow's native click is forwarded via attribute fallthrough and
   // routed to navigateToSettleUpEdit for SETTLEMENT-kind entries). This is
   // deliberately NOT the same code path as `gotoSettleUpEdit` (a direct
-  // `page.goto`), so it also exercises the `sharedGroup` deep-link fallback
-  // in useSettleUpForm.ts:121-133 rather than always hitting the API fetch.
+  // `page.goto`), so the form reads the group from the ADR-0030 in-memory
+  // cache (useSettleUpForm.ts) rather than always hitting the API fetch.
   async clickSettlementRow() {
     await this.page.getByTestId('expense-row').filter({ hasText: 'Settlement' }).click();
   }

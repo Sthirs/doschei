@@ -36,6 +36,7 @@ export const it = {
     deleting: 'Eliminazione…',
     settings: 'Impostazioni',
     loading: 'Caricamento…',
+    refreshFailed: 'Aggiornamento non riuscito. Mostro gli ultimi dati caricati.',
     close: 'Chiudi',
     saveChanges: 'Salva modifiche',
     balanceOwed: 'Ti devono {amount}',

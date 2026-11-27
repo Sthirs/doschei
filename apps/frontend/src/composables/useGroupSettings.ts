@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ref, type Ref } from 'vue';
+import { ref, watch, type Ref } from 'vue';
 
 import {
   useImageUpload,
@@ -66,6 +66,16 @@ export const useGroupSettings = (
   const authStore = useAuthStore();
 
   const groupName = ref(group().name);
+  // ADR-0030: the panel can mount on a cached group whose name a background
+  // revalidation later changes. Follow the server name while the draft is
+  // untouched, so Save does not submit (and revert to) a stale name; an
+  // in-progress edit is kept.
+  watch(
+    () => group().name,
+    (next, prev) => {
+      if (groupName.value === prev) groupName.value = next;
+    },
+  );
   const nameError = ref('');
   const isSubmittingName = ref(false);
 

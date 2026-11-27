@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 
 import GroupsView from '@/views/GroupsView.vue';
 import { i18n } from '@/i18n';
 import type { Group, InvitationListItem } from '@/types/group';
+import { useGroupDataStore } from '@/stores/groupData';
+import { deferred, httpError, seedGroupDetail, seedGroupsList } from './helpers/groupDataCache';
 
 // Mock the api module
 const mockApiGet = vi.fn();
@@ -262,5 +264,173 @@ describe('GroupsView', () => {
     expect(bobAvatar.exists()).toBe(true);
     expect(bobAvatar.find('img').exists()).toBe(false);
     expect(bobAvatar.text()).toContain('B');
+  });
+});
+
+// --- ADR-0030: the list renders from the group data cache ---
+describe('GroupsView — cached list (ADR-0030)', () => {
+  const listCalls = () => mockApiGet.mock.calls.filter(([url]) => url === '/groups');
+  const detailCalls = () =>
+    mockApiGet.mock.calls
+      .map(([url]) => url as string)
+      .filter((url) => url.startsWith('/groups/'));
+
+  /** GET /groups → list; GET /groups/:id → never settles (prefetch noise). */
+  const routeGets = (list: { groups: Group[]; invitations?: InvitationListItem[] }) => {
+    mockApiGet.mockImplementation((url: string) =>
+      url === '/groups'
+        ? Promise.resolve({ data: { invitations: [], ...list } })
+        : new Promise(() => {}),
+    );
+  };
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    mockApiGet.mockReset();
+    mockApiPost.mockReset();
+    mockCurrentPageTitle.value = null;
+  });
+
+  it('cached list renders immediately (no "Loading…") and still revalidates', async () => {
+    seedGroupsList({ groups: [makeGroup({ name: 'Cached trip' })], invitations: [] });
+    const pending = deferred<unknown>();
+    mockApiGet.mockImplementation((url: string) =>
+      url === '/groups' ? pending.promise : new Promise(() => {}),
+    );
+
+    const wrapper = mount(GroupsView, { global: { plugins: [i18n] } });
+
+    expect(wrapper.text()).toContain('Cached trip');
+    expect(wrapper.text()).not.toContain('Loading');
+    expect(listCalls()).toHaveLength(1);
+
+    pending.resolve({ data: { groups: [makeGroup({ name: 'Fresh trip' })], invitations: [] } });
+    await flushPromises();
+    expect(wrapper.text()).toContain('Fresh trip');
+  });
+
+  it('cached invitations render immediately too', () => {
+    seedGroupsList({
+      groups: [],
+      invitations: [
+        { id: 'inv-1', groupId: 'g9', groupName: 'Ski week', inviterName: 'Bob', createdAt: '2026-01-01' },
+      ],
+    });
+    mockApiGet.mockImplementation(() => new Promise(() => {}));
+
+    const wrapper = mount(GroupsView, { global: { plugins: [i18n] } });
+
+    expect(wrapper.text()).toContain('Ski week');
+  });
+
+  it('prefetches the details of the first 3 groups only', async () => {
+    routeGets({
+      groups: ['a', 'b', 'c', 'd', 'e'].map((id) => makeGroup({ id, name: id })),
+    });
+
+    mount(GroupsView, { global: { plugins: [i18n] } });
+    await flushPromises();
+
+    expect(detailCalls()).toEqual(['/groups/a', '/groups/b', '/groups/c']);
+  });
+
+  it('does not prefetch groups whose detail is already cached', async () => {
+    seedGroupDetail({ ...makeGroup({ id: 'a' }), expenses: [], balance: {} } as never);
+    routeGets({ groups: ['a', 'b'].map((id) => makeGroup({ id, name: id })) });
+
+    mount(GroupsView, { global: { plugins: [i18n] } });
+    await flushPromises();
+
+    expect(detailCalls()).toEqual(['/groups/b']);
+  });
+
+  it('createGroup success invalidates and refetches the list, and the new group appears', async () => {
+    let groups = [makeGroup({ id: 'a', name: 'Existing' })];
+    mockApiGet.mockImplementation((url: string) =>
+      url === '/groups'
+        ? Promise.resolve({ data: { groups, invitations: [] } })
+        : new Promise(() => {}),
+    );
+    mockApiPost.mockImplementation(() => {
+      groups = [...groups, makeGroup({ id: 'b', name: 'Brand new' })];
+      return Promise.resolve({ data: {} });
+    });
+    const wrapper = mount(GroupsView, { global: { plugins: [i18n] } });
+    await flushPromises();
+    const invalidateList = vi.spyOn(useGroupDataStore(), 'invalidateList');
+
+    await wrapper.findAll('button').find((b) => b.text().includes('+ Create group'))!.trigger('click');
+    await wrapper.find('input[placeholder="Group name"]').setValue('Brand new');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(mockApiPost).toHaveBeenCalledWith('/groups', { name: 'Brand new' });
+    expect(invalidateList).toHaveBeenCalled();
+    expect(wrapper.text()).toContain('Brand new');
+    // Mount + post-create refetch, deduplicated (watcher + explicit refresh).
+    expect(listCalls()).toHaveLength(2);
+  });
+
+  it('createGroup failure does not invalidate the list', async () => {
+    routeGets({ groups: [makeGroup()] });
+    mockApiPost.mockRejectedValue(httpError(500));
+    const wrapper = mount(GroupsView, { global: { plugins: [i18n] } });
+    await flushPromises();
+    const invalidateList = vi.spyOn(useGroupDataStore(), 'invalidateList');
+
+    await wrapper.findAll('button').find((b) => b.text().includes('+ Create group'))!.trigger('click');
+    await wrapper.find('input[placeholder="Group name"]').setValue('Nope');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(invalidateList).not.toHaveBeenCalled();
+    expect(listCalls()).toHaveLength(1);
+  });
+
+  it.each(['Accept', 'Decline'])('%s success invalidates and refetches the list', async (label) => {
+    routeGets({
+      groups: [],
+      invitations: [
+        { id: 'inv-1', groupId: 'g9', groupName: 'Ski week', inviterName: 'Bob', createdAt: '2026-01-01' },
+      ],
+    });
+    mockApiPost.mockResolvedValue({ data: {} });
+    const wrapper = mount(GroupsView, { global: { plugins: [i18n] } });
+    await flushPromises();
+    const invalidateList = vi.spyOn(useGroupDataStore(), 'invalidateList');
+
+    await wrapper.findAll('button').find((b) => b.text().trim() === label)!.trigger('click');
+    await flushPromises();
+
+    expect(mockApiPost).toHaveBeenCalledWith(
+      `/groups/g9/invitations/inv-1/${label.toLowerCase()}`,
+    );
+    expect(invalidateList).toHaveBeenCalled();
+    expect(listCalls()).toHaveLength(2);
+  });
+
+  it('a failed refresh over a cached list keeps it and shows the inline notice', async () => {
+    seedGroupsList({ groups: [makeGroup({ name: 'Cached trip' })], invitations: [] });
+    mockApiGet.mockImplementation((url: string) =>
+      url === '/groups' ? Promise.reject(httpError(500)) : new Promise(() => {}),
+    );
+
+    const wrapper = mount(GroupsView, { global: { plugins: [i18n] } });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Cached trip');
+    expect(wrapper.text()).toContain('Could not refresh. Showing the last loaded data.');
+    expect(wrapper.text()).not.toContain('We could not load your groups.');
+  });
+
+  it('a cold failure shows the full-screen error', async () => {
+    mockApiGet.mockRejectedValue(httpError(500));
+
+    const wrapper = mount(GroupsView, { global: { plugins: [i18n] } });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('We could not load your groups.');
+    expect(wrapper.text()).not.toContain('Could not refresh');
   });
 });

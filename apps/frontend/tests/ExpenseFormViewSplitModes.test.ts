@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { ref } from 'vue';
@@ -7,14 +8,11 @@ import ExpenseFormView from '@/views/ExpenseFormView.vue';
 import { i18n } from '@/i18n';
 import { api } from '@/lib/api';
 import type { GroupDetail } from '@/types/group';
+import { seedGroupDetail } from './helpers/groupDataCache';
 
-const mocks = vi.hoisted(() => ({
-  sharedGroup: { value: null as GroupDetail | null },
-}));
 
 vi.mock('@/router', () => ({
   currentPageTitle: ref<string | null>(null),
-  sharedGroup: mocks.sharedGroup,
 }));
 
 vi.mock('@/lib/api', () => ({
@@ -111,8 +109,9 @@ describe('ExpenseFormView split modes and delete flow', () => {
   let errorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.clearAllMocks();
-    mocks.sharedGroup.value = makeGroup() as unknown as GroupDetail;
+    seedGroupDetail(makeGroup() as unknown as GroupDetail);
     (
       api.patch as never as { mockResolvedValue: (v: unknown) => void }
     ).mockResolvedValue({ data: {} });

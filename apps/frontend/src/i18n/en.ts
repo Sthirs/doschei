@@ -23,6 +23,7 @@ export const en = {
     deleting: 'Deleting…',
     settings: 'Settings',
     loading: 'Loading…',
+    refreshFailed: 'Could not refresh. Showing the last loaded data.',
     close: 'Close',
     saveChanges: 'Save Changes',
     // Shared by GroupsView rows and GroupDetailView header; {amount} is pre-formatted via formatEur().
