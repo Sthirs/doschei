@@ -151,6 +151,26 @@ describe('GroupSettingsPanel', () => {
     expect(saveButton.text()).toContain('Save');
   });
 
+  it('follows a server-side rename while the name field is untouched', async () => {
+    const wrapper = mountComponent();
+    await wrapper.setProps({ group: makeGroup({ name: 'Venice 2026' }) });
+
+    const input = wrapper.find<HTMLInputElement>('[data-testid="group-name-input"]');
+    expect(input.element.value).toBe('Venice 2026');
+    const buttons = wrapper.findAll('button[type="button"]');
+    expect(buttons[buttons.length - 1].attributes('disabled')).toBeDefined();
+  });
+
+  it('keeps an in-progress name edit when the server name changes', async () => {
+    const wrapper = mountComponent();
+    const input = wrapper.find<HTMLInputElement>('[data-testid="group-name-input"]');
+    await input.setValue('My draft');
+
+    await wrapper.setProps({ group: makeGroup({ name: 'Venice 2026' }) });
+
+    expect(input.element.value).toBe('My draft');
+  });
+
   // Image picker tests
   it('renders image picker with placeholder when imageUrl is null', () => {
     const wrapper = mountComponent(makeGroup({ imageUrl: null }));

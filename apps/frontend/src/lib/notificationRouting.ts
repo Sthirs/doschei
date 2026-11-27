@@ -41,5 +41,12 @@ export function groupIdFromPushUrl(url: unknown): string | null {
     return null;
   }
   const match = /^\/groups\/([^/]+)/.exec(pathname);
-  return match ? decodeURIComponent(match[1]) : null;
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    // Malformed percent-encoding: no usable id, so the caller falls back to
+    // invalidating the list.
+    return null;
+  }
 }

@@ -260,11 +260,13 @@ test.describe('group data cache (ADR-0030)', () => {
     await installLoadingProbe(page);
     const detailGets = countRequests(page, isDetailGet());
 
-    const prefetched = Promise.all(
-      [0, 1, 2].map(() => page.waitForResponse((r) => isDetailGet()(r.request()))),
-    );
+    // Distinct group ids, so one response cannot stand in for all three.
+    const prefetchedIds = new Set<string>();
+    page.on('response', (r) => {
+      if (isDetailGet()(r.request())) prefetchedIds.add(new URL(r.url()).pathname.split('/').pop()!);
+    });
     await page.goto('/groups');
-    await prefetched;
+    await expect.poll(() => prefetchedIds.size).toBe(3);
     await page.waitForTimeout(500); // would catch a 4th prefetch
 
     expect(detailGets).toHaveLength(3);

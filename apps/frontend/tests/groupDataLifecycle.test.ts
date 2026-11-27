@@ -120,8 +120,7 @@ describe('installGroupDataLifecycle (ADR-0030 §6)', () => {
     it('unrelated auth state changes do not reset', () => {
       const { authStore, reset } = setup();
 
-      authStore.isLoading = true;
-      authStore.isLoading = false;
+      authStore.$patch({ isLoading: true });
       authStore.setToken('rotated-token'); // silent refresh, same user
       authStore.user = user('u1'); // same user re-fetched
 

@@ -52,7 +52,7 @@ describe('groupIdFromPushUrl (ADR-0030)', () => {
     expect(groupIdFromPushUrl(url)).toBe(expected);
   });
 
-  it.each([['/'], ['/groups'], ['/groups/'], ['/account'], [''], ['/groupsabc'], [undefined], [null], [42]])(
+  it.each([['/'], ['/groups'], ['/groups/'], ['/account'], [''], ['/groupsabc'], ['/groups/%'], ['/groups/%E0%A4%A'], [undefined], [null], [42]])(
     '%s → null',
     (url) => {
       expect(groupIdFromPushUrl(url)).toBeNull();
