@@ -60,15 +60,29 @@ self.addEventListener('push', (event: PushEvent) => {
   const url = payload.url ?? '/';
 
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: '/logo-192.png',
-      badge: '/logo-192.png',
-      tag: url,
-      data: { url },
-    }),
+    Promise.all([
+      self.registration.showNotification(payload.title, {
+        body: payload.body,
+        icon: '/logo-192.png',
+        badge: '/logo-192.png',
+        tag: url,
+        data: { url },
+      }),
+      notifyOpenClients(url),
+    ]),
   );
 });
+
+// ADR-0030: tell open pages which group changed so they mark its cached data
+// stale (lib/groupDataLifecycle.ts). This only posts a message; the worker
+// still never handles /api/ traffic.
+async function notifyOpenClients(url: string): Promise<void> {
+  const windows = await self.clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true,
+  });
+  for (const client of windows) client.postMessage({ type: 'push', url });
+}
 
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
   event.notification.close();

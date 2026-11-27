@@ -1,42 +1,46 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import { onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 
-import { api } from '@/lib/api';
 import { goBackTo } from '@/lib/backNavigation';
 import GroupSettingsPanel from '@/components/GroupSettingsPanel.vue';
+import StatusNotice from '@/components/StatusNotice.vue';
+import { useCachedGroupDetail } from '@/composables/useGroupData';
 import { currentPageTitle } from '@/router';
-import type { GroupDetail } from '@/types/group';
+import { useGroupDataStore } from '@/stores/groupData';
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-
-const group = ref<GroupDetail | null>(null);
-const isLoading = ref(true);
-const errorMessage = ref('');
+const store = useGroupDataStore();
 
 const groupId = computed(() => route.params.id as string);
 
-const loadGroup = async () => {
-  isLoading.value = true;
-  errorMessage.value = '';
+// ADR-0030: read the shared cache entry; a settings change invalidates it
+// (and the list), and the mounted read refetches.
+const {
+  data: group,
+  isInitialLoading: isLoading,
+  refreshFailed,
+  blockingError,
+} = useCachedGroupDetail(groupId);
+const errorMessage = computed(() =>
+  blockingError.value ? t('groupDetail.loadFailed') : '',
+);
 
-  try {
-    const { data } = await api.get<{ group: GroupDetail }>(
-      `/groups/${groupId.value}`,
-    );
-    group.value = data.group;
-    currentPageTitle.value = t('groupDetail.settingsTitleSuffix', {
-      name: data.group.name,
-    });
-  } catch {
-    errorMessage.value = t('groupDetail.loadFailed');
-  } finally {
-    isLoading.value = false;
-  }
+const setTitle = (name: string) => {
+  currentPageTitle.value = t('groupDetail.settingsTitleSuffix', { name });
 };
+watch(
+  () => group.value?.name,
+  (name) => {
+    if (name) setTitle(name);
+  },
+  { immediate: true },
+);
+
+const onUpdated = () => store.invalidateGroup(groupId.value);
 
 const goBack = () => {
   goBackTo(router, {
@@ -47,12 +51,9 @@ const goBack = () => {
 };
 
 onMounted(() => {
-  if (history.state.groupName) {
-    currentPageTitle.value = t('groupDetail.settingsTitleSuffix', {
-      name: String(history.state.groupName),
-    });
+  if (!group.value && history.state.groupName) {
+    setTitle(String(history.state.groupName));
   }
-  loadGroup();
 });
 
 onBeforeUnmount(() => {
@@ -89,15 +90,11 @@ onBeforeUnmount(() => {
       </section>
 
       <template v-else-if="group">
-        <GroupSettingsPanel :group="group" @updated="loadGroup" />
+        <StatusNotice v-if="refreshFailed" :message="t('common.refreshFailed')" live />
+        <GroupSettingsPanel :group="group" @updated="onUpdated" />
       </template>
 
-      <p
-        v-if="errorMessage"
-        class="rounded-md border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
-      >
-        {{ errorMessage }}
-      </p>
+      <StatusNotice v-if="errorMessage" :message="errorMessage" />
     </div>
   </main>
 </template>

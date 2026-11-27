@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { ref } from 'vue';
@@ -8,19 +9,12 @@ import { i18n } from '@/i18n';
 import { api } from '@/lib/api';
 import { currentPageTitle } from '@/router';
 import type { GroupDetail } from '@/types/group';
+import { useGroupDataStore } from '@/stores/groupData';
+import { seedGroupDetail } from './helpers/groupDataCache';
 
-// The view imports `currentPageTitle` and `sharedGroup` from @/router. Mock
-// the module: `currentPageTitle` with a real ref so the test can read what the
-// component wrote to the topbar title lifecycle, and `sharedGroup` (hoisted so
-// the vi.mock factory can reference it) to seed the group that would otherwise
-// arrive via router history state.
-const mocks = vi.hoisted(() => ({
-  sharedGroup: { value: null as GroupDetail | null },
-}));
 
 vi.mock('@/router', () => ({
   currentPageTitle: ref<string | null>(null),
-  sharedGroup: mocks.sharedGroup,
 }));
 
 // Mock the api module — the production api is an axios instance whose methods
@@ -95,7 +89,7 @@ const mountAt = async (
       },
     },
   });
-  // onMounted reads the group from the sharedGroup ref synchronously, then
+  // onMounted reads the group from the ADR-0030 cache synchronously, then
   // runs initialise(). Flush the chain.
   await flushPromises();
   await wrapper.vm.$nextTick();
@@ -213,12 +207,13 @@ const makeExpense = (overrides: Record<string, unknown> = {}) => ({
 
 describe('ExpenseFormView', () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.clearAllMocks();
     currentPageTitle.value = null;
-    // The view reads the group from the shared `sharedGroup` ref on mount
-    // instead of fetching it. Seed it so the group is available; tests that
-    // need different data override `mocks.sharedGroup.value` themselves.
-    mocks.sharedGroup.value = makeGroup() as any;
+    // The view reads the group from the ADR-0030 cache on mount instead of
+    // fetching it. Seed it so the group is available; tests that need
+    // different data seed their own group.
+    seedGroupDetail(makeGroup() as any);
     (
       api.post as unknown as { mockResolvedValue: (v: unknown) => unknown }
     ).mockResolvedValue({
@@ -290,9 +285,9 @@ describe('ExpenseFormView', () => {
   });
 
   it('edit mode happy path: title set, description pre-filled, patch called, navigates to group-detail', async () => {
-    mocks.sharedGroup.value = makeGroup({
+    seedGroupDetail(makeGroup({
       expenses: [makeExpense({ description: 'Old' })],
-    }) as any;
+    }) as any);
 
     const { wrapper, router } = await mountAt('/groups/g1/expenses/e1/edit');
 
@@ -353,11 +348,17 @@ describe('ExpenseFormView', () => {
   });
 
   it('edit 404 path: nonexistent expense → "Expense not found." + back-arrow still injected', async () => {
-    mocks.sharedGroup.value = makeGroup({ expenses: [] }) as any;
+    seedGroupDetail(makeGroup({ expenses: [] }) as any);
+    // ADR-0030: an edit target missing from the cached group triggers one
+    // fresh fetch before the form gives up with "not found".
+    (
+      api.get as unknown as { mockResolvedValue: (v: unknown) => unknown }
+    ).mockResolvedValue({ data: { group: makeGroup({ expenses: [] }) } });
 
     const { wrapper } = await mountAt('/groups/g1/expenses/nonexistent/edit');
 
     expect(wrapper.html()).toContain('Expense not found.');
+    expect(api.get).toHaveBeenCalledTimes(1);
     // The back-arrow lives in a <Teleport> at the top of the template, which
     // renders unconditionally regardless of loading / not-found / form state.
     expect(wrapper.html()).toContain('Back to group');
@@ -366,6 +367,7 @@ describe('ExpenseFormView', () => {
 
 describe('ExpenseFormView category auto-selection', () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.useFakeTimers();
   });
   afterEach(() => {
@@ -373,7 +375,7 @@ describe('ExpenseFormView category auto-selection', () => {
   });
 
   it('create mode: typing a known description auto-picks the matching category after the debounce window', async () => {
-    mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
+    seedGroupDetail(makeGroupWithBusTrainHistory() as any);
     const { wrapper } = await mountAt('/groups/g1/expenses/new', {
       CategoryPicker: CategoryPickerStub,
     });
@@ -395,7 +397,7 @@ describe('ExpenseFormView category auto-selection', () => {
   });
 
   it('create mode guard: a manual pick on the picker is preserved across subsequent description inputs', async () => {
-    mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
+    seedGroupDetail(makeGroupWithBusTrainHistory() as any);
     const { wrapper } = await mountAt('/groups/g1/expenses/new', {
       CategoryPicker: CategoryPickerStub,
     });
@@ -417,7 +419,7 @@ describe('ExpenseFormView category auto-selection', () => {
   });
 
   it('edit mode: stored non-default category is preserved through init and through typing', async () => {
-    mocks.sharedGroup.value = makeGroup({
+    seedGroupDetail(makeGroup({
       expenses: [
         makeExpense({
           id: 'e-hotel',
@@ -425,7 +427,7 @@ describe('ExpenseFormView category auto-selection', () => {
           category: 'hotel',
         }),
       ],
-    }) as any;
+    }) as any);
     const { wrapper } = await mountAt('/groups/g1/expenses/e-hotel/edit', {
       CategoryPicker: CategoryPickerStub,
     });
@@ -446,7 +448,7 @@ describe('ExpenseFormView category auto-selection', () => {
   });
 
   it('gibberish description produces no suggestion: category stays at its current value', async () => {
-    mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
+    seedGroupDetail(makeGroupWithBusTrainHistory() as any);
     const { wrapper } = await mountAt('/groups/g1/expenses/new', {
       CategoryPicker: CategoryPickerStub,
     });
@@ -463,7 +465,7 @@ describe('ExpenseFormView category auto-selection', () => {
   });
 
   it('unmount while a suggestion timer is pending does not log warnings or errors', async () => {
-    mocks.sharedGroup.value = makeGroupWithBusTrainHistory() as any;
+    seedGroupDetail(makeGroupWithBusTrainHistory() as any);
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -489,7 +491,7 @@ describe('ExpenseFormView category auto-selection', () => {
   });
 
   it('renders paid-by chip with image when member has imageUrl', async () => {
-    mocks.sharedGroup.value = makeGroupWithAvatars() as any;
+    seedGroupDetail(makeGroupWithAvatars() as any);
     const { wrapper } = await mountAt('/groups/g1/expenses/new');
 
     // Paid-by section renders a button per group member
@@ -526,9 +528,10 @@ describe('ExpenseFormView category auto-selection', () => {
 
 describe('ExpenseFormView payer default', () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.clearAllMocks();
     currentPageTitle.value = null;
-    mocks.sharedGroup.value = makeGroup() as any;
+    seedGroupDetail(makeGroup() as any);
     (
       api.post as unknown as { mockResolvedValue: (v: unknown) => unknown }
     ).mockResolvedValue({
@@ -547,7 +550,7 @@ describe('ExpenseFormView payer default', () => {
   });
 
   it('me-not-first: current user is not members[0] → their chip is selected and payload uses their id', async () => {
-    mocks.sharedGroup.value = makeGroup({
+    seedGroupDetail(makeGroup({
       members: [makeMember('user-2', 'Bob'), makeMember('user-1', 'Alice')],
       balance: {
         currentUserId: 'user-1',
@@ -555,7 +558,7 @@ describe('ExpenseFormView payer default', () => {
         netForCurrentUser: 0,
         perUser: [],
       },
-    }) as any;
+    }) as any);
 
     const { wrapper } = await mountAt('/groups/g1/expenses/new');
 
@@ -610,14 +613,14 @@ describe('ExpenseFormView payer default', () => {
   });
 
   it('fallback: currentUserId not in members → members[0] chip is selected (legacy default preserved)', async () => {
-    mocks.sharedGroup.value = makeGroup({
+    seedGroupDetail(makeGroup({
       balance: {
         currentUserId: 'user-99',
         currentUserName: 'Unknown',
         netForCurrentUser: 0,
         perUser: [],
       },
-    }) as any;
+    }) as any);
 
     const { wrapper } = await mountAt('/groups/g1/expenses/new');
 
@@ -636,9 +639,9 @@ describe('ExpenseFormView payer default', () => {
   });
 
   it('edit regression: stored payer wins over signed-in user', async () => {
-    mocks.sharedGroup.value = makeGroup({
+    seedGroupDetail(makeGroup({
       expenses: [makeExpense({ paidByUserId: 'user-2' })],
-    }) as any;
+    }) as any);
 
     const { wrapper } = await mountAt('/groups/g1/expenses/e1/edit');
 
@@ -673,9 +676,10 @@ describe('ExpenseFormView payer default', () => {
 // 23-24 — those cover interaction/behaviour; this covers DOM structure only.
 describe('ExpenseFormView DOM-invariance snapshot', () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.clearAllMocks();
     currentPageTitle.value = null;
-    mocks.sharedGroup.value = makeGroup() as unknown as GroupDetail;
+    seedGroupDetail(makeGroup() as unknown as GroupDetail);
     (
       api.post as unknown as { mockResolvedValue: (v: unknown) => unknown }
     ).mockResolvedValue({
@@ -743,5 +747,199 @@ describe('ExpenseFormView DOM-invariance snapshot', () => {
         </div>
       </main>"
     `);
+  });
+});
+
+// --- ADR-0030: the form reads the group data cache ---
+describe('ExpenseFormView — group data cache (ADR-0030)', () => {
+  const getMock = api.get as unknown as ReturnType<typeof vi.fn>;
+  const postMock = api.post as unknown as ReturnType<typeof vi.fn>;
+  const patchMock = api.patch as unknown as ReturnType<typeof vi.fn>;
+  const deleteMock = api.delete as unknown as ReturnType<typeof vi.fn>;
+
+  /** Order of the first navigation call (goBackTo pops or replaces). */
+  const spyNavigation = (router: Router) => {
+    const replace = vi.spyOn(router, 'replace');
+    const back = vi.spyOn(router, 'back');
+    return () =>
+      Math.min(
+        ...[...replace.mock.invocationCallOrder, ...back.mock.invocationCallOrder],
+      );
+  };
+
+  const fillValidCreate = async (wrapper: Awaited<ReturnType<typeof mountAt>>['wrapper']) => {
+    await wrapper.findAll('input[type="number"]')[0].setValue('100');
+    await wrapper.findAll('input[type="text"]')[0].setValue('Dinner');
+    (wrapper.vm as unknown as { split: { toggleSplitUser: (id: string) => void } })
+      .split.toggleSplitUser('user-2');
+    await wrapper.vm.$nextTick();
+  };
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    getMock.mockReset();
+    postMock.mockReset().mockResolvedValue({ data: {} });
+    patchMock.mockReset().mockResolvedValue({ data: {} });
+    deleteMock.mockReset().mockResolvedValue({ data: {} });
+    currentPageTitle.value = null;
+  });
+
+  it('cached group: the form initialises with zero GETs (payer chips populated)', async () => {
+    seedGroupDetail(makeGroup() as any);
+
+    const { wrapper } = await mountAt('/groups/g1/expenses/new');
+
+    expect(getMock).not.toHaveBeenCalled();
+    const paidBy = wrapper.findAll('span').find((s) => s.text() === 'Paid by')!;
+    expect(paidBy.element.parentElement!.querySelectorAll('button')).toHaveLength(2);
+  });
+
+  it('cold deep link: one GET, then the form initialises and the cache is warm for the way back', async () => {
+    getMock.mockResolvedValueOnce({ data: { group: makeGroup() } });
+
+    const { wrapper } = await mountAt('/groups/g1/expenses/new');
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect(getMock).toHaveBeenCalledWith('/groups/g1');
+    expect(wrapper.html()).toContain('Paid by');
+    expect(useGroupDataStore().cachedDetail('g1')?.id).toBe('g1');
+  });
+
+  it('cold deep link that fails shows the load error', async () => {
+    getMock.mockRejectedValueOnce(new Error('offline'));
+
+    const { wrapper } = await mountAt('/groups/g1/expenses/new');
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.html()).not.toContain('Paid by');
+  });
+
+  it('edit target missing from the cache is fetched fresh and then found', async () => {
+    seedGroupDetail(makeGroup({ expenses: [] }) as any);
+    getMock.mockResolvedValueOnce({
+      data: { group: makeGroup({ expenses: [makeExpense({ description: 'Added by Bob' })] }) },
+    });
+
+    const { wrapper } = await mountAt('/groups/g1/expenses/e1/edit');
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect((wrapper.findAll('input[type="text"]')[0].element as HTMLInputElement).value).toBe(
+      'Added by Bob',
+    );
+    expect(wrapper.html()).not.toContain('Expense not found.');
+  });
+
+  it('edit target present in the cache: zero GETs', async () => {
+    seedGroupDetail(makeGroup({ expenses: [makeExpense()] }) as any);
+
+    await mountAt('/groups/g1/expenses/e1/edit');
+
+    expect(getMock).not.toHaveBeenCalled();
+  });
+
+  it('create success invalidates the group BEFORE navigating back', async () => {
+    const store = seedGroupDetail(makeGroup() as any);
+    const invalidate = vi.spyOn(store, 'invalidateGroup');
+    const { wrapper, router } = await mountAt('/groups/g1/expenses/new');
+    const firstNavigation = spyNavigation(router);
+    await fillValidCreate(wrapper);
+
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(invalidate).toHaveBeenCalledWith('g1');
+    expect(invalidate.mock.invocationCallOrder[0]).toBeLessThan(firstNavigation());
+    expect(store.details.g1.stale).toBe(true);
+    expect(store.list.stale).toBe(true);
+    expect(router.currentRoute.value.name).toBe('group-detail');
+  });
+
+  it('update success invalidates the group before navigating back', async () => {
+    const store = seedGroupDetail(makeGroup({ expenses: [makeExpense()] }) as any);
+    const invalidate = vi.spyOn(store, 'invalidateGroup');
+    const { wrapper, router } = await mountAt('/groups/g1/expenses/e1/edit');
+    const firstNavigation = spyNavigation(router);
+
+    await wrapper.findAll('input[type="text"]')[0].setValue('Renamed');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(patchMock).toHaveBeenCalled();
+    expect(invalidate).toHaveBeenCalledWith('g1');
+    expect(invalidate.mock.invocationCallOrder[0]).toBeLessThan(firstNavigation());
+  });
+
+  it('delete success invalidates the group before navigating back', async () => {
+    const store = seedGroupDetail(makeGroup({ expenses: [makeExpense()] }) as any);
+    const invalidate = vi.spyOn(store, 'invalidateGroup');
+    const { wrapper, router } = await mountAt('/groups/g1/expenses/e1/edit');
+
+    await wrapper.findAll('button').find((b) => b.text() === 'Delete')!.trigger('click');
+    await flushPromises();
+    const back = vi.spyOn(router, 'back');
+    const replace = vi.spyOn(router, 'replace');
+    await wrapper.findAll('button').find((b) => b.text() === 'Confirm Delete')!.trigger('click');
+    await flushPromises();
+    await flushPromises();
+
+    expect(deleteMock).toHaveBeenCalledWith('/groups/g1/expenses/e1');
+    expect(invalidate).toHaveBeenCalledWith('g1');
+    const navOrders = [...back.mock.invocationCallOrder, ...replace.mock.invocationCallOrder];
+    expect(navOrders.length).toBeGreaterThan(0);
+    expect(invalidate.mock.invocationCallOrder[0]).toBeLessThan(Math.min(...navOrders));
+    expect(router.currentRoute.value.name).toBe('group-detail');
+  });
+
+  it('a failed create does not invalidate and leaves the cache entry untouched', async () => {
+    const store = seedGroupDetail(makeGroup() as any);
+    const invalidate = vi.spyOn(store, 'invalidateGroup');
+    postMock.mockRejectedValueOnce(new Error('500'));
+    const { wrapper, router } = await mountAt('/groups/g1/expenses/new');
+    await fillValidCreate(wrapper);
+
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(store.details.g1.stale).toBe(false);
+    expect(store.details.g1.version).toBe(0);
+    expect(router.currentRoute.value.name).toBe('expense-new');
+  });
+
+  it('a failed delete does not invalidate', async () => {
+    const store = seedGroupDetail(makeGroup({ expenses: [makeExpense()] }) as any);
+    const invalidate = vi.spyOn(store, 'invalidateGroup');
+    deleteMock.mockRejectedValueOnce(new Error('500'));
+    const { wrapper } = await mountAt('/groups/g1/expenses/e1/edit');
+
+    await wrapper.findAll('button').find((b) => b.text() === 'Delete')!.trigger('click');
+    await flushPromises();
+    await wrapper.findAll('button').find((b) => b.text() === 'Confirm Delete')!.trigger('click');
+    await flushPromises();
+
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it('a background cache refresh while typing does not overwrite the form', async () => {
+    const store = seedGroupDetail(makeGroup() as any);
+    const { wrapper } = await mountAt('/groups/g1/expenses/new');
+    await wrapper.findAll('input[type="text"]')[0].setValue('Typed by user');
+    await wrapper.findAll('input[type="number"]')[0].setValue('42');
+
+    getMock.mockResolvedValueOnce({
+      data: { group: makeGroup({ name: 'Refreshed', expenses: [makeExpense()] }) },
+    });
+    store.invalidateGroup('g1');
+    await store.fetchDetail('g1');
+    await flushPromises();
+
+    expect(store.details.g1.data?.name).toBe('Refreshed');
+    expect((wrapper.findAll('input[type="text"]')[0].element as HTMLInputElement).value).toBe(
+      'Typed by user',
+    );
+    expect((wrapper.findAll('input[type="number"]')[0].element as HTMLInputElement).value).toBe(
+      '42',
+    );
   });
 });

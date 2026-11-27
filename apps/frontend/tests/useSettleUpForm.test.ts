@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
@@ -8,6 +9,9 @@ import {
 } from '@/composables/useSettleUpForm';
 import { i18n } from '@/i18n';
 import type { GroupDetail } from '@/types/group';
+import { api } from '@/lib/api';
+import { useGroupDataStore } from '@/stores/groupData';
+import { seedGroupDetail } from './helpers/groupDataCache';
 
 const mocks = vi.hoisted(() => {
   const afterEachCallbacks: Array<() => void> = [];
@@ -30,7 +34,6 @@ const mocks = vi.hoisted(() => {
     afterEachCallbacks,
     historyBack: null as string | null,
     currentPageTitle: { value: null as string | null },
-    sharedGroup: { value: null as GroupDetail | null },
   };
 });
 
@@ -76,7 +79,6 @@ vi.mock('vue-router', () => ({
 
 vi.mock('@/router', () => ({
   currentPageTitle: mocks.currentPageTitle,
-  sharedGroup: mocks.sharedGroup,
 }));
 
 /**
@@ -118,7 +120,7 @@ const makeGroup = (perUserSign: 1 | -1): GroupDetail => ({
 });
 
 const mountForm = async (group: GroupDetail) => {
-  mocks.sharedGroup.value = group;
+  seedGroupDetail(group);
   let form!: UseSettleUpFormReturn;
   const Host = defineComponent({
     setup() {
@@ -133,6 +135,7 @@ const mountForm = async (group: GroupDetail) => {
 
 describe('useSettleUpForm', () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.clearAllMocks();
     mocks.route.name = 'settleup-new';
     mocks.route.params = { id: 'g1' };
@@ -141,7 +144,6 @@ describe('useSettleUpForm', () => {
     mocks.afterEachCallbacks.length = 0;
     mocks.historyBack = null;
     mocks.currentPageTitle.value = null;
-    mocks.sharedGroup.value = null;
   });
 
   it('recomputes the amount when ONLY payeeId changes', async () => {
@@ -244,6 +246,7 @@ describe('useSettleUpForm', () => {
 // (see useRoutedOverlay.test.ts and GroupDetailOverlayRoutes.test.ts for that).
 describe('useSettleUpForm — back navigation (ADR-0024)', () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.clearAllMocks();
     mocks.route.name = 'settleup-new';
     mocks.route.params = { id: 'g1' };
@@ -252,7 +255,6 @@ describe('useSettleUpForm — back navigation (ADR-0024)', () => {
     mocks.afterEachCallbacks.length = 0;
     mocks.historyBack = null;
     mocks.currentPageTitle.value = null;
-    mocks.sharedGroup.value = null;
   });
 
   it('save exit pops history when the previous entry already is group-detail', async () => {
@@ -341,5 +343,216 @@ describe('useSettleUpForm — back navigation (ADR-0024)', () => {
 
     form.amount.value = 10.01;
     expect(form.isValid.value).toBe(true);
+  });
+});
+
+// --- ADR-0030: the settle-up form reads the group data cache ---
+describe('useSettleUpForm — group data cache (ADR-0030)', () => {
+  const getMock = api.get as unknown as ReturnType<typeof vi.fn>;
+  const postMock = api.post as unknown as ReturnType<typeof vi.fn>;
+  const patchMock = api.patch as unknown as ReturnType<typeof vi.fn>;
+  const deleteMock = api.delete as unknown as ReturnType<typeof vi.fn>;
+
+  const settlement = (id = 's1') => ({
+    id,
+    kind: 'SETTLEMENT' as const,
+    description: '',
+    amount: 42,
+    category: '',
+    paidByName: 'Alice',
+    paidByUserId: 'user-1',
+    settledWithUserId: 'user-2',
+    settledWithName: 'Bob',
+    date: '2024-01-01',
+    createdAt: '2024-01-01',
+    splits: [],
+  });
+
+  const withSettlement = () => ({ ...makeGroup(-1), expenses: [settlement()] });
+
+  /** Mount the composable WITHOUT seeding (mountForm always seeds). */
+  const mountCold = async () => {
+    let form!: UseSettleUpFormReturn;
+    const Host = defineComponent({
+      setup() {
+        form = useSettleUpForm();
+        return () => h('div');
+      },
+    });
+    mount(Host, { global: { plugins: [i18n] } });
+    await flushPromises();
+    return form;
+  };
+
+  const firstNavigationOrder = () =>
+    Math.min(...mocks.back.mock.invocationCallOrder, ...mocks.replace.mock.invocationCallOrder);
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    getMock.mockReset();
+    postMock.mockReset().mockResolvedValue({ data: {} });
+    patchMock.mockReset().mockResolvedValue({ data: {} });
+    deleteMock.mockReset().mockResolvedValue({ data: {} });
+    mocks.route.name = 'settleup-new';
+    mocks.route.params = { id: 'g1' };
+    mocks.route.query = {};
+    mocks.afterEachCallbacks.length = 0;
+    mocks.historyBack = '/groups/g1';
+  });
+
+  it('cached group: zero GETs, and create defaults come from the cached balance', async () => {
+    const { form } = await mountForm(makeGroup(-1));
+
+    expect(getMock).not.toHaveBeenCalled();
+    // Current user owes most to Bob (800) per the cached balance.
+    expect(form.payerId.value).toBe('user-1');
+    expect(form.payeeId.value).toBe('user-2');
+    expect(form.amount.value).toBe(800);
+  });
+
+  it('cold deep link: one GET, then the form initialises and the cache is warm', async () => {
+    getMock.mockResolvedValueOnce({ data: { group: makeGroup(-1) } });
+
+    const form = await mountCold();
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect(getMock).toHaveBeenCalledWith('/groups/g1');
+    expect(form.group.value?.id).toBe('g1');
+    expect(form.payeeId.value).toBe('user-2');
+    expect(useGroupDataStore().cachedDetail('g1')).not.toBeNull();
+  });
+
+  it('cold deep link that fails sets loadError', async () => {
+    getMock.mockRejectedValueOnce(new Error('offline'));
+
+    const form = await mountCold();
+
+    expect(form.loadError.value).toBe(true);
+    expect(form.group.value).toBeNull();
+  });
+
+  it('edit: settlement missing from the cache is fetched fresh and found', async () => {
+    mocks.route.name = 'settleup-edit';
+    mocks.route.params = { id: 'g1', sid: 's1' };
+    getMock.mockResolvedValueOnce({ data: { group: withSettlement() } });
+
+    const { form } = await mountForm(makeGroup(-1)); // cached, but no s1
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect(form.notFound.value).toBe(false);
+    expect(form.amount.value).toBe(42);
+  });
+
+  it('edit: still missing after the fresh fetch → notFound', async () => {
+    mocks.route.name = 'settleup-edit';
+    mocks.route.params = { id: 'g1', sid: 's1' };
+    getMock.mockResolvedValueOnce({ data: { group: makeGroup(-1) } });
+
+    const { form } = await mountForm(makeGroup(-1));
+
+    expect(getMock).toHaveBeenCalledTimes(1);
+    expect(form.notFound.value).toBe(true);
+  });
+
+  it('edit: settlement present in the cache → zero GETs', async () => {
+    mocks.route.name = 'settleup-edit';
+    mocks.route.params = { id: 'g1', sid: 's1' };
+
+    const { form } = await mountForm(withSettlement());
+
+    expect(getMock).not.toHaveBeenCalled();
+    expect(form.amount.value).toBe(42);
+  });
+
+  it('create success invalidates the group before navigating back', async () => {
+    const { form } = await mountForm(makeGroup(-1));
+    const store = useGroupDataStore();
+    const invalidate = vi.spyOn(store, 'invalidateGroup');
+
+    await form.submit();
+    await flushPromises();
+
+    expect(postMock).toHaveBeenCalledWith('/groups/g1/settlements', expect.any(Object));
+    expect(invalidate).toHaveBeenCalledWith('g1');
+    expect(invalidate.mock.invocationCallOrder[0]).toBeLessThan(firstNavigationOrder());
+    expect(store.details.g1.stale).toBe(true);
+    expect(store.list.stale).toBe(true);
+  });
+
+  it('update success invalidates the group before navigating back', async () => {
+    mocks.route.name = 'settleup-edit';
+    mocks.route.params = { id: 'g1', sid: 's1' };
+    const { form } = await mountForm(withSettlement());
+    const invalidate = vi.spyOn(useGroupDataStore(), 'invalidateGroup');
+
+    await form.submit();
+    await flushPromises();
+
+    expect(patchMock).toHaveBeenCalledWith('/groups/g1/settlements/s1', expect.any(Object));
+    expect(invalidate).toHaveBeenCalledWith('g1');
+    expect(invalidate.mock.invocationCallOrder[0]).toBeLessThan(firstNavigationOrder());
+  });
+
+  it('delete success invalidates the group before navigating back', async () => {
+    mocks.route.name = 'settleup-edit';
+    mocks.route.params = { id: 'g1', sid: 's1' };
+    const { form } = await mountForm(withSettlement());
+    const invalidate = vi.spyOn(useGroupDataStore(), 'invalidateGroup');
+
+    await form.deleteSettlement();
+    await flushPromises();
+
+    expect(deleteMock).toHaveBeenCalledWith('/groups/g1/settlements/s1');
+    expect(invalidate).toHaveBeenCalledWith('g1');
+    expect(invalidate.mock.invocationCallOrder[0]).toBeLessThan(firstNavigationOrder());
+  });
+
+  it.each([
+    ['create', 'settleup-new', postMock],
+    ['update', 'settleup-edit', patchMock],
+  ] as const)('a failed %s does not invalidate', async (_label, routeName, mock) => {
+    mocks.route.name = routeName;
+    mocks.route.params = { id: 'g1', sid: 's1' };
+    mock.mockRejectedValueOnce(new Error('500'));
+    const { form } = await mountForm(withSettlement());
+    const store = useGroupDataStore();
+    const invalidate = vi.spyOn(store, 'invalidateGroup');
+
+    await form.submit();
+    await flushPromises();
+
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(store.details.g1.version).toBe(0);
+    expect(form.errorMessage.value).not.toBe('');
+  });
+
+  it('a failed delete does not invalidate', async () => {
+    mocks.route.name = 'settleup-edit';
+    mocks.route.params = { id: 'g1', sid: 's1' };
+    deleteMock.mockRejectedValueOnce(new Error('500'));
+    const { form } = await mountForm(withSettlement());
+    const invalidate = vi.spyOn(useGroupDataStore(), 'invalidateGroup');
+
+    await form.deleteSettlement();
+    await flushPromises();
+
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it('a background cache refresh does not overwrite a hand-edited amount', async () => {
+    const { form } = await mountForm(makeGroup(-1));
+    form.amount.value = 12.5;
+    form.amountTouched.value = true;
+    const store = useGroupDataStore();
+
+    getMock.mockResolvedValueOnce({ data: { group: makeGroup(1) } });
+    store.invalidateGroup('g1');
+    await store.fetchDetail('g1');
+    await flushPromises();
+
+    expect(store.details.g1.data?.netForCurrentUser).toBe(1050);
+    expect(form.amount.value).toBe(12.5);
+    expect(form.payerId.value).toBe('user-1');
   });
 });

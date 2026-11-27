@@ -14,7 +14,8 @@ import { api } from '@/lib/api';
 import { goBackTo } from '@/lib/backNavigation';
 import { hasStorablePrecision } from '@/lib/money';
 import { computeSettleUpDefaults, settlementAmountFor } from '@/lib/settleUp';
-import { currentPageTitle, sharedGroup } from '@/router';
+import { currentPageTitle } from '@/router';
+import { useGroupDataStore } from '@/stores/groupData';
 import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
 import type { GroupDetail } from '@/types/group';
 
@@ -46,14 +47,14 @@ const todayDateValue = (): string => {
 };
 
 /**
- * View model for `SettleUpView`: route-derived mode, the group fetch with its
- * `sharedGroup` deep-link fallback, settlement form state, validation, and the
+ * View model for `SettleUpView`: route-derived mode, the group read from the
+ * ADR-0030 cache (fetched on a cold deep link), settlement form state, validation, and the
  * create / edit / delete submissions.
  *
  * Unlike `useExpenseSplit` — a *shared*, deliberately i18n-free logic
  * composable — this one is bound to a single view and already depends on the
- * router, the API client, and the module-level `currentPageTitle` /
- * `sharedGroup` refs. There is no purity left to protect by injecting
+ * router, the API client, the group data store, and the module-level
+ * `currentPageTitle` ref. There is no purity left to protect by injecting
  * messages, so it resolves its own strings through `useI18n()`.
  *
  * MUST be called synchronously from `setup()`: it registers `onMounted` /
@@ -64,6 +65,7 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
   const { t } = useI18n();
   const route = useRoute();
   const router = useRouter();
+  const store = useGroupDataStore();
 
   const mode = computed<'create' | 'edit'>(() =>
     route.name === 'settleup-edit' ? 'edit' : 'create',
@@ -75,15 +77,11 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
   const notFound = ref(false);
   const loadError = ref(false);
 
+  // Assign and initialise in one tick so the form never renders half-loaded.
   const loadGroup = async () => {
-    try {
-      const { data } = await api.get<{ group: GroupDetail }>(
-        `/groups/${groupId.value}`,
-      );
-      group.value = data.group;
-    } catch {
-      loadError.value = true;
-    }
+    const fetched = await store.fetchDetail(groupId.value);
+    if (!fetched) loadError.value = true;
+    return fetched;
   };
 
   const payerId = ref('');
@@ -134,16 +132,23 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
     currentPageTitle.value =
       mode.value === 'edit' ? t('settleUp.editTitle') : t('settleUp.addTitle');
 
-    const passedGroup = sharedGroup.value;
-    sharedGroup.value = null;
-    if (passedGroup?.id === groupId.value) {
-      group.value = passedGroup;
+    // ADR-0030: cached group when it has the edit target; else fetch.
+    const cached = store.cachedDetail(groupId.value);
+    if (
+      cached &&
+      (mode.value === 'create' ||
+        cached.expenses.some((e) => e.id === sid.value))
+    ) {
+      group.value = cached;
       initialise();
       return;
     }
 
-    await loadGroup();
-    if (group.value) initialise();
+    const fetched = await loadGroup();
+    if (fetched) {
+      group.value = fetched;
+      initialise();
+    }
   });
 
   onBeforeUnmount(() => {
@@ -224,6 +229,7 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
           body,
         );
       }
+      store.invalidateGroup(groupId.value);
       goToGroupDetail();
     } catch {
       errorMessage.value = t('settleUp.saveError');
@@ -237,6 +243,7 @@ export const useSettleUpForm = (): UseSettleUpFormReturn => {
     errorMessage.value = '';
     try {
       await api.delete(`/groups/${groupId.value}/settlements/${sid.value}`);
+      store.invalidateGroup(groupId.value);
       // The overlay's own entry points at this now-deleted settlement, so it
       // must be dropped (replace), not popped, before goToGroupDetail() pops.
       await closeDeleteConfirmBeforeLeaving();

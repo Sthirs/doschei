@@ -42,12 +42,8 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-const mocks = vi.hoisted(() => ({
-  sharedGroup: { value: null as any },
-}));
 vi.mock('@/router', () => ({
   currentPageTitle: ref('Test Group'),
-  sharedGroup: mocks.sharedGroup,
 }));
 
 vi.mock('@/stores/auth', () => ({

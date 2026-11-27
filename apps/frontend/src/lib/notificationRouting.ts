@@ -26,3 +26,20 @@ export function resolveNotificationClick<T extends ClientLike>(
 
   return existing ? { type: 'focus', client: existing } : { type: 'open', url: targetUrl };
 }
+
+/**
+ * ADR-0030: the group a push payload is about, so the page can mark that
+ * group's cached data stale. Push URLs are `/groups/:id` (backend
+ * `notifyLedgerChange` / `notifyInvitation`). Anything else yields `null`.
+ */
+export function groupIdFromPushUrl(url: unknown): string | null {
+  if (typeof url !== 'string' || url === '') return null;
+  let pathname: string;
+  try {
+    pathname = new URL(url, 'https://app.invalid').pathname;
+  } catch {
+    return null;
+  }
+  const match = /^\/groups\/([^/]+)/.exec(pathname);
+  return match ? decodeURIComponent(match[1]) : null;
+}

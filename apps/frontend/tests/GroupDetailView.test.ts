@@ -6,6 +6,9 @@ import { ref } from 'vue';
 import GroupDetailView from '@/views/GroupDetailView.vue';
 import { i18n } from '@/i18n';
 import { api } from '@/lib/api';
+import { currentPageTitle } from '@/router';
+import { useGroupDataStore } from '@/stores/groupData';
+import { deferred, httpError, seedGroupDetail } from './helpers/groupDataCache';
 
 // The default group payload used by the mocked api.get. Declared as a hoisted
 // function (not a const) so the vi.mock factory can call it even though vi.mock
@@ -140,13 +143,8 @@ vi.mock('vue-router', () => ({
   }),
 }));
 
-// Mock the router module's currentPageTitle and sharedGroup
-const mocks = vi.hoisted(() => ({
-  sharedGroup: { value: null as any },
-}));
 vi.mock('@/router', () => ({
   currentPageTitle: ref('Test Group'),
-  sharedGroup: mocks.sharedGroup,
 }));
 
 // Mock auth store
@@ -599,6 +597,7 @@ describe('GroupDetailView DOM-invariance snapshot', () => {
           <!-- Loading -->
           <!-- Sticky header: balance + actions -->
           <div class="shrink-0 px-4 pt-3 pb-3 flex flex-col gap-3">
+            <!--v-if-->
             <!-- Balance summary card -->
             <section class="balance-card sm:p-4 p-3">
               <div class="flex justify-between">
@@ -688,5 +687,181 @@ describe('GroupDetailView DOM-invariance snapshot', () => {
         </div>
       </main>"
     `);
+  });
+});
+
+// --- ADR-0030: stale-while-revalidate from the group data cache ---
+describe('GroupDetailView — cached group (ADR-0030)', () => {
+  const getMock = api.get as unknown as ReturnType<typeof vi.fn>;
+
+  /** Records whether "Loading…" was EVER rendered, not just at the end. */
+  const watchForLoading = (wrapper: ReturnType<typeof mountGroupDetailView>) => {
+    let seen = wrapper.text().includes('Loading');
+    const observer = new MutationObserver(() => {
+      if (wrapper.text().includes('Loading')) seen = true;
+    });
+    observer.observe(wrapper.element.parentElement ?? document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+    return () => {
+      observer.disconnect();
+      return seen;
+    };
+  };
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    afterEachCallbacks.length = 0;
+    Object.defineProperty(window, 'history', {
+      value: { state: {} },
+      writable: true,
+      configurable: true,
+    });
+    currentPageTitle.value = null;
+  });
+
+  afterEach(() => {
+    getMock.mockReset();
+    getMock.mockResolvedValue({ data: { group: getDefaultGroup() } });
+  });
+
+  it('renders cached content on the first tick and never shows "Loading…" while revalidating', async () => {
+    seedGroupDetail(getDefaultGroup() as never);
+    const pending = deferred<unknown>();
+    getMock.mockReturnValueOnce(pending.promise);
+
+    const wrapper = mountGroupDetailView();
+    const sawLoading = watchForLoading(wrapper);
+
+    expect(wrapper.html()).toContain('Your Balance');
+    expect(wrapper.html()).toContain('Dinner');
+    expect(getMock).toHaveBeenCalledWith('/groups/group-1');
+
+    pending.resolve({ data: { group: getDefaultGroup() } });
+    await flushPromises();
+    expect(sawLoading()).toBe(false);
+  });
+
+  it('sets the topbar title from the cached name before the GET resolves', () => {
+    seedGroupDetail({ ...getDefaultGroup(), name: 'Cached Name' } as never);
+    getMock.mockReturnValueOnce(new Promise(() => {}));
+
+    mountGroupDetailView();
+
+    expect(currentPageTitle.value).toBe('Cached Name');
+  });
+
+  it('cold mount (nothing cached) shows "Loading…" until the GET lands', async () => {
+    const pending = deferred<unknown>();
+    getMock.mockReturnValueOnce(pending.promise);
+
+    const wrapper = mountGroupDetailView();
+    expect(wrapper.text()).toContain('Loading');
+
+    pending.resolve({ data: { group: getDefaultGroup() } });
+    await flushPromises();
+    expect(wrapper.text()).not.toContain('Loading');
+    expect(wrapper.html()).toContain('Dinner');
+  });
+
+  it('a background refresh adds the new expense and shows the server balance, without a loading flash', async () => {
+    seedGroupDetail(getDefaultGroup() as never);
+    const pending = deferred<unknown>();
+    getMock.mockReturnValueOnce(pending.promise);
+    const wrapper = mountGroupDetailView();
+    const sawLoading = watchForLoading(wrapper);
+
+    const base = getDefaultGroup();
+    const refreshed = {
+      ...base,
+      expenses: [
+        ...base.expenses,
+        {
+          ...base.expenses[1],
+          id: 'expense-new',
+          description: 'Gelato',
+        },
+      ],
+      // The server's number, deliberately not derivable from the rows.
+      balance: { ...base.balance, netForCurrentUser: 12.34 },
+    };
+    pending.resolve({ data: { group: refreshed } });
+    await flushPromises();
+
+    expect(wrapper.html()).toContain('Gelato');
+    expect(wrapper.text()).toContain('12.34');
+    expect(sawLoading()).toBe(false);
+  });
+
+  it('a failed background refresh keeps the cached content and shows the inline notice', async () => {
+    seedGroupDetail(getDefaultGroup() as never);
+    getMock.mockRejectedValueOnce(httpError(500));
+
+    const wrapper = mountGroupDetailView();
+    await flushPromises();
+
+    expect(wrapper.html()).toContain('Dinner');
+    expect(wrapper.text()).toContain('Could not refresh. Showing the last loaded data.');
+    expect(wrapper.find('[role="status"]').exists()).toBe(true);
+    expect(wrapper.text()).not.toContain('We could not load this group.');
+  });
+
+  it('a cold failure shows the full-screen error', async () => {
+    getMock.mockRejectedValueOnce(httpError(500));
+
+    const wrapper = mountGroupDetailView();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('We could not load this group.');
+    expect(wrapper.text()).not.toContain('Could not refresh');
+    expect(wrapper.text()).not.toContain('Loading');
+  });
+
+  it('a background 404 (group gone) switches to the full-screen error', async () => {
+    seedGroupDetail(getDefaultGroup() as never);
+    getMock.mockRejectedValueOnce(httpError(404));
+
+    const wrapper = mountGroupDetailView();
+    expect(wrapper.html()).toContain('Dinner');
+    await flushPromises();
+
+    expect(wrapper.html()).not.toContain('Dinner');
+    expect(wrapper.text()).toContain('We could not load this group.');
+  });
+
+  it('an invalidation while open (focus / push) refetches and re-renders in place', async () => {
+    seedGroupDetail(getDefaultGroup() as never);
+    getMock.mockResolvedValueOnce({ data: { group: getDefaultGroup() } });
+    const wrapper = mountGroupDetailView();
+    await flushPromises();
+
+    getMock.mockResolvedValueOnce({
+      data: { group: { ...getDefaultGroup(), name: 'Renamed elsewhere' } },
+    });
+    useGroupDataStore().invalidateGroup('group-1');
+    await flushPromises();
+
+    expect(getMock).toHaveBeenCalledTimes(2);
+    expect(currentPageTitle.value).toBe('Renamed elsewhere');
+    expect(wrapper.text()).not.toContain('Loading');
+  });
+
+  it('navigating to a form hands nothing over: the target reads the cache entry', async () => {
+    seedGroupDetail(getDefaultGroup() as never);
+    const wrapper = mountGroupDetailView();
+    await flushPromises();
+
+    const addButton = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('+ Add expense'))!;
+    await addButton.trigger('click');
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'expense-new' }),
+    );
+    expect(useGroupDataStore().cachedDetail('group-1')?.id).toBe('group-1');
   });
 });

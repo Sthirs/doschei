@@ -7,6 +7,7 @@ import SettleUpView from '@/views/SettleUpView.vue';
 import { i18n } from '@/i18n';
 import { api } from '@/lib/api';
 import type { Expense, GroupDetail } from '@/types/group';
+import { seedGroupDetail } from './helpers/groupDataCache';
 
 // --- Mock state (hoisted so vi.mock factories can reference it) ---
 // `push`/`back`/`replace` start as bare vi.fn()'s here — `vi.hoisted` runs
@@ -29,7 +30,6 @@ const mocks = vi.hoisted(() => {
     afterEachCallbacks,
     historyBack: null as string | null,
     currentPageTitle: { value: null as string | null },
-    sharedGroup: { value: null as GroupDetail | null },
   };
 });
 
@@ -91,7 +91,6 @@ vi.mock('vue-router', () => ({
 
 vi.mock('@/router', () => ({
   currentPageTitle: mocks.currentPageTitle,
-  sharedGroup: mocks.sharedGroup,
 }));
 
 vi.mock('@/stores/auth', () => ({
@@ -164,7 +163,7 @@ const getSettlement = (overrides: Partial<Expense> = {}): Expense => ({
 // --- Mount helper ---
 
 const mountView = async (group: GroupDetail) => {
-  mocks.sharedGroup.value = group;
+  seedGroupDetail(group);
   const wrapper = mount(SettleUpView, {
     global: {
       plugins: [i18n],
@@ -198,7 +197,6 @@ describe('SettleUpView', () => {
     mocks.afterEachCallbacks.length = 0;
     mocks.historyBack = null;
     mocks.currentPageTitle.value = null;
-    mocks.sharedGroup.value = null;
   });
 
   it('create mode: shows Record-a-Payment banner, amount card with €, and POSTs on submit → group-detail', async () => {
@@ -356,5 +354,38 @@ describe('SettleUpView', () => {
     expect(mocks.replace).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'group-detail' }),
     );
+  });
+});
+
+// --- ADR-0030: the settle-up page reads the group data cache ---
+describe('SettleUpView — group data cache (ADR-0030)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    mocks.route.name = 'settleup-new';
+    mocks.route.params = { id: 'g1' };
+    mocks.route.query = {};
+    mocks.afterEachCallbacks.length = 0;
+  });
+
+  it('cached group: the payment form renders with zero GETs', async () => {
+    const wrapper = await mountView(getDefaultGroup());
+
+    expect(api.get).not.toHaveBeenCalled();
+    expect(wrapper.html()).toContain('Record a Payment');
+  });
+
+  it('cold deep link: one GET, then the payment form renders', async () => {
+    (api.get as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { group: getDefaultGroup() },
+    });
+    const wrapper = mount(SettleUpView, {
+      global: { plugins: [i18n], stubs: { Teleport: true, DateTimePicker: true, UserPicker: true } },
+    });
+    await flushPromises();
+
+    expect(api.get).toHaveBeenCalledTimes(1);
+    expect(api.get).toHaveBeenCalledWith('/groups/g1');
+    expect(wrapper.html()).toContain('Record a Payment');
   });
 });

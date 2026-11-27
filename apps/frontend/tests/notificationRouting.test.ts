@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveNotificationClick } from '@/lib/notificationRouting';
+import { groupIdFromPushUrl, resolveNotificationClick } from '@/lib/notificationRouting';
 
 describe('resolveNotificationClick', () => {
   it('focuses an already-open client whose pathname matches the target URL', () => {
@@ -37,4 +37,25 @@ describe('resolveNotificationClick', () => {
 
     expect(result).toEqual({ type: 'focus', client });
   });
+});
+
+describe('groupIdFromPushUrl (ADR-0030)', () => {
+  it.each([
+    ['/groups/abc', 'abc'],
+    ['/groups/abc/', 'abc'],
+    ['/groups/abc?x=1', 'abc'],
+    ['/groups/abc#frag', 'abc'],
+    ['https://doschei.example/groups/abc', 'abc'],
+    ['/groups/abc/expenses/new', 'abc'],
+    ['/groups/a%20b', 'a b'],
+  ])('%s → %s', (url, expected) => {
+    expect(groupIdFromPushUrl(url)).toBe(expected);
+  });
+
+  it.each([['/'], ['/groups'], ['/groups/'], ['/account'], [''], ['/groupsabc'], [undefined], [null], [42]])(
+    '%s → null',
+    (url) => {
+      expect(groupIdFromPushUrl(url)).toBeNull();
+    },
+  );
 });

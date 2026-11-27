@@ -4,7 +4,8 @@ import { useRouter } from 'vue-router';
 
 import { api } from '@/lib/api';
 import { goBackTo } from '@/lib/backNavigation';
-import { currentPageTitle, sharedGroup } from '@/router';
+import { currentPageTitle } from '@/router';
+import { useGroupDataStore } from '@/stores/groupData';
 import { useExpenseFormState } from '@/composables/useExpenseFormState';
 import { useExpenseFormValidation } from '@/composables/useExpenseFormValidation';
 import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
@@ -16,6 +17,7 @@ import { useRoutedOverlay } from '@/composables/useRoutedOverlay';
 export const useExpenseForm = () => {
   const { t } = useI18n();
   const router = useRouter();
+  const store = useGroupDataStore();
 
   const {
     mode,
@@ -126,6 +128,7 @@ export const useExpenseForm = () => {
           payload,
         );
       }
+      store.invalidateGroup(groupId.value);
       goBack();
     } catch {
       errorMessage.value =
@@ -143,6 +146,7 @@ export const useExpenseForm = () => {
 
     try {
       await api.delete(`/groups/${groupId.value}/expenses/${expenseId.value}`);
+      store.invalidateGroup(groupId.value);
       // The overlay's own entry points at this now-deleted expense, so it
       // must be dropped (replace), not popped, before goBack() pops again.
       await closeDeleteConfirmBeforeLeaving();
@@ -159,16 +163,25 @@ export const useExpenseForm = () => {
     // first paint.
     currentPageTitle.value = pageTitle.value;
 
-    const passedGroup = sharedGroup.value;
-    sharedGroup.value = null;
-    if (passedGroup?.id === groupId.value) {
-      group.value = passedGroup;
+    // ADR-0030: use the cached group when it has what this form needs; an
+    // edit target missing from it (e.g. just added by another member) or a
+    // cold deep link fetches instead.
+    const cached = store.cachedDetail(groupId.value);
+    if (
+      cached &&
+      (mode.value === 'create' ||
+        cached.expenses.some((e) => e.id === expenseId.value))
+    ) {
+      group.value = cached;
       initialise();
       return;
     }
 
-    await loadGroup();
-    if (group.value) initialise();
+    const fetched = await loadGroup();
+    if (fetched) {
+      group.value = fetched;
+      initialise();
+    }
   });
 
   onBeforeUnmount(() => {

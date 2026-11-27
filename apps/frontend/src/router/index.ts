@@ -14,11 +14,6 @@ const SettleUpView = () => import('@/views/SettleUpView.vue');
 
 export const currentPageTitle = ref<string | null>(null);
 
-// Carry a group payload across navigation to expense/settle-up views so the
-// target page does not need to re-fetch GET /groups/:id.
-import type { GroupDetail } from '@/types/group';
-export const sharedGroup = ref<GroupDetail | null>(null);
-
 
 export const router = createRouter({
   history: createWebHistory(),

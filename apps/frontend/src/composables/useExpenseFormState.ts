@@ -2,13 +2,13 @@ import { computed, reactive, ref, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 
-import { api } from '@/lib/api';
 import {
   useExpenseSplit,
   type UseExpenseSplitReturn,
 } from '@/composables/useExpenseSplit';
 import { useExpenseCategorySuggest } from '@/composables/useExpenseCategorySuggest';
 import { DEFAULT_CATEGORY_KEY } from '@/lib/categories';
+import { useGroupDataStore } from '@/stores/groupData';
 import type { Expense, GroupDetail } from '@/types/group';
 
 const padDatePart = (value: number) => String(value).padStart(2, '0');
@@ -44,15 +44,16 @@ export const useExpenseFormState = () => {
   const notFound = ref(false);
   const loadError = ref(false);
 
-  const loadGroup = async () => {
-    try {
-      const { data } = await api.get<{ group: GroupDetail }>(
-        `/groups/${groupId.value}`,
-      );
-      group.value = data.group;
-    } catch {
-      loadError.value = true;
-    }
+  // ADR-0030: the group comes from the shared cache; a fetch goes through the
+  // store so it is deduplicated and warms the detail view for the way back.
+  const store = useGroupDataStore();
+  // Resolves the group without assigning it: the caller assigns and runs
+  // `initialise()` in the same tick, so the form never renders a loaded group
+  // with an uninitialised split.
+  const loadGroup = async (): Promise<GroupDetail | null> => {
+    const fetched = await store.fetchDetail(groupId.value);
+    if (!fetched) loadError.value = true;
+    return fetched;
   };
 
   const description = ref('');
