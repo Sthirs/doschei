@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.12.0](https://github.com/Sthirs/doschei/compare/v1.11.4...v1.12.0) (2026-11-27)
+
+
+### Features
+
+* **frontend:** cache group data in memory with stale-while-revalidate ([#199](https://github.com/Sthirs/doschei/issues/199)) ([91d3a41](https://github.com/Sthirs/doschei/commit/91d3a414dbb19bde11cc3c311763234964e5b6bc))
+
+
+### Bug Fixes
+
+* **backend:** stop loading image columns in group expense queries ([#197](https://github.com/Sthirs/doschei/issues/197)) ([0638f30](https://github.com/Sthirs/doschei/commit/0638f30d060b05fc3324b38adc14e712d45c2889))
+
 ## [1.11.4](https://github.com/Sthirs/doschei/compare/v1.11.3...v1.11.4) (2026-11-27)
 
 
