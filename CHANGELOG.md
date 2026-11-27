@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.4](https://github.com/Sthirs/doschei/compare/v1.11.3...v1.11.4) (2026-11-27)
+
+
+### Bug Fixes
+
+* **deps:** update dependency web-push to v4 ([#184](https://github.com/Sthirs/doschei/issues/184)) ([a907128](https://github.com/Sthirs/doschei/commit/a907128e3d390189ada13c6b89d9a75c23c3c184))
+
 ## [1.11.3](https://github.com/Sthirs/doschei/compare/v1.11.2...v1.11.3) (2026-11-20)
 
 
