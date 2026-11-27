@@ -1,6 +1,6 @@
 # ADR-0030: Client-side group data cache — in-memory stale-while-revalidate Pinia store
 
-- **Status:** 🟡 proposed
+- **Status:** 🟢 accepted
 - **Date:** 2026-11-27
 - **Deciders:** Sthirs
 
